@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.2.0 (2026-03-08)
+
 - refactor: use explicit `--format` flag for `typst compile` command.
 
 ## 0.1.0 (2026-03-08)
