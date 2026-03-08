@@ -8,7 +8,7 @@ When the output format is Typst, blocks pass through natively without image conv
 ## Installation
 
 ```bash
-quarto add mcanouil/quarto-typst-render
+quarto add mcanouil/quarto-typst-render@0.1.0
 ```
 
 This will install the extension under the `_extensions` subdirectory.
