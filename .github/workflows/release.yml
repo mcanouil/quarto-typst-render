@@ -1,0 +1,43 @@
+name: Release Quarto Extension
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        type: choice
+        description: "Version"
+        required: false
+        default: "patch"
+        options:
+          - "patch"
+          - "minor"
+          - "major"
+      quarto:
+        type: choice
+        description: "Quarto version"
+        required: false
+        default: "release"
+        options:
+          - "release"
+          - "pre-release"
+
+permissions:
+  contents: write
+  pull-requests: write
+  id-token: write
+  pages: write
+
+jobs:
+  release:
+    uses: mcanouil/quarto-workflows/.github/workflows/release-extension.yml@main
+    secrets: inherit
+    with:
+      gh-app-id: ${{ vars.APP_ID }}
+      version: "${{ github.event.inputs.version }}"
+      formats: "html typst pdf-xelatex pdf-lualatex pdf-pdflatex revealjs beamer docx pptx"
+      quarto: "${{ github.event.inputs.quarto }}"
+      post-render: false
+      tinytex: true
+      r: false
+      python: false
+      julia: false

@@ -1,0 +1,108 @@
+# Schema for the typst-render extension
+# Provides configuration validation and IDE support for options
+# and per-block comment+pipe attributes on typst code blocks.
+
+$schema: https://m.canouil.dev/quarto-wizard/assets/schema/v1/extension-schema.json
+
+options:
+  format:
+    type: string
+    enum: [png, svg, pdf]
+    description: "Image output format. Auto-detected from output format if not set."
+  dpi:
+    type: string
+    default: "144"
+    description: "Pixels per inch for PNG output."
+  width:
+    type: string
+    default: "auto"
+    description: "Page width for image compilation (ignored in Typst output)."
+  height:
+    type: string
+    default: "auto"
+    description: "Page height for image compilation (ignored in Typst output)."
+  margin:
+    type: string
+    default: "0.5em"
+    description: "Page margin for image compilation; block inset in Typst output."
+  background:
+    type: string
+    default: "none"
+    description: "Page fill for image compilation; block fill in Typst output."
+  preamble:
+    type: string
+    default: ""
+    description: "Typst code prepended before user code, or path to a .typ file."
+    completion:
+      type: file
+      extensions: [.typ]
+  cache:
+    type: boolean
+    default: true
+    description: "Cache compiled images to avoid recompilation."
+  echo:
+    type: [boolean, string]
+    enum: [true, false, fenced]
+    default: false
+    description: "Show Typst source code alongside rendered output. Use 'fenced' to include code block markers."
+  eval:
+    type: boolean
+    default: true
+    description: "Compile Typst code to image."
+
+# Per-block comment+pipe attributes (//| key: value).
+# These are parsed from the code block text, not from element attributes.
+attributes:
+  typst:
+    format:
+      type: string
+      enum: [png, svg, pdf]
+      description: "Image output format for this block."
+    dpi:
+      type: string
+      description: "Pixels per inch for PNG output."
+    width:
+      type: string
+      description: "Page width for image compilation (ignored in Typst output)."
+    height:
+      type: string
+      description: "Page height for image compilation (ignored in Typst output)."
+    margin:
+      type: string
+      description: "Page margin for image compilation; block inset in Typst output."
+    background:
+      type: string
+      description: "Page fill for image compilation; block fill in Typst output."
+    preamble:
+      type: string
+      description: "Typst code prepended before this block's code, or path to a .typ file."
+      completion:
+        type: file
+        extensions: [.typ]
+    cache:
+      type: boolean
+      description: "Enable or disable caching for this block."
+    file:
+      type: string
+      description: "Path to external .typ file to render instead of block content."
+      completion:
+        type: file
+        extensions: [.typ]
+    echo:
+      type: [boolean, string]
+      enum: [true, false, fenced]
+      description: "Show source code alongside rendered output. Use 'fenced' to include code block markers."
+    eval:
+      type: boolean
+      description: "Compile this block to image."
+    label:
+      type: string
+      description: "Cross-reference label (e.g., 'fig-my-diagram', 'tbl-results')."
+    cap:
+      type: string
+      description: "Caption text for the labelled block."
+      aliases: [fig-cap, tbl-cap, lst-cap]
+    alt:
+      type: string
+      description: "Alternative text for the labelled block."
+      aliases: [fig-alt, tbl-alt, lst-alt]

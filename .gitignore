@@ -1,0 +1,8 @@
+/.luarc.json
+/.quarto/
+*.html
+*.pdf
+*.docx
+*.pptx
+*_files/
+.DS_Store
