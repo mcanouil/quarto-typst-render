@@ -279,7 +279,7 @@ local function compile_typst(source, opts, img_format)
   f:write(source)
   f:close()
 
-  local args = { 'compile', '--ppi', dpi, abs_input, abs_output }
+  local args = { 'compile', '--format', img_format, '--ppi', dpi, abs_input, abs_output }
 
   local ok, result = pcall(pandoc.pipe, bin, args, '')
   if not ok then
