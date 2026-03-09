@@ -61,6 +61,9 @@ options:
     type: string
     enum: [fragment, slide, column, column-fragment]
     description: "Output placement in Reveal.js presentations. Ignored for other formats."
+  classes:
+    type: string
+    description: "Space-separated CSS classes applied to the output image element (e.g., 'r-stretch')."
 
 # Per-block comment+pipe attributes (//| key: value).
 # These are parsed from the code block text, not from element attributes.
@@ -117,6 +120,9 @@ attributes:
       type: string
       enum: [fragment, slide, column, column-fragment]
       description: "Output placement in Reveal.js presentations. Ignored for other formats."
+    classes:
+      type: string
+      description: "Space-separated CSS classes applied to the output image element (e.g., 'r-stretch')."
     label:
       type: string
       description: "Cross-reference label (e.g., 'fig-my-diagram', 'tbl-results')."

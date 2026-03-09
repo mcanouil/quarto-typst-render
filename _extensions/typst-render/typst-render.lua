@@ -40,8 +40,26 @@ local DEFAULTS = {
   include = true,
   output = true,
   ['output-location'] = nil,
+  classes = nil,
   label = nil,
 }
+
+--- Keys consumed by the filter; any other option is forwarded as an HTML attribute.
+local KNOWN_KEYS = { cap = true, alt = true }
+for k in pairs(DEFAULTS) do
+  KNOWN_KEYS[k] = true
+end
+
+--- Check whether a key is consumed by the filter (not forwarded as an attribute).
+--- Matches exact known keys and prefix-specific cross-ref keys (e.g. fig-cap, tbl-alt).
+--- @param key string
+--- @return boolean
+local function is_known_key(key)
+  if KNOWN_KEYS[key] then
+    return true
+  end
+  return key:match('^%a+%-cap$') ~= nil or key:match('^%a+%-alt$') ~= nil
+end
 
 --- Cache subdirectory within the .quarto scratch directory
 local CACHE_SUBDIR = '.quarto/typst-render'
@@ -283,11 +301,28 @@ local function create_image_element(img_path, opts)
   local caption_text = cell.resolve_caption(opts)
   local alt_text = cell.resolve_alt(opts, caption_text)
 
+  local classes = {}
+  if quarto.format.is_html_output() then
+    classes[#classes + 1] = 'img-fluid'
+  end
+  if type(opts.classes) == 'string' and opts.classes ~= '' then
+    for cls in opts.classes:gmatch('%S+') do
+      classes[#classes + 1] = cls
+    end
+  end
+
+  local kvpairs = {}
+  for k, v in pairs(opts) do
+    if not is_known_key(k) and type(v) == 'string' then
+      kvpairs[#kvpairs + 1] = { k, v }
+    end
+  end
+
   local img = pandoc.Image(
     { pandoc.Str(alt_text) },
     img_path,
     '',
-    pandoc.Attr('', {}, {})
+    pandoc.Attr('', classes, kvpairs)
   )
 
   return pandoc.Para({ img })
@@ -353,7 +388,7 @@ local function get_configuration(meta)
     -- so we use a separate key list to ensure 'format' etc. are not missed.
     local config_keys = {
       'format', 'dpi', 'width', 'height', 'margin', 'background',
-      'preamble', 'cache', 'echo', 'eval', 'include', 'output', 'output-location',
+      'preamble', 'cache', 'echo', 'eval', 'include', 'output', 'output-location', 'classes',
     }
     for _, k in ipairs(config_keys) do
       local default_val = DEFAULTS[k]
