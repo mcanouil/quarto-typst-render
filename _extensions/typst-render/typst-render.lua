@@ -502,8 +502,8 @@ local function get_configuration(meta)
 
   local ext_config = nil
 
-  if meta['extensions'] and meta['extensions']['typst-render'] then
-    ext_config = meta['extensions']['typst-render']
+  if utils.get_extension_config(meta, EXTENSION_NAME) then
+    ext_config = utils.get_extension_config(meta, EXTENSION_NAME)
   elseif meta['typst-render'] then
     ext_config = meta['typst-render']
   end
