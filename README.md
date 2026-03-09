@@ -137,19 +137,26 @@ extensions:
 
 ### Options
 
-| Option       | Type            | Default   | Description                                                          |
-| ------------ | --------------- | --------- | -------------------------------------------------------------------- |
-| `format`     | string          | (auto)    | Image format: `png`, `svg`, `pdf`.                                   |
-| `dpi`        | string          | `"144"`   | Pixels per inch (PNG only).                                          |
-| `width`      | string          | `"auto"`  | Typst page width (e.g., `10cm`, `auto`).                             |
-| `height`     | string          | `"auto"`  | Typst page height (`auto` fits content).                             |
-| `margin`     | string          | `"0.5em"` | Typst page margin.                                                   |
-| `background` | string          | `"none"`  | Typst page fill colour.                                              |
-| `preamble`   | string          | `""`      | Typst code or path to a `.typ` file prepended before user code.      |
-| `cache`      | boolean         | `true`    | Cache compiled images.                                               |
-| `file`       | string          | (none)    | Path to external `.typ` file to render.                              |
-| `echo`       | boolean\|string | `false`   | Show Typst source code alongside output (`true`, `false`, `fenced`). |
-| `eval`       | boolean         | `true`    | Compile Typst code to image.                                         |
+| Option            | Type            | Default   | Description                                                          |
+| ----------------- | --------------- | --------- | -------------------------------------------------------------------- |
+| `format`          | string          | (auto)    | Image format: `png`, `svg`, `pdf`.                                   |
+| `dpi`             | string          | `"144"`   | Pixels per inch (PNG only).                                          |
+| `width`           | string          | `"auto"`  | Page width for image compilation (ignored in Typst output).          |
+| `height`          | string          | `"auto"`  | Page height for image compilation (ignored in Typst output).         |
+| `margin`          | string          | `"0.5em"` | Page margin for image compilation; block `inset` in Typst output.    |
+| `background`      | string          | `"none"`  | Page fill for image compilation; block `fill` in Typst output.       |
+| `preamble`        | string          | `""`      | Typst code or path to a `.typ` file prepended before user code.      |
+| `cache`           | boolean         | `true`    | Cache compiled images.                                               |
+| `file`            | string          | (none)    | Path to external `.typ` file to render.                              |
+| `echo`            | boolean\|string | `false`   | Show Typst source code alongside output (`true`, `false`, `fenced`). |
+| `eval`            | boolean         | `true`    | Compile Typst code to image.                                         |
+| `include`         | boolean         | `true`    | Include block in output. Set `false` to suppress entirely.           |
+| `output`          | boolean         | `true`    | Show rendered output. Set `false` to skip compilation.               |
+| `output-location` | string          | (none)    | Output placement in Reveal.js (`fragment`, `slide`, `column`, `column-fragment`). |
+| `classes`         | string          | (none)    | Space-separated CSS classes on the output image (e.g., `r-stretch`). |
+
+Any unknown option with a string value is forwarded as an HTML attribute on the output image element (e.g., `//| style: "max-height: 300px;"`).
+Values that look like booleans (`true`/`false`) must be quoted to be forwarded (e.g., `//| data-lazy: "true"`).
 
 ### Per-Block Cross-Referencing Options
 
@@ -181,6 +188,11 @@ extensions:
 | `false` | `true`   | Source code listing only.                        |
 | `false` | `fenced` | Fenced source code listing only (with markers).  |
 | `false` | `false`  | Nothing rendered (hidden block).                 |
+
+The `include` and `output` options take precedence over the eval/echo matrix:
+
+- `include: false` hides the entire block regardless of eval/echo settings.
+- `output: false` skips compilation and shows only the source code (if echo is enabled).
 
 ## Example
 
