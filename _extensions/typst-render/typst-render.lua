@@ -61,6 +61,18 @@ local block_counter = 0
 -- HELPER FUNCTIONS
 -- ============================================================================
 
+--- Resolve a file path following the Quarto convention.
+--- Paths starting with "/" are relative to the project root;
+--- other paths are relative to the current document directory.
+--- @param path string The file path to resolve
+--- @return string Resolved file path
+local function resolve_file_path(path)
+  if path:sub(1, 1) == '/' and quarto.project and quarto.project.directory then
+    return pandoc.path.join({ quarto.project.directory, path:sub(2) })
+  end
+  return path
+end
+
 --- Resolve the Typst binary path.
 --- @return string|nil Path to the Typst binary, or nil if not found
 local function resolve_typst_bin()
@@ -159,15 +171,7 @@ local function resolve_preamble(value)
     return nil
   end
   if value:match('%.typ$') then
-    local file_path = value
-    if quarto.project and quarto.project.directory then
-      local abs_check = io.open(file_path, 'r')
-      if not abs_check then
-        file_path = pandoc.path.join({ quarto.project.directory, file_path })
-      else
-        abs_check:close()
-      end
-    end
+    local file_path = resolve_file_path(value)
     local f = io.open(file_path, 'r')
     if f then
       local content = f:read('*a')
@@ -415,15 +419,7 @@ end
 --- @param file_opt string Path from the `file` option
 --- @return string|nil File contents, or nil on failure
 local function read_external_file(file_opt)
-  local file_path = file_opt
-  if quarto.project and quarto.project.directory then
-    local abs_check = io.open(file_path, 'r')
-    if not abs_check then
-      file_path = pandoc.path.join({ quarto.project.directory, file_path })
-    else
-      abs_check:close()
-    end
-  end
+  local file_path = resolve_file_path(file_opt)
   local f = io.open(file_path, 'r')
   if f then
     local content = f:read('*a')
