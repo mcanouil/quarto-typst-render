@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.4.0 (2026-03-09)
+
 - feat: add `classes` option for CSS classes on output image elements.
 - feat: add `img-fluid` class by default for responsive images in HTML output.
 - feat: forward unknown code-cell options as HTML attributes on the output image element.
