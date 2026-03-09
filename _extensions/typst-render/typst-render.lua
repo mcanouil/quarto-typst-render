@@ -14,14 +14,13 @@ local EXTENSION_NAME = 'typst-render'
 
 --- Load modules
 local utils = require(quarto.utils.resolve_path('_modules/utils.lua'):gsub('%.lua$', ''))
-local validation = require(quarto.utils.resolve_path('_modules/validation.lua'):gsub('%.lua$', ''))
 
 -- ============================================================================
 -- CONSTANTS
 -- ============================================================================
 
---- Valid image formats
-local VALID_FORMATS = { 'png', 'svg', 'pdf' }
+--- Valid image format set for O(1) lookup
+local VALID_FORMAT_SET = { png = true, svg = true, pdf = true }
 
 --- Default option values
 local DEFAULTS = {
@@ -610,7 +609,7 @@ local function process_codeblock(el)
 
   -- Determine image format
   local img_format = opts.format
-  if not img_format or not validation.in_array(img_format, VALID_FORMATS) then
+  if not img_format or not VALID_FORMAT_SET[img_format] then
     img_format = get_image_format_for_output()
   end
 
