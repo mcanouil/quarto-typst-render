@@ -281,7 +281,7 @@ This source is visible, but the rendered image is suppressed.
 
 ## Output Location (Reveal.js)
 
-:::: {.content-visible when-format="revealjs"}
+::: {.content-visible when-format="revealjs"}
 
 The `output-location` option controls where rendered output appears in Reveal.js presentations.
 
@@ -357,7 +357,7 @@ extensions:
 
 ## Social Card
 
-:::: {.content-hidden when-format="typst"}
+::: {.content-hidden when-format="typst"}
 
 A repository social card built entirely in Typst, rendered as a high-resolution PNG.
 
