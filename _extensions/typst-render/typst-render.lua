@@ -37,6 +37,7 @@ local DEFAULTS = {
   file = nil,
   root = nil,
   ['font-path'] = nil,
+  ['package-path'] = nil,
   input = nil,
   echo = false,
   eval = true,
@@ -319,11 +320,22 @@ local function compile_typst(source, opts, img_format)
 
   local args = { 'compile', '--format', img_format, '--ppi', dpi, '--root', resolved_root }
 
-  -- Add --font-path if specified
-  if opts['font-path'] then
-    local resolved_font_path = resolve_file_path(opts['font-path'])
+  -- Add --font-path flags (single string or list of paths)
+  local font_paths = opts['font-path']
+  if type(font_paths) == 'table' then
+    for _, p in ipairs(font_paths) do
+      args[#args + 1] = '--font-path'
+      args[#args + 1] = resolve_file_path(p)
+    end
+  elseif type(font_paths) == 'string' then
     args[#args + 1] = '--font-path'
-    args[#args + 1] = resolved_font_path
+    args[#args + 1] = resolve_file_path(font_paths)
+  end
+
+  -- Add --package-path if specified
+  if opts['package-path'] then
+    args[#args + 1] = '--package-path'
+    args[#args + 1] = resolve_file_path(opts['package-path'])
   end
 
   -- Add --input flags for each input variable
@@ -475,7 +487,7 @@ local function get_configuration(meta)
     local config_keys = {
       'format', 'dpi', 'width', 'height', 'margin', 'background',
       'preamble', 'cache', 'echo', 'eval', 'include', 'output', 'output-location', 'classes',
-      'root', 'font-path',
+      'root', 'package-path',
     }
     for _, k in ipairs(config_keys) do
       local default_val = DEFAULTS[k]
@@ -502,6 +514,21 @@ local function get_configuration(meta)
         else
           global_config[k] = pandoc.utils.stringify(val)
         end
+      end
+    end
+
+    -- Handle 'font-path' separately: accept a string or list of strings
+    if ext_config['font-path'] ~= nil then
+      local raw = ext_config['font-path']
+      local raw_type = pandoc.utils.type(raw)
+      if raw_type == 'List' then
+        local paths = {}
+        for _, v in ipairs(raw) do
+          paths[#paths + 1] = pandoc.utils.stringify(v)
+        end
+        global_config['font-path'] = paths
+      else
+        global_config['font-path'] = { pandoc.utils.stringify(raw) }
       end
     end
 

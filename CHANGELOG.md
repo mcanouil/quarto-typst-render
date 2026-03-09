@@ -5,6 +5,8 @@
 - feat: add `root` option to set the Typst compilation root directory (`--root`).
 - feat: add `font-path` option to specify additional font directories (`--font-path`).
 - feat: add `input` option to pass key-value pairs to Typst via `--input` (accessible via `sys.inputs`).
+- feat: add `package-path` option to specify a local Typst package directory (`--package-path`).
+- feat: `font-path` now accepts a list of paths for multiple font directories.
 - refactor: use stdin instead of temporary files for Typst compilation.
 
 ## 0.4.0 (2026-03-09)

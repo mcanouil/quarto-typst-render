@@ -42,8 +42,15 @@ options:
     completion:
       type: directory
   font-path:
+    type: [string, array]
+    description: "Path or list of paths to directories containing additional fonts for Typst compilation."
+    items:
+      type: string
+    completion:
+      type: directory
+  package-path:
     type: string
-    description: "Path to a directory containing additional fonts for Typst compilation."
+    description: "Path to a directory containing Typst packages for offline or reproducible builds."
     completion:
       type: directory
   input:
@@ -115,6 +122,9 @@ attributes:
     font-path:
       type: string
       description: "Path to a directory containing additional fonts for this block."
+    package-path:
+      type: string
+      description: "Path to a directory containing Typst packages for this block."
     input:
       type: string
       description: "Comma-separated key=value pairs passed as --input flags (e.g., 'theme=dark,lang=en')."

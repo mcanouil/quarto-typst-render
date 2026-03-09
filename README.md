@@ -167,7 +167,8 @@ Per-block input override using comma-separated syntax:
 | `preamble`        | string          | `""`      | Typst code or path to a `.typ` file prepended before user code.      |
 | `cache`           | boolean         | `true`    | Cache compiled images.                                               |
 | `root`            | string          | (auto)    | Root directory for Typst compilation (defaults to project directory). |
-| `font-path`       | string          | (none)    | Path to a directory containing additional fonts.                     |
+| `font-path`       | string\|array   | (none)    | Path or list of paths to directories containing additional fonts.    |
+| `package-path`    | string          | (none)    | Path to a directory containing Typst packages (offline/reproducible).|
 | `input`           | object          | (none)    | Key-value pairs passed as `--input` flags to Typst CLI.              |
 | `file`            | string          | (none)    | Path to external `.typ` file to render.                              |
 | `echo`            | boolean\|string | `false`   | Show Typst source code alongside output (`true`, `false`, `fenced`). |
