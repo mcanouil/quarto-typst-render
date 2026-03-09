@@ -484,8 +484,8 @@ local function register_custom_crossref_types(meta)
     return
   end
   for _, entry in ipairs(custom) do
-    local key = entry['key'] and utils.stringify(entry['key'])
-    local name = entry['reference-prefix'] and utils.stringify(entry['reference-prefix'])
+    local key = entry['key'] and pandoc.utils.stringify(entry['key'])
+    local name = entry['reference-prefix'] and pandoc.utils.stringify(entry['reference-prefix'])
     if key and name then
       REF_TYPE_NAMES[key] = name
     end
@@ -521,7 +521,7 @@ local function get_configuration(meta)
           if type(val) == 'boolean' then
             global_config[k] = val
           else
-            local str = utils.stringify(val)
+            local str = pandoc.utils.stringify(val)
             if str == 'fenced' then
               global_config[k] = 'fenced'
             else
@@ -532,11 +532,11 @@ local function get_configuration(meta)
           if type(val) == 'boolean' then
             global_config[k] = val
           else
-            local str = utils.stringify(val)
+            local str = pandoc.utils.stringify(val)
             global_config[k] = str == 'true'
           end
         else
-          global_config[k] = utils.stringify(val)
+          global_config[k] = pandoc.utils.stringify(val)
         end
       end
     end
