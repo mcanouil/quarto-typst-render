@@ -379,8 +379,7 @@ local function wrap_crossref(content, opts)
   local caption_text = resolve_caption(opts, prefix)
   local caption_inlines = {}
   if caption_text ~= '' then
-    local doc = pandoc.read(caption_text, 'markdown')
-    caption_inlines = pandoc.utils.blocks_to_inlines(doc.blocks)
+    caption_inlines = quarto.utils.string_to_inlines(caption_text)
   end
 
   local ref_type_name = REF_TYPE_NAMES[prefix] or (prefix:sub(1, 1):upper() .. prefix:sub(2))
