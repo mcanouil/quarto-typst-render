@@ -22,6 +22,14 @@ local utils = require(quarto.utils.resolve_path('_modules/utils.lua'):gsub('%.lu
 --- Valid image format set for O(1) lookup
 local VALID_FORMAT_SET = { png = true, svg = true, pdf = true }
 
+--- Valid output-location values for Reveal.js presentations
+local VALID_OUTPUT_LOCATION_SET = {
+  fragment = true,
+  slide = true,
+  column = true,
+  ['column-fragment'] = true,
+}
+
 --- Default option values
 local DEFAULTS = {
   format = nil,
@@ -35,6 +43,7 @@ local DEFAULTS = {
   file = nil,
   echo = false,
   eval = true,
+  ['output-location'] = nil,
   label = nil,
 }
 
@@ -462,6 +471,59 @@ local function create_echo_block(code, fenced, option_lines)
   return pandoc.CodeBlock(code, pandoc.Attr('', { 'typst' }, {}))
 end
 
+--- Resolve and validate the output-location option.
+--- Returns the location string only when rendering to Reveal.js.
+--- @param opts table Merged options
+--- @return string|nil Valid location string, or nil
+local function resolve_output_location(opts)
+  local loc = opts['output-location']
+  if not loc or loc == '' then
+    return nil
+  end
+  if not quarto.doc.is_format('revealjs') then
+    return nil
+  end
+  if not VALID_OUTPUT_LOCATION_SET[loc] then
+    utils.log_warning(
+      EXTENSION_NAME,
+      'Invalid output-location value: "' .. loc .. '". '
+        .. 'Valid values: fragment, slide, column, column-fragment.'
+    )
+    return nil
+  end
+  return loc
+end
+
+--- Apply output-location wrapping for Reveal.js presentations.
+--- @param echo_block pandoc.CodeBlock|nil Echo block (nil when echo is off)
+--- @param result pandoc.Block The compiled output block
+--- @param location string The validated output-location value
+--- @return pandoc.Blocks Wrapped output blocks
+local function apply_output_location(echo_block, result, location)
+  if location == 'column' or location == 'column-fragment' then
+    if not echo_block then
+      return pandoc.Blocks({ result })
+    end
+    local output_classes = location == 'column-fragment'
+      and { 'column', 'fragment' }
+      or { 'column' }
+    local code_col = pandoc.Div(pandoc.Blocks({ echo_block }), pandoc.Attr('', { 'column' }, {}))
+    local output_col = pandoc.Div(pandoc.Blocks({ result }), pandoc.Attr('', output_classes, {}))
+    local wrapper = pandoc.Div(
+      pandoc.Blocks({ code_col, output_col }),
+      pandoc.Attr('', { 'columns', 'column-output-location' }, {})
+    )
+    return pandoc.Blocks({ wrapper })
+  end
+
+  local wrapper_class = location == 'slide' and 'output-location-slide' or 'fragment'
+  local wrapped = pandoc.Div(pandoc.Blocks({ result }), pandoc.Attr('', { wrapper_class }, {}))
+  if echo_block then
+    return pandoc.Blocks({ echo_block, wrapped })
+  end
+  return pandoc.Blocks({ wrapped })
+end
+
 -- ============================================================================
 -- FILTER FUNCTIONS
 -- ============================================================================
@@ -507,7 +569,7 @@ local function get_configuration(meta)
     -- so we use a separate key list to ensure 'format' etc. are not missed.
     local config_keys = {
       'format', 'dpi', 'width', 'height', 'margin', 'background',
-      'preamble', 'cache', 'echo', 'eval',
+      'preamble', 'cache', 'echo', 'eval', 'output-location',
     }
     for _, k in ipairs(config_keys) do
       local default_val = DEFAULTS[k]
@@ -628,6 +690,12 @@ local function process_codeblock(el)
   end
 
   local result = wrap_crossref(create_image_element(img_path, opts), opts)
+
+  local output_location = resolve_output_location(opts)
+  if output_location then
+    local echo_block = do_echo and create_echo_block(code, is_fenced, option_lines) or nil
+    return apply_output_location(echo_block, result, output_location)
+  end
 
   if do_echo then
     local echo_block = create_echo_block(code, is_fenced, option_lines)
