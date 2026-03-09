@@ -36,6 +36,21 @@ options:
     completion:
       type: file
       extensions: [.typ]
+  root:
+    type: string
+    description: "Root directory for Typst compilation. Defaults to the project directory."
+    completion:
+      type: directory
+  font-path:
+    type: string
+    description: "Path to a directory containing additional fonts for Typst compilation."
+    completion:
+      type: directory
+  input:
+    type: object
+    description: "Key-value pairs passed as --input flags to the Typst CLI, accessible via sys.inputs in Typst code."
+    additionalProperties:
+      type: string
   cache:
     type: boolean
     default: true
@@ -94,6 +109,15 @@ attributes:
       completion:
         type: file
         extensions: [.typ]
+    root:
+      type: string
+      description: "Root directory for Typst compilation in this block."
+    font-path:
+      type: string
+      description: "Path to a directory containing additional fonts for this block."
+    input:
+      type: string
+      description: "Comma-separated key=value pairs passed as --input flags (e.g., 'theme=dark,lang=en')."
     cache:
       type: boolean
       description: "Enable or disable caching for this block."

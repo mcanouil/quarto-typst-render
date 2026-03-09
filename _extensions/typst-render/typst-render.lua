@@ -35,6 +35,9 @@ local DEFAULTS = {
   preamble = '',
   cache = true,
   file = nil,
+  root = nil,
+  ['font-path'] = nil,
+  input = nil,
   echo = false,
   eval = true,
   include = true,
@@ -45,7 +48,7 @@ local DEFAULTS = {
 }
 
 --- Keys consumed by the filter; any other option is forwarded as an HTML attribute.
-local KNOWN_KEYS = { cap = true, alt = true }
+local KNOWN_KEYS = { cap = true, alt = true, _block_input = true }
 for k in pairs(DEFAULTS) do
   KNOWN_KEYS[k] = true
 end
@@ -151,6 +154,58 @@ local function resolve_preamble(value)
   return value
 end
 
+--- Parse a comma-separated string of key=value pairs into a table.
+--- @param str string Input string like "key1=val1,key2=val2"
+--- @return table Parsed key-value table
+local function parse_input_string(str)
+  local result = {}
+  if not str or str == '' then
+    return result
+  end
+  for pair in str:gmatch('[^,]+') do
+    local k, v = pair:match('^%s*(.-)%s*=%s*(.-)%s*$')
+    if k and k ~= '' then
+      result[k] = v or ''
+    end
+  end
+  return result
+end
+
+--- Merge global and per-block input maps. Per-block values override global ones.
+--- @param global_input table|nil Global input map from YAML
+--- @param block_input string|nil Per-block comma-separated input string
+--- @return table Merged input map (may be empty)
+local function merge_inputs(global_input, block_input)
+  local merged = {}
+  if type(global_input) == 'table' then
+    for k, v in pairs(global_input) do
+      merged[k] = v
+    end
+  end
+  if type(block_input) == 'string' then
+    for k, v in pairs(parse_input_string(block_input)) do
+      merged[k] = v
+    end
+  end
+  return merged
+end
+
+--- Serialise an input map as a sorted, deterministic string for cache hashing.
+--- @param input_map table Key-value table
+--- @return string Serialised string like "key1=val1|key2=val2"
+local function serialise_inputs(input_map)
+  local keys = {}
+  for k in pairs(input_map) do
+    keys[#keys + 1] = k
+  end
+  table.sort(keys)
+  local parts = {}
+  for _, k in ipairs(keys) do
+    parts[#parts + 1] = k .. '=' .. input_map[k]
+  end
+  return table.concat(parts, '|')
+end
+
 --- Build the `#set page(...)` directive from options (for image compilation).
 --- @param opts table Merged options
 --- @return string Typst page directive
@@ -215,6 +270,7 @@ local function ensure_cache_dir()
 end
 
 --- Compile Typst source to an image file.
+--- Uses stdin to pass source code, avoiding temporary .typ files.
 --- @param source string Full Typst source code
 --- @param opts table Merged options
 --- @param img_format string Target image format
@@ -226,8 +282,19 @@ local function compile_typst(source, opts, img_format)
   end
 
   local dpi = tostring(opts.dpi)
+
+  -- Merge global and per-block input variables
+  local merged_input = merge_inputs(opts.input, opts._block_input)
+  local input_serial = serialise_inputs(merged_input)
+
+  -- Include inputs in cache hash material
+  local hash_source = source
+  if input_serial ~= '' then
+    hash_source = source .. '|input:' .. input_serial
+  end
+
   local use_cache = opts.cache ~= false
-  local stem = compute_cache_stem(source, img_format, dpi, opts.label)
+  local stem = compute_cache_stem(hash_source, img_format, dpi, opts.label)
   local abs_cache, rel_cache = ensure_cache_dir()
   local abs_output = pandoc.path.join({ abs_cache, stem .. '.' .. img_format })
   local rel_output = pandoc.path.join({ rel_cache, stem .. '.' .. img_format })
@@ -240,24 +307,46 @@ local function compile_typst(source, opts, img_format)
     end
   end
 
-  local abs_input = pandoc.path.join({ abs_cache, stem .. '.typ' })
-  local f = io.open(abs_input, 'w')
-  if not f then
-    utils.log_error(EXTENSION_NAME, 'Could not write temporary Typst file: ' .. abs_input)
-    return nil
+  -- Resolve --root: explicit option, project directory, or working directory
+  local resolved_root
+  if opts.root then
+    resolved_root = resolve_file_path(opts.root)
+  elseif quarto.project and quarto.project.directory then
+    resolved_root = quarto.project.directory
+  else
+    resolved_root = pandoc.system.get_working_directory()
   end
-  f:write(source)
-  f:close()
 
-  local args = { 'compile', '--format', img_format, '--ppi', dpi, abs_input, abs_output }
+  local args = { 'compile', '--format', img_format, '--ppi', dpi, '--root', resolved_root }
 
-  local ok, result = pcall(pandoc.pipe, bin, args, '')
+  -- Add --font-path if specified
+  if opts['font-path'] then
+    local resolved_font_path = resolve_file_path(opts['font-path'])
+    args[#args + 1] = '--font-path'
+    args[#args + 1] = resolved_font_path
+  end
+
+  -- Add --input flags for each input variable
+  local sorted_keys = {}
+  for k in pairs(merged_input) do
+    sorted_keys[#sorted_keys + 1] = k
+  end
+  table.sort(sorted_keys)
+  for _, k in ipairs(sorted_keys) do
+    args[#args + 1] = '--input'
+    args[#args + 1] = k .. '=' .. merged_input[k]
+  end
+
+  -- Use stdin ('-') instead of a temp file
+  args[#args + 1] = '-'
+  args[#args + 1] = abs_output
+
+  local ok, result = pcall(pandoc.pipe, bin, args, source)
   if not ok then
     utils.log_error(
       EXTENSION_NAME,
       'Typst compilation failed:\n' .. tostring(result)
     )
-    os.remove(abs_input)
     return nil
   end
 
@@ -272,14 +361,11 @@ local function compile_typst(source, opts, img_format)
       os.rename(page_path, abs_output)
     else
       utils.log_error(EXTENSION_NAME, 'Compiled file not found: ' .. abs_output)
-      os.remove(abs_input)
       return nil
     end
   else
     out_f:close()
   end
-
-  os.remove(abs_input)
 
   return rel_output
 end
@@ -389,6 +475,7 @@ local function get_configuration(meta)
     local config_keys = {
       'format', 'dpi', 'width', 'height', 'margin', 'background',
       'preamble', 'cache', 'echo', 'eval', 'include', 'output', 'output-location', 'classes',
+      'root', 'font-path',
     }
     for _, k in ipairs(config_keys) do
       local default_val = DEFAULTS[k]
@@ -417,6 +504,18 @@ local function get_configuration(meta)
         end
       end
     end
+
+    -- Handle 'input' separately: store as a key-value table (YAML map)
+    if ext_config['input'] ~= nil then
+      local raw = ext_config['input']
+      if type(raw) == 'table' then
+        local input_map = {}
+        for k, v in pairs(raw) do
+          input_map[tostring(k)] = pandoc.utils.stringify(v)
+        end
+        global_config['input'] = input_map
+      end
+    end
   end
 
   return meta
@@ -431,7 +530,16 @@ local function process_codeblock(el)
   end
 
   local block_opts, clean_code, option_lines = cell.parse_options(el.text)
+
+  -- Stash per-block input string before merge overwrites it with global table
+  local block_input_str = nil
+  if type(block_opts.input) == 'string' then
+    block_input_str = block_opts.input
+    block_opts.input = nil
+  end
+
   local opts = cell.merge_options(block_opts, global_config, DEFAULTS)
+  opts._block_input = block_input_str
 
   if not cell.should_include(opts) then
     return pandoc.Null()

@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- feat: add `root` option to set the Typst compilation root directory (`--root`).
+- feat: add `font-path` option to specify additional font directories (`--font-path`).
+- feat: add `input` option to pass key-value pairs to Typst via `--input` (accessible via `sys.inputs`).
+- refactor: use stdin instead of temporary files for Typst compilation.
+
 ## 0.4.0 (2026-03-09)
 
 - feat: add `classes` option for CSS classes on output image elements.
