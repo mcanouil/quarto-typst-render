@@ -480,6 +480,10 @@ extensions:
 | `eval`       | boolean         | `true`    | Compile Typst code to image.                                         |
 | `include`    | boolean         | `true`    | Include block in output. Set `false` to suppress entirely.           |
 | `output`     | boolean         | `true`    | Show rendered output. Set `false` to skip compilation.               |
+| `classes`    | string          | (none)    | Space-separated CSS classes on the output image (e.g., `r-stretch`). |
+
+Any unknown option with a string value is forwarded as an HTML attribute on the output image element (e.g., `//| style: "max-height: 300px;"`).
+Values that look like booleans (`true`/`false`) must be quoted to be forwarded (e.g., `//| data-lazy: "true"`).
 
 ### Per-Block Cross-Referencing Options
 
