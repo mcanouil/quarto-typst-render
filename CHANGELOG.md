@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### New Features
+
+- feat: adopt Quarto "/" path convention for project-root-relative file paths (#13).
+
 ### Refactoring
 
 - refactor: use `quarto.format.*` API for output format detection (#4).
