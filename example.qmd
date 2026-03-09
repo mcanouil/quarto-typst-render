@@ -323,6 +323,22 @@ The `output-location` option controls where rendered output appears in Reveal.js
 
 :::
 
+## Input Variables
+
+::: {.content-hidden when-format="typst"}
+
+Pass key-value pairs to Typst code via `sys.inputs`.
+Global inputs are set in YAML; per-block inputs override them using comma-separated syntax.
+
+```{typst}
+//| echo: fenced
+//| input: greeting=Hello,subject=World
+#set text(size: 16pt)
+#sys.inputs.at("greeting"), #sys.inputs.at("subject")!
+```
+
+:::
+
 ## External File Rendering
 
 Render an external `.typ` file instead of inline code:
@@ -475,6 +491,9 @@ extensions:
 | `background`      | string          | `"none"`  | Page fill for image compilation; block `fill` in Typst output.                    |
 | `preamble`        | string          | `""`      | Typst code or path to a `.typ` file prepended before user code.                   |
 | `cache`           | boolean         | `true`    | Cache compiled images.                                                            |
+| `root`            | string          | (auto)    | Root directory for Typst compilation (defaults to project directory).              |
+| `font-path`       | string          | (none)    | Path to a directory containing additional fonts.                                  |
+| `input`           | object          | (none)    | Key-value pairs passed as `--input` flags to Typst CLI.                           |
 | `file`            | string          | (none)    | Path to external `.typ` file to render.                                           |
 | `echo`            | boolean\|string | `false`   | Show Typst source code alongside output (`true`, `false`, `fenced`).              |
 | `eval`            | boolean         | `true`    | Compile Typst code to image.                                                      |
