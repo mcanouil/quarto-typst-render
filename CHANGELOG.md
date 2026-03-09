@@ -4,6 +4,7 @@
 
 ### New Features
 
+- feat: add `output-location` support for Reveal.js presentations (fragment, slide, column, column-fragment).
 - feat: adopt Quarto "/" path convention for project-root-relative file paths (#13).
 
 ### Refactoring
