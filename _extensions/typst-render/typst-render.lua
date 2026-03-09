@@ -70,9 +70,9 @@ local function resolve_typst_bin()
   end
   typst_checked = true
 
-  local ok, paths = pcall(function() return quarto.paths.typst() end)
-  if ok and paths and paths ~= '' then
-    typst_bin = paths
+  local path = quarto.paths.typst()
+  if path and path ~= '' then
+    typst_bin = path
     return typst_bin
   end
 
