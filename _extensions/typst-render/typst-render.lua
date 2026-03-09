@@ -83,11 +83,11 @@ end
 --- Determine the best image format for the current output.
 --- @return string Image format: "svg", "pdf", or "png"
 local function get_image_format_for_output()
-  if quarto.doc.is_format('html:js') then
+  if quarto.format.is_html_output() then
     return 'svg'
-  elseif quarto.doc.is_format('latex') then
+  elseif quarto.format.is_latex_output() then
     return 'pdf'
-  elseif quarto.doc.is_format('docx') or quarto.doc.is_format('pptx') then
+  elseif quarto.format.is_docx_output() or quarto.format.is_powerpoint_output() then
     return 'png'
   else
     return 'png'
@@ -580,7 +580,7 @@ local function process_codeblock(el)
   end
 
   -- Native Typst output: pass through as scoped RawBlock, wrapped in crossref if needed
-  if quarto.doc.is_format('typst') then
+  if quarto.format.is_typst_output() then
     local preamble = resolve_preamble(opts.preamble)
     local parts = {}
     if preamble then
@@ -616,7 +616,7 @@ local function process_codeblock(el)
   end
 
   -- Warn about PDF in HTML
-  if img_format == 'pdf' and quarto.doc.is_format('html:js') then
+  if img_format == 'pdf' and quarto.format.is_html_output() then
     utils.log_warning(
       EXTENSION_NAME,
       'PDF images are not supported in HTML output. Falling back to PNG.'
