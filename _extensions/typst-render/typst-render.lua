@@ -164,7 +164,7 @@ local function resolve_preamble(value)
     if quarto.project and quarto.project.directory then
       local abs_check = io.open(file_path, 'r')
       if not abs_check then
-        file_path = quarto.project.directory .. '/' .. file_path
+        file_path = pandoc.path.join({ quarto.project.directory, file_path })
       else
         abs_check:close()
       end
@@ -238,7 +238,7 @@ local function ensure_cache_dir()
   local rel_path = CACHE_SUBDIR
   local abs_path = CACHE_SUBDIR
   if quarto.project and quarto.project.directory then
-    abs_path = quarto.project.directory .. '/' .. CACHE_SUBDIR
+    abs_path = pandoc.path.join({ quarto.project.directory, CACHE_SUBDIR })
   end
   pandoc.system.make_directory(abs_path, true)
   return abs_path, rel_path
@@ -259,8 +259,8 @@ local function compile_typst(source, opts, img_format)
   local use_cache = opts.cache ~= false
   local stem = compute_cache_stem(source, img_format, dpi, opts.label)
   local abs_cache, rel_cache = ensure_cache_dir()
-  local abs_output = abs_cache .. '/' .. stem .. '.' .. img_format
-  local rel_output = rel_cache .. '/' .. stem .. '.' .. img_format
+  local abs_output = pandoc.path.join({ abs_cache, stem .. '.' .. img_format })
+  local rel_output = pandoc.path.join({ rel_cache, stem .. '.' .. img_format })
 
   if use_cache then
     local f = io.open(abs_output, 'r')
@@ -270,7 +270,7 @@ local function compile_typst(source, opts, img_format)
     end
   end
 
-  local abs_input = abs_cache .. '/' .. stem .. '.typ'
+  local abs_input = pandoc.path.join({ abs_cache, stem .. '.typ' })
   local f = io.open(abs_input, 'w')
   if not f then
     utils.log_error(EXTENSION_NAME, 'Could not write temporary Typst file: ' .. abs_input)
@@ -295,7 +295,7 @@ local function compile_typst(source, opts, img_format)
   -- Check if the expected output exists; if not, try the page-numbered variant
   local out_f = io.open(abs_output, 'r')
   if not out_f then
-    local page_path = abs_cache .. '/' .. stem .. '1.' .. img_format
+    local page_path = pandoc.path.join({ abs_cache, stem .. '1.' .. img_format })
     local page_f = io.open(page_path, 'r')
     if page_f then
       page_f:close()
@@ -421,7 +421,7 @@ local function read_external_file(file_opt)
   if quarto.project and quarto.project.directory then
     local abs_check = io.open(file_path, 'r')
     if not abs_check then
-      file_path = quarto.project.directory .. '/' .. file_path
+      file_path = pandoc.path.join({ quarto.project.directory, file_path })
     else
       abs_check:close()
     end
