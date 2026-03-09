@@ -14,6 +14,8 @@ local EXTENSION_NAME = 'typst-render'
 
 --- Load modules
 local utils = require(quarto.utils.resolve_path('_modules/utils.lua'):gsub('%.lua$', ''))
+local code_cell = require(quarto.utils.resolve_path('_modules/code-cell.lua'):gsub('%.lua$', ''))
+local cell = code_cell.new({ language = 'typst', comment_prefix = '//|' })
 
 -- ============================================================================
 -- CONSTANTS
@@ -21,14 +23,6 @@ local utils = require(quarto.utils.resolve_path('_modules/utils.lua'):gsub('%.lu
 
 --- Valid image format set for O(1) lookup
 local VALID_FORMAT_SET = { png = true, svg = true, pdf = true }
-
---- Valid output-location values for Reveal.js presentations
-local VALID_OUTPUT_LOCATION_SET = {
-  fragment = true,
-  slide = true,
-  column = true,
-  ['column-fragment'] = true,
-}
 
 --- Default option values
 local DEFAULTS = {
@@ -43,6 +37,8 @@ local DEFAULTS = {
   file = nil,
   echo = false,
   eval = true,
+  include = true,
+  output = true,
   ['output-location'] = nil,
   label = nil,
 }
@@ -114,62 +110,6 @@ local function get_image_format_for_output()
   end
 end
 
---- Parse comment+pipe options from Typst code block text.
---- comment+pipe lines use `//| key: value` syntax.
---- @param text string The raw code block text
---- @return table Options table
---- @return string Cleaned code with comment+pipe lines removed
---- @return table Raw comment+pipe lines for fenced echo output
-local function parse_block_options(text)
-  local opts = {}
-  local code_lines = {}
-  local option_lines = {}
-  local in_commentpipe = true
-
-  for line in text:gmatch('[^\r\n]*') do
-    if in_commentpipe then
-      local key, value = line:match('^%s*//|%s*([%w%-]+):%s*(.+)%s*$')
-      if key then
-        value = utils.trim(value)
-        if value == 'true' then
-          opts[key] = true
-        elseif value == 'false' then
-          opts[key] = false
-        else
-          -- Strip surrounding quotes from string values
-          local unquoted = value:match('^"(.*)"$') or value:match("^'(.*)'$")
-          opts[key] = unquoted or value
-        end
-        option_lines[#option_lines + 1] = line
-      else
-        in_commentpipe = false
-        code_lines[#code_lines + 1] = line
-      end
-    else
-      code_lines[#code_lines + 1] = line
-    end
-  end
-
-  return opts, table.concat(code_lines, '\n'), option_lines
-end
-
---- Merge options with priority: block comment+pipe > global YAML > defaults.
---- @param block_opts table Per-block comment+pipe options
---- @return table Merged options
-local function merge_options(block_opts)
-  local merged = {}
-  for k, v in pairs(DEFAULTS) do
-    merged[k] = v
-  end
-  for k, v in pairs(global_config) do
-    merged[k] = v
-  end
-  for k, v in pairs(block_opts) do
-    merged[k] = v
-  end
-  return merged
-end
-
 --- Resolve a preamble value to Typst code.
 --- If the value ends with `.typ`, it is treated as a file path and its contents
 --- are read; otherwise the value is used as inline Typst code.
@@ -236,7 +176,7 @@ end
 --- @return string File stem (without extension)
 local function compute_cache_stem(source, fmt, dpi, label)
   local hash = pandoc.utils.sha1(source .. '|' .. fmt .. '|' .. dpi):sub(1, 8)
-  if label and label ~= '' then
+  if type(label) == 'string' and label ~= '' then
     return 'typst-' .. label .. '-' .. hash
   end
   block_counter = block_counter + 1
@@ -335,84 +275,13 @@ local REF_TYPE_NAMES = {
   lst = 'Listing',
 }
 
---- Extract the cross-reference type prefix from a label (e.g., "fig" from "fig-foo").
---- @param label string The label string
---- @return string|nil The prefix, or nil if no valid ref type
-local function ref_type(label)
-  return label:match('^(%a+)%-')
-end
-
---- Resolve the caption text for a labelled block.
---- Looks for `<prefix>-cap` first (e.g., `fig-cap`, `tbl-cap`), then falls back
---- to a generic `cap` key.
---- @param opts table Merged options
---- @param prefix string|nil The cross-reference type prefix
---- @return string Caption text (may be empty)
-local function resolve_caption(opts, prefix)
-  if prefix and opts[prefix .. '-cap'] then
-    return opts[prefix .. '-cap']
-  end
-  if opts['cap'] then
-    return opts['cap']
-  end
-  return ''
-end
-
---- Resolve the alt text for a labelled block.
---- Looks for `<prefix>-alt` first, then falls back to generic `alt`, then to
---- the provided fallback (typically the caption).
---- @param opts table Merged options
---- @param prefix string|nil The cross-reference type prefix
---- @param fallback string Fallback text if no alt is found
---- @return string Alt text
-local function resolve_alt(opts, prefix, fallback)
-  if prefix and opts[prefix .. '-alt'] then
-    return opts[prefix .. '-alt']
-  end
-  if opts['alt'] then
-    return opts['alt']
-  end
-  return fallback
-end
-
---- Wrap a content block in a quarto.FloatRefTarget if a cross-ref label is present.
---- Supports any Quarto cross-reference type (fig-, tbl-, lst-, etc.).
---- @param content pandoc.Block The content block (Para with image, RawBlock, etc.)
---- @param opts table Merged options
---- @return pandoc.Block FloatRefTarget or the original content block
-local function wrap_crossref(content, opts)
-  local label = opts.label or ''
-  local prefix = ref_type(label)
-
-  if prefix == nil then
-    return content
-  end
-
-  local caption_text = resolve_caption(opts, prefix)
-  local caption_inlines = {}
-  if caption_text ~= '' then
-    caption_inlines = quarto.utils.string_to_inlines(caption_text)
-  end
-
-  local ref_type_name = REF_TYPE_NAMES[prefix] or (prefix:sub(1, 1):upper() .. prefix:sub(2))
-
-  return quarto.FloatRefTarget({
-    identifier = label,
-    type = ref_type_name,
-    content = pandoc.Blocks({ content }),
-    caption_long = pandoc.Blocks({ pandoc.Plain(caption_inlines) }),
-  })
-end
-
 --- Create a Pandoc Image element from a compiled image.
 --- @param img_path string Path to the image file
 --- @param opts table Merged options
 --- @return pandoc.Para Para containing the image
 local function create_image_element(img_path, opts)
-  local label = opts.label or ''
-  local prefix = ref_type(label)
-  local caption_text = resolve_caption(opts, prefix)
-  local alt_text = resolve_alt(opts, prefix, caption_text)
+  local caption_text = cell.resolve_caption(opts)
+  local alt_text = cell.resolve_alt(opts, caption_text)
 
   local img = pandoc.Image(
     { pandoc.Str(alt_text) },
@@ -437,91 +306,6 @@ local function read_external_file(file_opt)
   end
   utils.log_error(EXTENSION_NAME, 'Could not read file: ' .. file_opt)
   return nil
-end
-
---- Check if a CodeBlock is a {typst} block.
---- Handles both `typst` (standard Pandoc class) and `{typst}` (Quarto markdown engine literal).
---- @param el pandoc.CodeBlock
---- @return boolean
-local function is_typst_block(el)
-  return el.classes:includes('typst') or el.classes:includes('{typst}')
-end
-
---- Create a source code listing block.
---- When fenced is true, wraps the code with ` ```{typst} ` markers and
---- comment+pipe options to mimic Quarto's `echo: fenced` presentation.
---- @param code string The Typst source code
---- @param fenced boolean Whether to show fenced code block markers
---- @param option_lines table|nil Raw comment+pipe lines to include in fenced output
---- @return pandoc.CodeBlock A code block for syntax highlighting
-local function create_echo_block(code, fenced, option_lines)
-  if fenced then
-    local lines = { '```{typst}' }
-    if option_lines then
-      for _, line in ipairs(option_lines) do
-        if not line:match('^%s*//|%s*echo:%s*') then
-          lines[#lines + 1] = line
-        end
-      end
-    end
-    lines[#lines + 1] = code
-    lines[#lines + 1] = '```'
-    return pandoc.CodeBlock(table.concat(lines, '\n'), pandoc.Attr('', { 'markdown' }, {}))
-  end
-  return pandoc.CodeBlock(code, pandoc.Attr('', { 'typst' }, {}))
-end
-
---- Resolve and validate the output-location option.
---- Returns the location string only when rendering to Reveal.js.
---- @param opts table Merged options
---- @return string|nil Valid location string, or nil
-local function resolve_output_location(opts)
-  local loc = opts['output-location']
-  if not loc or loc == '' then
-    return nil
-  end
-  if not quarto.doc.is_format('revealjs') then
-    return nil
-  end
-  if not VALID_OUTPUT_LOCATION_SET[loc] then
-    utils.log_warning(
-      EXTENSION_NAME,
-      'Invalid output-location value: "' .. loc .. '". '
-        .. 'Valid values: fragment, slide, column, column-fragment.'
-    )
-    return nil
-  end
-  return loc
-end
-
---- Apply output-location wrapping for Reveal.js presentations.
---- @param echo_block pandoc.CodeBlock|nil Echo block (nil when echo is off)
---- @param result pandoc.Block The compiled output block
---- @param location string The validated output-location value
---- @return pandoc.Blocks Wrapped output blocks
-local function apply_output_location(echo_block, result, location)
-  if location == 'column' or location == 'column-fragment' then
-    if not echo_block then
-      return pandoc.Blocks({ result })
-    end
-    local output_classes = location == 'column-fragment'
-      and { 'column', 'fragment' }
-      or { 'column' }
-    local code_col = pandoc.Div(pandoc.Blocks({ echo_block }), pandoc.Attr('', { 'column' }, {}))
-    local output_col = pandoc.Div(pandoc.Blocks({ result }), pandoc.Attr('', output_classes, {}))
-    local wrapper = pandoc.Div(
-      pandoc.Blocks({ code_col, output_col }),
-      pandoc.Attr('', { 'columns', 'column-output-location' }, {})
-    )
-    return pandoc.Blocks({ wrapper })
-  end
-
-  local wrapper_class = location == 'slide' and 'output-location-slide' or 'fragment'
-  local wrapped = pandoc.Div(pandoc.Blocks({ result }), pandoc.Attr('', { wrapper_class }, {}))
-  if echo_block then
-    return pandoc.Blocks({ echo_block, wrapped })
-  end
-  return pandoc.Blocks({ wrapped })
 end
 
 -- ============================================================================
@@ -569,7 +353,7 @@ local function get_configuration(meta)
     -- so we use a separate key list to ensure 'format' etc. are not missed.
     local config_keys = {
       'format', 'dpi', 'width', 'height', 'margin', 'background',
-      'preamble', 'cache', 'echo', 'eval', 'output-location',
+      'preamble', 'cache', 'echo', 'eval', 'include', 'output', 'output-location',
     }
     for _, k in ipairs(config_keys) do
       local default_val = DEFAULTS[k]
@@ -607,16 +391,21 @@ end
 --- @param el pandoc.CodeBlock
 --- @return pandoc.Block|pandoc.Blocks|nil
 local function process_codeblock(el)
-  if not is_typst_block(el) then
+  if not cell.is_code_block(el) then
     return nil
   end
 
-  local block_opts, clean_code, option_lines = parse_block_options(el.text)
-  local opts = merge_options(block_opts)
+  local block_opts, clean_code, option_lines = cell.parse_options(el.text)
+  local opts = cell.merge_options(block_opts, global_config, DEFAULTS)
+
+  if not cell.should_include(opts) then
+    return pandoc.Null()
+  end
 
   local do_eval = opts.eval ~= false
   local do_echo = opts.echo == true or opts.echo == 'fenced'
   local is_fenced = opts.echo == 'fenced'
+  local output_mode = cell.resolve_output_mode(opts)
 
   -- Handle eval/echo matrix: both false means hidden block
   if not do_eval and not do_echo then
@@ -632,7 +421,15 @@ local function process_codeblock(el)
 
   -- Echo-only: show source listing without compilation
   if not do_eval then
-    return create_echo_block(code, is_fenced, option_lines)
+    return cell.create_echo_block(code, is_fenced, option_lines)
+  end
+
+  -- Output suppressed: skip compilation, show echo block only
+  if output_mode == 'false' then
+    if do_echo then
+      return cell.create_echo_block(code, is_fenced, option_lines)
+    end
+    return pandoc.Null()
   end
 
   -- Native Typst output: pass through as scoped RawBlock, wrapped in crossref if needed
@@ -657,9 +454,9 @@ local function process_codeblock(el)
     else
       scoped_code = '#[\n' .. inner .. '\n]'
     end
-    local result = wrap_crossref(pandoc.RawBlock('typst', scoped_code), opts)
+    local result = cell.wrap_crossref(pandoc.RawBlock('typst', scoped_code), opts, REF_TYPE_NAMES)
     if do_echo then
-      local echo_block = create_echo_block(code, is_fenced, option_lines)
+      local echo_block = cell.create_echo_block(code, is_fenced, option_lines)
       return pandoc.Blocks({ echo_block, result })
     end
     return result
@@ -689,16 +486,16 @@ local function process_codeblock(el)
     return el
   end
 
-  local result = wrap_crossref(create_image_element(img_path, opts), opts)
+  local result = cell.wrap_crossref(create_image_element(img_path, opts), opts, REF_TYPE_NAMES)
 
-  local output_location = resolve_output_location(opts)
+  local output_location = cell.resolve_output_location(opts, EXTENSION_NAME)
   if output_location then
-    local echo_block = do_echo and create_echo_block(code, is_fenced, option_lines) or nil
-    return apply_output_location(echo_block, result, output_location)
+    local echo_block = do_echo and cell.create_echo_block(code, is_fenced, option_lines) or nil
+    return cell.apply_output_location(echo_block, result, output_location)
   end
 
   if do_echo then
-    local echo_block = create_echo_block(code, is_fenced, option_lines)
+    local echo_block = cell.create_echo_block(code, is_fenced, option_lines)
     return pandoc.Blocks({ echo_block, result })
   end
 

@@ -6,9 +6,12 @@
 
 - feat: add `output-location` support for Reveal.js presentations (fragment, slide, column, column-fragment).
 - feat: adopt Quarto "/" path convention for project-root-relative file paths (#13).
+- feat: add `include` and `output` options to control block visibility and compilation.
+- feat: add prefix-aware option resolution (`cap`, `alt`, `align`) to `code-cell` module.
 
 ### Refactoring
 
+- refactor: move cross-referencing logic (`ref_type`, `resolve_caption`, `resolve_alt`, `wrap_crossref`) to `code-cell` module.
 - refactor: use `quarto.format.*` API for output format detection (#4).
 - refactor: use `pandoc.path.join()` for path construction (#5).
 - refactor: use `quarto.utils.string_to_inlines()` for caption parsing (#6).
