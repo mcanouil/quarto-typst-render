@@ -114,16 +114,6 @@ local function get_image_format_for_output()
   end
 end
 
---- Check whether the current output format is Reveal.js.
---- Falls back to the Pandoc FORMAT global for older Quarto versions.
---- @return boolean
-local function is_revealjs_output()
-  if quarto.format.is_revealjs_output then
-    return quarto.format.is_revealjs_output()
-  end
-  return FORMAT == 'revealjs'
-end
-
 --- Parse comment+pipe options from Typst code block text.
 --- comment+pipe lines use `//| key: value` syntax.
 --- @param text string The raw code block text
@@ -490,7 +480,7 @@ local function resolve_output_location(opts)
   if not loc or loc == '' then
     return nil
   end
-  if not is_revealjs_output() then
+  if not quarto.doc.is_format('revealjs') then
     return nil
   end
   if not VALID_OUTPUT_LOCATION_SET[loc] then
