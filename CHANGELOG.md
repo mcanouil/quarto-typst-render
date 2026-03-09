@@ -10,6 +10,7 @@
 - refactor: simplify `resolve_typst_bin()` by removing `pcall` wrapper (#7).
 - refactor: inline format validation and remove `validation` module dependency (#8).
 - refactor: use `pandoc.utils.stringify` directly (#9).
+- refactor: remove unused `validation` module (#11).
 
 ## 0.2.0 (2026-03-08)
 
