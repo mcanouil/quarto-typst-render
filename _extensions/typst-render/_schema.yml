@@ -49,6 +49,18 @@ options:
     type: boolean
     default: true
     description: "Compile Typst code to image."
+  include:
+    type: boolean
+    default: true
+    description: "Include block in output. Set false to suppress entirely."
+  output:
+    type: boolean
+    default: true
+    description: "Show rendered output. Use false to skip compilation and suppress image."
+  output-location:
+    type: string
+    enum: [fragment, slide, column, column-fragment]
+    description: "Output placement in Reveal.js presentations. Ignored for other formats."
 
 # Per-block comment+pipe attributes (//| key: value).
 # These are parsed from the code block text, not from element attributes.
@@ -95,6 +107,16 @@ attributes:
     eval:
       type: boolean
       description: "Compile this block to image."
+    include:
+      type: boolean
+      description: "Include this block in output. Set false to suppress entirely."
+    output:
+      type: boolean
+      description: "Show rendered output for this block. Use false to skip compilation."
+    output-location:
+      type: string
+      enum: [fragment, slide, column, column-fragment]
+      description: "Output placement in Reveal.js presentations. Ignored for other formats."
     label:
       type: string
       description: "Cross-reference label (e.g., 'fig-my-diagram', 'tbl-results')."
