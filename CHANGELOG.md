@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.3.0 (2026-03-09)
+
 ### New Features
 
 - feat: add `output-location` support for Reveal.js presentations (fragment, slide, column, column-fragment).
