@@ -41,6 +41,7 @@ format:
     output-file: example-revealjs
     shift-heading-level-by: -1
     embed-resources: true
+    smaller: true
   beamer:
     output-file: example-beamer
     aspectratio: 169
@@ -255,6 +256,73 @@ With `eval: true` (the default), the block is compiled:
 Setting `eval: false` and `echo: false` hides the block entirely.
 Nothing is rendered.
 
+### Include: Suppress All Output
+
+Setting `include: false` suppresses all output (both source and rendered image).
+The block is completely hidden from the document, regardless of other options.
+
+```{typst}
+//| include: false
+#set text(size: 14pt)
+This block is hidden entirely by include: false.
+```
+
+### Output: Suppress Rendered Output
+
+Setting `output: false` skips compilation and suppresses the rendered image.
+When combined with `echo: true`, only the source code is shown.
+
+```{typst}
+//| echo: true
+//| output: false
+#set text(size: 14pt)
+This source is visible, but the rendered image is suppressed.
+```
+
+## Output Location (Reveal.js)
+
+:::: {.content-visible when-format="revealjs"}
+
+The `output-location` option controls where rendered output appears in Reveal.js presentations.
+
+### Fragment
+
+```{typst}
+//| echo: true
+//| output-location: fragment
+#set text(size: 14pt)
+#align(center)[Output appears as a *fragment* after the source.]
+```
+
+### Slide
+
+```{typst}
+//| echo: true
+//| output-location: slide
+#set text(size: 14pt)
+#align(center)[Output appears on the *next slide*.]
+```
+
+### Column
+
+```{typst}
+//| echo: true
+//| output-location: column
+#set text(size: 14pt)
+#align(center)[Output appears in a *side-by-side column*.]
+```
+
+### Column Fragment
+
+```{typst}
+//| echo: true
+//| output-location: column-fragment
+#set text(size: 14pt)
+#align(center)[Output appears in a *column*, revealed as a fragment.]
+```
+
+:::
+
 ## External File Rendering
 
 Render an external `.typ` file instead of inline code:
@@ -287,6 +355,100 @@ extensions:
     preamble: "preamble.typ"
 ```
 
+## Social Card
+
+:::: {.content-hidden when-format="typst"}
+
+A repository social card built entirely in Typst, rendered as a high-resolution PNG.
+
+```{typst}
+//| echo: fenced
+//| label: fig-social-card
+//| cap: "Social card for quarto-typst-render."
+//| format: png
+//| dpi: 288
+//| width: 1280pt
+//| height: 640pt
+//| margin: 0pt
+
+#let gradient-bg = gradient.linear(
+  rgb("#1a1a2e"),
+  rgb("#16213e"),
+  rgb("#0f3460"),
+  angle: 135deg,
+)
+
+#let accent = rgb("#e94560")
+#let text-primary = rgb("#eaeaea")
+#let text-secondary = rgb("#a0a0b0")
+#let surface = rgb("#1a1a2e").lighten(10%)
+
+#set page(fill: gradient-bg)
+#set text(font: "Inter", fill: text-primary)
+
+#place(
+  top + left,
+  dx: -40pt,
+  dy: -40pt,
+  circle(radius: 200pt, fill: accent.transparentize(92%)),
+)
+#place(
+  bottom + right,
+  dx: 80pt,
+  dy: 80pt,
+  circle(radius: 300pt, fill: rgb("#0f3460").transparentize(60%)),
+)
+
+#align(horizon)[
+  #pad(x: 72pt)[
+    #grid(
+      columns: (1fr, auto),
+      column-gutter: 48pt,
+      align: (left + horizon, right + horizon),
+      [
+        #block(
+          fill: accent,
+          radius: 6pt,
+          inset: (x: 14pt, y: 8pt),
+        )[
+          #text(
+            size: 14pt,
+            weight: "bold",
+            tracking: 1.5pt,
+            fill: white,
+          )[QUARTO EXTENSION]
+        ]
+
+        #v(20pt)
+
+        #text(size: 48pt, weight: "bold", tracking: -0.5pt)[
+          typst-render
+        ]
+
+        #v(12pt)
+
+        #text(size: 20pt, fill: text-secondary, weight: "regular")[
+          Compile Typst code blocks to images#linebreak()
+          for any Quarto output format.
+        ]
+
+        #v(28pt)
+
+        #text(size: 16pt, fill: text-secondary)[
+          #text(fill: accent, weight: "bold")[mcanouil]
+          #h(4pt)
+          #text(fill: text-secondary.transparentize(50%))[/]
+          #h(4pt)
+          quarto-typst-render
+        ]
+      ],
+    )
+  ]
+]
+```
+
+:::
+
 ## Global Configuration
 
 Configure the filter globally in your document YAML.
@@ -316,6 +478,8 @@ extensions:
 | `file`       | string          | (none)    | Path to external `.typ` file to render.                              |
 | `echo`       | boolean\|string | `false`   | Show Typst source code alongside output (`true`, `false`, `fenced`). |
 | `eval`       | boolean         | `true`    | Compile Typst code to image.                                         |
+| `include`    | boolean         | `true`    | Include block in output. Set `false` to suppress entirely.           |
+| `output`     | boolean         | `true`    | Show rendered output. Set `false` to skip compilation.               |
 
 ### Per-Block Cross-Referencing Options
 
@@ -347,3 +511,8 @@ extensions:
 | `false` | `true`   | Source code listing only.                        |
 | `false` | `fenced` | Fenced source code listing only (with markers).  |
 | `false` | `false`  | Nothing rendered (hidden block).                 |
+
+The `include` and `output` options take precedence over the eval/echo matrix:
+
+- `include: false` hides the entire block regardless of eval/echo settings.
+- `output: false` skips compilation and shows only the source code (if echo is enabled).
