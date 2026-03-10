@@ -35,8 +35,6 @@ local DEFAULTS = {
   preamble = '',
   cache = true,
   file = nil,
-  root = nil,
-  ['font-path'] = nil,
   input = nil,
   echo = false,
   eval = true,
@@ -48,7 +46,10 @@ local DEFAULTS = {
 }
 
 --- Keys consumed by the filter; any other option is forwarded as an HTML attribute.
-local KNOWN_KEYS = { cap = true, alt = true, _block_input = true }
+local KNOWN_KEYS = {
+  cap = true, alt = true, _block_input = true,
+  root = true, ['font-path'] = true, ['package-path'] = true,
+}
 for k in pairs(DEFAULTS) do
   KNOWN_KEYS[k] = true
 end
@@ -93,7 +94,7 @@ local block_counter = 0
 --- @param path string The file path to resolve
 --- @return string Resolved file path
 local function resolve_file_path(path)
-  if path:sub(1, 1) == '/' and quarto.project and quarto.project.directory then
+  if path:sub(1, 1) == '/' then
     return pandoc.path.join({ quarto.project.directory, path:sub(2) })
   end
   return path
@@ -260,13 +261,9 @@ end
 --- @return string Absolute path to the cache directory
 --- @return string Relative path to the cache directory (for image references)
 local function ensure_cache_dir()
-  local rel_path = CACHE_SUBDIR
-  local abs_path = CACHE_SUBDIR
-  if quarto.project and quarto.project.directory then
-    abs_path = pandoc.path.join({ quarto.project.directory, CACHE_SUBDIR })
-  end
+  local abs_path = pandoc.path.join({ quarto.project.directory, CACHE_SUBDIR })
   pandoc.system.make_directory(abs_path, true)
-  return abs_path, rel_path
+  return abs_path, CACHE_SUBDIR
 end
 
 --- Compile Typst source to an image file.
@@ -307,23 +304,29 @@ local function compile_typst(source, opts, img_format)
     end
   end
 
-  -- Resolve --root: explicit option, project directory, or working directory
+  -- Resolve --root: global config or Quarto project directory
   local resolved_root
-  if opts.root then
-    resolved_root = resolve_file_path(opts.root)
-  elseif quarto.project and quarto.project.directory then
-    resolved_root = quarto.project.directory
+  if global_config.root then
+    resolved_root = resolve_file_path(global_config.root)
   else
-    resolved_root = pandoc.system.get_working_directory()
+    resolved_root = quarto.project.directory
   end
 
   local args = { 'compile', '--format', img_format, '--ppi', dpi, '--root', resolved_root }
 
-  -- Add --font-path if specified
-  if opts['font-path'] then
-    local resolved_font_path = resolve_file_path(opts['font-path'])
-    args[#args + 1] = '--font-path'
-    args[#args + 1] = resolved_font_path
+  -- Add --font-path flags (global-only; always a list after get_configuration)
+  local font_paths = global_config['font-path']
+  if font_paths then
+    for _, p in ipairs(font_paths) do
+      args[#args + 1] = '--font-path'
+      args[#args + 1] = resolve_file_path(p)
+    end
+  end
+
+  -- Add --package-path if specified (global-only)
+  if global_config['package-path'] then
+    args[#args + 1] = '--package-path'
+    args[#args + 1] = resolve_file_path(global_config['package-path'])
   end
 
   -- Add --input flags for each input variable
@@ -475,7 +478,7 @@ local function get_configuration(meta)
     local config_keys = {
       'format', 'dpi', 'width', 'height', 'margin', 'background',
       'preamble', 'cache', 'echo', 'eval', 'include', 'output', 'output-location', 'classes',
-      'root', 'font-path',
+      'root', 'package-path',
     }
     for _, k in ipairs(config_keys) do
       local default_val = DEFAULTS[k]
@@ -502,6 +505,21 @@ local function get_configuration(meta)
         else
           global_config[k] = pandoc.utils.stringify(val)
         end
+      end
+    end
+
+    -- Handle 'font-path' separately: accept a string or list of strings
+    if ext_config['font-path'] ~= nil then
+      local raw = ext_config['font-path']
+      local raw_type = pandoc.utils.type(raw)
+      if raw_type == 'List' then
+        local paths = {}
+        for _, v in ipairs(raw) do
+          paths[#paths + 1] = pandoc.utils.stringify(v)
+        end
+        global_config['font-path'] = paths
+      else
+        global_config['font-path'] = { pandoc.utils.stringify(raw) }
       end
     end
 
