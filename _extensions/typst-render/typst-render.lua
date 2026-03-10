@@ -665,8 +665,20 @@ local function process_codeblock(el)
   local img_path = compile_typst(full_source, opts, img_format)
 
   if not img_path then
-    utils.log_warning(EXTENSION_NAME, 'Compilation failed; returning original code block.')
-    return el
+    utils.log_warning(EXTENSION_NAME, 'Compilation failed; returning error block.')
+    local error_block = pandoc.Div(
+      pandoc.Blocks({
+        pandoc.Para({
+          pandoc.Strong({ pandoc.Str('[typst-render] Compilation failed for this block.') }),
+        }),
+      }),
+      pandoc.Attr('', { 'typst-render-error' }, {})
+    )
+    if do_echo then
+      local echo_block = cell.create_echo_block(code, is_fenced, option_lines)
+      return pandoc.Blocks({ echo_block, error_block })
+    end
+    return error_block
   end
 
   local result = cell.wrap_crossref(create_image_element(img_path, opts), opts, REF_TYPE_NAMES)
