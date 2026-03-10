@@ -94,7 +94,7 @@ local block_counter = 0
 --- @param path string The file path to resolve
 --- @return string Resolved file path
 local function resolve_file_path(path)
-  if path:sub(1, 1) == '/' and quarto.project and quarto.project.directory then
+  if path:sub(1, 1) == '/' then
     return pandoc.path.join({ quarto.project.directory, path:sub(2) })
   end
   return path
@@ -261,13 +261,9 @@ end
 --- @return string Absolute path to the cache directory
 --- @return string Relative path to the cache directory (for image references)
 local function ensure_cache_dir()
-  local rel_path = CACHE_SUBDIR
-  local abs_path = CACHE_SUBDIR
-  if quarto.project and quarto.project.directory then
-    abs_path = pandoc.path.join({ quarto.project.directory, CACHE_SUBDIR })
-  end
+  local abs_path = pandoc.path.join({ quarto.project.directory, CACHE_SUBDIR })
   pandoc.system.make_directory(abs_path, true)
-  return abs_path, rel_path
+  return abs_path, CACHE_SUBDIR
 end
 
 --- Compile Typst source to an image file.
