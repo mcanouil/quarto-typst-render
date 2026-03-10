@@ -107,6 +107,35 @@ Render an external `.typ` file instead of inline code:
 ```
 ````
 
+### Multi-Page Output
+
+When Typst produces multiple pages (e.g., using `#pagebreak()`), all pages are included by default.
+Use `pages` to select specific pages and `layout-ncol` to arrange them in columns.
+
+````markdown
+```{typst}
+//| layout-ncol: 2
+//| width: 8cm
+//| height: 6cm
+#align(center + horizon)[*Page 1*]
+#pagebreak()
+#align(center + horizon)[*Page 2*]
+```
+````
+
+Select specific pages with `pages`:
+
+````markdown
+```{typst}
+//| pages: 1
+//| width: 8cm
+//| height: 6cm
+#align(center + horizon)[*Shown*]
+#pagebreak()
+#align(center + horizon)[*Hidden*]
+```
+````
+
 ### Engine-Generated Blocks
 
 R, Python, or Julia cells with `output: asis` can output ` ```{typst} ` blocks.
@@ -146,6 +175,14 @@ extensions:
       lang: en
 ```
 
+Cache cleanup removes stale files from previous renders:
+
+```yaml
+extensions:
+  typst-render:
+    cache: clean
+```
+
 Per-block input override using comma-separated syntax:
 
 ````markdown
@@ -166,7 +203,7 @@ Per-block input override using comma-separated syntax:
 | `margin`          | string          | `"0.5em"` | Page margin for image compilation; block `inset` in Typst output.                 |
 | `background`      | string          | `"none"`  | Page fill for image compilation; block `fill` in Typst output.                    |
 | `preamble`        | string          | `""`      | Typst code or path to a `.typ` file prepended before user code.                   |
-| `cache`           | boolean         | `true`    | Cache compiled images.                                                            |
+| `cache`           | boolean\|string | `true`    | Cache compiled images. Use `"clean"` to also remove stale cache files.            |
 | `input`           | object          | (none)    | Key-value pairs passed as `--input` flags to Typst CLI.                           |
 | `file`            | string          | (none)    | Path to external `.typ` file to render.                                           |
 | `echo`            | boolean\|string | `false`   | Show Typst source code alongside output (`true`, `false`, `fenced`).              |
@@ -175,6 +212,8 @@ Per-block input override using comma-separated syntax:
 | `output`          | boolean         | `true`    | Show rendered output. Set `false` to skip compilation.                            |
 | `output-location` | string          | (none)    | Output placement in Reveal.js (`fragment`, `slide`, `column`, `column-fragment`). |
 | `classes`         | string          | (none)    | Space-separated CSS classes on the output image (e.g., `r-stretch`).              |
+| `pages`           | string          | `"all"`   | Pages to include: `all`, `1`, `1-3`, `2,5`, `3-`.                                |
+| `layout-ncol`     | string          | (none)    | Number of columns for multi-page layout.                                          |
 
 Any unknown option with a string value is forwarded as an HTML attribute on the output image element (e.g., `//| style: "max-height: 300px;"`).
 Values that look like booleans (`true`/`false`) must be quoted to be forwarded (e.g., `//| data-lazy: "true"`).
