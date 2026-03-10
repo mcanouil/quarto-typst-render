@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.5.0 (2026-03-10)
+
 - feat: add `root` option to set the Typst compilation root directory (`--root`).
 - feat: add `font-path` option to specify additional font directories (`--font-path`).
 - feat: add `input` option to pass key-value pairs to Typst via `--input` (accessible via `sys.inputs`).
