@@ -88,18 +88,6 @@ local block_counter = 0
 -- HELPER FUNCTIONS
 -- ============================================================================
 
---- Resolve a file path following the Quarto convention.
---- Paths starting with "/" are relative to the project root;
---- other paths are relative to the current document directory.
---- @param path string The file path to resolve
---- @return string Resolved file path
-local function resolve_file_path(path)
-  if path:sub(1, 1) == '/' then
-    return pandoc.path.join({ quarto.project.directory, path:sub(2) })
-  end
-  return path
-end
-
 --- Resolve the Typst binary path.
 --- @return string|nil Path to the Typst binary, or nil if not found
 local function resolve_typst_bin()
@@ -142,7 +130,7 @@ local function resolve_preamble(value)
     return nil
   end
   if value:match('%.typ$') then
-    local file_path = resolve_file_path(value)
+    local file_path = utils.resolve_project_path(value)
     local f = io.open(file_path, 'r')
     if f then
       local content = f:read('*a')
@@ -307,7 +295,7 @@ local function compile_typst(source, opts, img_format)
   -- Resolve --root: global config or Quarto project directory
   local resolved_root
   if global_config.root then
-    resolved_root = resolve_file_path(global_config.root)
+    resolved_root = utils.resolve_project_path(global_config.root)
   else
     resolved_root = quarto.project.directory
   end
@@ -319,14 +307,14 @@ local function compile_typst(source, opts, img_format)
   if font_paths then
     for _, p in ipairs(font_paths) do
       args[#args + 1] = '--font-path'
-      args[#args + 1] = resolve_file_path(p)
+      args[#args + 1] = utils.resolve_project_path(p)
     end
   end
 
   -- Add --package-path if specified (global-only)
   if global_config['package-path'] then
     args[#args + 1] = '--package-path'
-    args[#args + 1] = resolve_file_path(global_config['package-path'])
+    args[#args + 1] = utils.resolve_project_path(global_config['package-path'])
   end
 
   -- Add --input flags for each input variable
@@ -421,7 +409,7 @@ end
 --- @param file_opt string Path from the `file` option
 --- @return string|nil File contents, or nil on failure
 local function read_external_file(file_opt)
-  local file_path = resolve_file_path(file_opt)
+  local file_path = utils.resolve_project_path(file_opt)
   local f = io.open(file_path, 'r')
   if f then
     local content = f:read('*a')
