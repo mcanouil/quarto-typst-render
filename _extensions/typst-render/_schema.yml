@@ -87,6 +87,13 @@ options:
   classes:
     type: string
     description: "Space-separated CSS classes applied to the output image element (e.g., 'r-stretch')."
+  pages:
+    type: string
+    default: "all"
+    description: "Pages to include from multi-page output: 'all', '1', '1-3', '2,5', '3-'."
+  layout-ncol:
+    type: string
+    description: "Number of columns for arranging multi-page output. Omit for vertical stack."
 
 # Per-block comment+pipe attributes (//| key: value).
 # These are parsed from the code block text, not from element attributes.
@@ -149,6 +156,12 @@ attributes:
     classes:
       type: string
       description: "Space-separated CSS classes applied to the output image element (e.g., 'r-stretch')."
+    pages:
+      type: string
+      description: "Pages to include from multi-page output: 'all', '1', '1-3', '2,5', '3-'."
+    layout-ncol:
+      type: string
+      description: "Number of columns for arranging multi-page output. Omit for vertical stack."
     label:
       type: string
       description: "Cross-reference label (e.g., 'fig-my-diagram', 'tbl-results')."

@@ -43,6 +43,8 @@ local DEFAULTS = {
   ['output-location'] = nil,
   classes = nil,
   label = nil,
+  pages = 'all',
+  ['layout-ncol'] = nil,
 }
 
 --- Keys consumed by the filter; any other option is forwarded as an HTML attribute.
@@ -212,6 +214,67 @@ local function serialise_inputs(input_map)
   return table.concat(parts, '|')
 end
 
+--- Parse a pages specification string into a sorted, deduplicated list of page numbers.
+--- Supports: "all", single numbers ("3"), ranges ("1-3"), open-ended ranges ("3-"),
+--- and comma-separated combinations ("1,3-5,8").
+--- @param pages_str string Pages specification
+--- @param total_pages number Total number of pages available
+--- @return table List of valid page numbers (sorted, deduplicated)
+local function parse_pages(pages_str, total_pages)
+  if pages_str == 'all' then
+    local result = {}
+    for i = 1, total_pages do
+      result[i] = i
+    end
+    return result
+  end
+
+  local seen = {}
+  local result = {}
+  for part in pages_str:gmatch('[^,]+') do
+    part = part:match('^%s*(.-)%s*$')
+    local lo, hi = part:match('^(%d+)%-(%d+)$')
+    if not lo then
+      local open_lo = part:match('^(%d+)%-$')
+      if open_lo then
+        lo = open_lo
+        hi = tostring(total_pages)
+      else
+        local single = part:match('^(%d+)$')
+        if single then
+          lo = single
+          hi = single
+        end
+      end
+    end
+    if lo then
+      lo = tonumber(lo)
+      hi = tonumber(hi)
+      for i = lo, hi do
+        if i >= 1 and i <= total_pages then
+          if not seen[i] then
+            seen[i] = true
+            result[#result + 1] = i
+          end
+        else
+          utils.log_warning(
+            EXTENSION_NAME,
+            'Page ' .. i .. ' is out of range (1-' .. total_pages .. '); skipping.'
+          )
+        end
+      end
+    else
+      utils.log_warning(
+        EXTENSION_NAME,
+        'Invalid page specification "' .. part .. '"; skipping.'
+      )
+    end
+  end
+
+  table.sort(result)
+  return result
+end
+
 --- Build the `#set page(...)` directive from options (for image compilation).
 --- @param opts table Merged options
 --- @return string Typst page directive
@@ -275,12 +338,37 @@ local function ensure_cache_dir()
   return abs_path, CACHE_SUBDIR
 end
 
---- Compile Typst source to an image file.
+--- Discover page-numbered output files produced by Typst CLI.
+--- Typst generates {stem}1.{ext}, {stem}2.{ext}, ... for PNG/SVG.
+--- @param abs_cache string Absolute path to cache directory
+--- @param rel_cache string Relative path to cache directory
+--- @param stem string File stem (without extension)
+--- @param ext string File extension (e.g., "png", "svg")
+--- @return table List of relative paths to discovered page files
+local function discover_page_files(abs_cache, rel_cache, stem, ext)
+  local pages = {}
+  local i = 1
+  while true do
+    local page_name = stem .. tostring(i) .. '.' .. ext
+    local page_path = pandoc.path.join({ abs_cache, page_name })
+    local f = io.open(page_path, 'r')
+    if not f then
+      break
+    end
+    f:close()
+    used_cache_files[page_name] = true
+    pages[#pages + 1] = pandoc.path.join({ rel_cache, page_name })
+    i = i + 1
+  end
+  return pages
+end
+
+--- Compile Typst source to an image file (or multiple files for multi-page output).
 --- Uses stdin to pass source code, avoiding temporary .typ files.
 --- @param source string Full Typst source code
 --- @param opts table Merged options
 --- @param img_format string Target image format
---- @return string|nil Path to the compiled image, or nil on failure
+--- @return table|nil List of paths to compiled images, or nil on failure
 local function compile_typst(source, opts, img_format)
   local bin = resolve_typst_bin()
   if not bin then
@@ -315,15 +403,33 @@ local function compile_typst(source, opts, img_format)
   local abs_output = pandoc.path.join({ abs_cache, stem .. '.' .. img_format })
   local rel_output = pandoc.path.join({ rel_cache, stem .. '.' .. img_format })
 
-  -- Track this file for cache cleanup
-  used_cache_files[stem .. '.' .. img_format] = true
   used_cache_formats[img_format] = true
 
   if use_cache then
-    local f = io.open(abs_output, 'r')
-    if f then
-      f:close()
-      return rel_output
+    if img_format == 'pdf' then
+      local f = io.open(abs_output, 'r')
+      if f then
+        f:close()
+        used_cache_files[stem .. '.' .. img_format] = true
+        return { rel_output }
+      end
+    else
+      local first_page = pandoc.path.join({ abs_cache, stem .. '1.' .. img_format })
+      local f = io.open(first_page, 'r')
+      if f then
+        f:close()
+        local pages = discover_page_files(abs_cache, rel_cache, stem, img_format)
+        if #pages > 0 then
+          return pages
+        end
+      end
+      -- Fallback: check direct path for single-page output (old cache format)
+      f = io.open(abs_output, 'r')
+      if f then
+        f:close()
+        used_cache_files[stem .. '.' .. img_format] = true
+        return { rel_output }
+      end
     end
   end
 
@@ -376,28 +482,34 @@ local function compile_typst(source, opts, img_format)
     return nil
   end
 
-  -- Typst CLI generates {stem}{page}.{ext} for PNG (e.g., output1.png)
-  -- Check if the expected output exists; if not, try the page-numbered variant
-  local out_f = io.open(abs_output, 'r')
-  if not out_f then
-    local page_path = pandoc.path.join({ abs_cache, stem .. '1.' .. img_format })
-    local page_f = io.open(page_path, 'r')
-    if page_f then
-      page_f:close()
-      local rename_ok, rename_err = os.rename(page_path, abs_output)
-      if not rename_ok then
-        utils.log_error(EXTENSION_NAME, 'Could not rename output file: ' .. tostring(rename_err))
-        return nil
-      end
-    else
-      utils.log_error(EXTENSION_NAME, 'Compiled file not found: ' .. abs_output)
-      return nil
+  -- PDF always produces a single file at the exact output path
+  if img_format == 'pdf' then
+    local f = io.open(abs_output, 'r')
+    if f then
+      f:close()
+      used_cache_files[stem .. '.' .. img_format] = true
+      return { rel_output }
     end
-  else
-    out_f:close()
+    utils.log_error(EXTENSION_NAME, 'Compiled file not found: ' .. abs_output)
+    return nil
   end
 
-  return rel_output
+  -- PNG/SVG: Typst CLI generates {stem}1.{ext}, {stem}2.{ext}, ...
+  local pages = discover_page_files(abs_cache, rel_cache, stem, img_format)
+  if #pages > 0 then
+    return pages
+  end
+
+  -- Fallback: check direct path (single-page, no page number suffix)
+  local f = io.open(abs_output, 'r')
+  if f then
+    f:close()
+    used_cache_files[stem .. '.' .. img_format] = true
+    return { rel_output }
+  end
+
+  utils.log_error(EXTENSION_NAME, 'Compiled file not found: ' .. abs_output)
+  return nil
 end
 
 --- Map from cross-reference prefix to Quarto FloatRefTarget type name.
@@ -442,6 +554,30 @@ local function create_image_element(img_path, opts)
   )
 
   return pandoc.Para({ img })
+end
+
+--- Create a Pandoc element from one or more compiled page images.
+--- Single-page output returns a Para; multi-page output returns a Div
+--- with optional layout-ncol for Quarto's layout processing.
+--- @param page_paths table List of image paths
+--- @param opts table Merged options
+--- @return pandoc.Block Para (single page) or Div (multiple pages)
+local function create_multi_page_element(page_paths, opts)
+  if #page_paths == 1 then
+    return create_image_element(page_paths[1], opts)
+  end
+
+  local blocks = {}
+  for _, path in ipairs(page_paths) do
+    blocks[#blocks + 1] = create_image_element(path, opts)
+  end
+
+  local div_attrs = {}
+  if opts['layout-ncol'] then
+    div_attrs[#div_attrs + 1] = { 'layout-ncol', tostring(opts['layout-ncol']) }
+  end
+
+  return pandoc.Div(blocks, pandoc.Attr('', {}, div_attrs))
 end
 
 --- Read an external `.typ` file, resolving relative to the project directory.
@@ -503,7 +639,7 @@ local function get_configuration(meta)
     local config_keys = {
       'format', 'dpi', 'width', 'height', 'margin', 'background',
       'preamble', 'cache', 'echo', 'eval', 'include', 'output', 'output-location', 'classes',
-      'root', 'package-path',
+      'root', 'package-path', 'pages', 'layout-ncol',
     }
     for _, k in ipairs(config_keys) do
       local default_val = DEFAULTS[k]
@@ -695,9 +831,9 @@ local function process_codeblock(el)
 
   -- Build and compile
   local full_source = build_typst_source(code, opts)
-  local img_path = compile_typst(full_source, opts, img_format)
+  local all_pages = compile_typst(full_source, opts, img_format)
 
-  if not img_path then
+  if not all_pages then
     utils.log_warning(EXTENSION_NAME, 'Compilation failed; returning error block.')
     local error_block = pandoc.Div(
       pandoc.Blocks({
@@ -714,7 +850,28 @@ local function process_codeblock(el)
     return error_block
   end
 
-  local result = cell.wrap_crossref(create_image_element(img_path, opts), opts, REF_TYPE_NAMES)
+  -- Apply page selection
+  local selected_pages
+  if img_format == 'pdf' and opts.pages ~= 'all' then
+    utils.log_warning(
+      EXTENSION_NAME,
+      'Page selection is not supported for PDF format; embedding the full PDF.'
+    )
+    selected_pages = all_pages
+  else
+    local page_indices = parse_pages(opts.pages, #all_pages)
+    selected_pages = {}
+    for _, idx in ipairs(page_indices) do
+      selected_pages[#selected_pages + 1] = all_pages[idx]
+    end
+  end
+
+  if #selected_pages == 0 then
+    utils.log_warning(EXTENSION_NAME, 'No pages matched the selection; returning empty block.')
+    return pandoc.Null()
+  end
+
+  local result = cell.wrap_crossref(create_multi_page_element(selected_pages, opts), opts, REF_TYPE_NAMES)
 
   local output_location = cell.resolve_output_location(opts, EXTENSION_NAME)
   if output_location then
