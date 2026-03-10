@@ -156,27 +156,27 @@ Per-block input override using comma-separated syntax:
 
 ### Options
 
-| Option            | Type            | Default   | Description                                                          |
-| ----------------- | --------------- | --------- | -------------------------------------------------------------------- |
-| `format`          | string          | (auto)    | Image format: `png`, `svg`, `pdf`.                                   |
-| `dpi`             | string          | `"144"`   | Pixels per inch (PNG only).                                          |
-| `width`           | string          | `"auto"`  | Page width for image compilation (ignored in Typst output).          |
-| `height`          | string          | `"auto"`  | Page height for image compilation (ignored in Typst output).         |
-| `margin`          | string          | `"0.5em"` | Page margin for image compilation; block `inset` in Typst output.    |
-| `background`      | string          | `"none"`  | Page fill for image compilation; block `fill` in Typst output.       |
-| `preamble`        | string          | `""`      | Typst code or path to a `.typ` file prepended before user code.      |
-| `cache`           | boolean         | `true`    | Cache compiled images.                                               |
-| `root`            | string          | (auto)    | Root directory for Typst compilation (defaults to project directory). |
-| `font-path`       | string\|array   | (none)    | Path or list of paths to directories containing additional fonts.    |
-| `package-path`    | string          | (none)    | Path to a directory containing Typst packages (offline/reproducible).|
-| `input`           | object          | (none)    | Key-value pairs passed as `--input` flags to Typst CLI.              |
-| `file`            | string          | (none)    | Path to external `.typ` file to render.                              |
-| `echo`            | boolean\|string | `false`   | Show Typst source code alongside output (`true`, `false`, `fenced`). |
-| `eval`            | boolean         | `true`    | Compile Typst code to image.                                         |
-| `include`         | boolean         | `true`    | Include block in output. Set `false` to suppress entirely.           |
-| `output`          | boolean         | `true`    | Show rendered output. Set `false` to skip compilation.               |
+| Option            | Type            | Default   | Description                                                                       |
+| ----------------- | --------------- | --------- | --------------------------------------------------------------------------------- |
+| `format`          | string          | (auto)    | Image format: `png`, `svg`, `pdf`.                                                |
+| `dpi`             | string          | `"144"`   | Pixels per inch (PNG only).                                                       |
+| `width`           | string          | `"auto"`  | Page width for image compilation (ignored in Typst output).                       |
+| `height`          | string          | `"auto"`  | Page height for image compilation (ignored in Typst output).                      |
+| `margin`          | string          | `"0.5em"` | Page margin for image compilation; block `inset` in Typst output.                 |
+| `background`      | string          | `"none"`  | Page fill for image compilation; block `fill` in Typst output.                    |
+| `preamble`        | string          | `""`      | Typst code or path to a `.typ` file prepended before user code.                   |
+| `cache`           | boolean         | `true`    | Cache compiled images.                                                            |
+| `root`            | string          | (auto)    | Root directory for Typst compilation (defaults to project directory).             |
+| `font-path`       | string\|array   | (none)    | Path or list of paths to directories containing additional fonts.                 |
+| `package-path`    | string          | (none)    | Path to a directory containing Typst packages (offline/reproducible).             |
+| `input`           | object          | (none)    | Key-value pairs passed as `--input` flags to Typst CLI.                           |
+| `file`            | string          | (none)    | Path to external `.typ` file to render.                                           |
+| `echo`            | boolean\|string | `false`   | Show Typst source code alongside output (`true`, `false`, `fenced`).              |
+| `eval`            | boolean         | `true`    | Compile Typst code to image.                                                      |
+| `include`         | boolean         | `true`    | Include block in output. Set `false` to suppress entirely.                        |
+| `output`          | boolean         | `true`    | Show rendered output. Set `false` to skip compilation.                            |
 | `output-location` | string          | (none)    | Output placement in Reveal.js (`fragment`, `slide`, `column`, `column-fragment`). |
-| `classes`         | string          | (none)    | Space-separated CSS classes on the output image (e.g., `r-stretch`). |
+| `classes`         | string          | (none)    | Space-separated CSS classes on the output image (e.g., `r-stretch`).              |
 
 Any unknown option with a string value is forwarded as an HTML attribute on the output image element (e.g., `//| style: "max-height: 300px;"`).
 Values that look like booleans (`true`/`false`) must be quoted to be forwarded (e.g., `//| data-lazy: "true"`).
