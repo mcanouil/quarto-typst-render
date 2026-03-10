@@ -38,7 +38,7 @@ options:
       extensions: [.typ]
   root:
     type: string
-    description: "Root directory for Typst compilation. Defaults to the project directory."
+    description: "Root directory for Typst compilation. Defaults to the Quarto project directory."
     completion:
       type: directory
   font-path:
@@ -116,15 +116,6 @@ attributes:
       completion:
         type: file
         extensions: [.typ]
-    root:
-      type: string
-      description: "Root directory for Typst compilation in this block."
-    font-path:
-      type: string
-      description: "Path to a directory containing additional fonts for this block."
-    package-path:
-      type: string
-      description: "Path to a directory containing Typst packages for this block."
     input:
       type: string
       description: "Comma-separated key=value pairs passed as --input flags (e.g., 'theme=dark,lang=en')."

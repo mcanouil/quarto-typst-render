@@ -35,9 +35,6 @@ local DEFAULTS = {
   preamble = '',
   cache = true,
   file = nil,
-  root = nil,
-  ['font-path'] = nil,
-  ['package-path'] = nil,
   input = nil,
   echo = false,
   eval = true,
@@ -49,7 +46,10 @@ local DEFAULTS = {
 }
 
 --- Keys consumed by the filter; any other option is forwarded as an HTML attribute.
-local KNOWN_KEYS = { cap = true, alt = true, _block_input = true }
+local KNOWN_KEYS = {
+  cap = true, alt = true, _block_input = true,
+  root = true, ['font-path'] = true, ['package-path'] = true,
+}
 for k in pairs(DEFAULTS) do
   KNOWN_KEYS[k] = true
 end
@@ -308,10 +308,10 @@ local function compile_typst(source, opts, img_format)
     end
   end
 
-  -- Resolve --root: explicit option, project directory, or working directory
+  -- Resolve --root: global config, project directory, or working directory
   local resolved_root
-  if opts.root then
-    resolved_root = resolve_file_path(opts.root)
+  if global_config.root then
+    resolved_root = resolve_file_path(global_config.root)
   elseif quarto.project and quarto.project.directory then
     resolved_root = quarto.project.directory
   else
@@ -320,8 +320,8 @@ local function compile_typst(source, opts, img_format)
 
   local args = { 'compile', '--format', img_format, '--ppi', dpi, '--root', resolved_root }
 
-  -- Add --font-path flags (single string or list of paths)
-  local font_paths = opts['font-path']
+  -- Add --font-path flags (global-only; single string or list of paths)
+  local font_paths = global_config['font-path']
   if type(font_paths) == 'table' then
     for _, p in ipairs(font_paths) do
       args[#args + 1] = '--font-path'
@@ -332,10 +332,10 @@ local function compile_typst(source, opts, img_format)
     args[#args + 1] = resolve_file_path(font_paths)
   end
 
-  -- Add --package-path if specified
-  if opts['package-path'] then
+  -- Add --package-path if specified (global-only)
+  if global_config['package-path'] then
     args[#args + 1] = '--package-path'
-    args[#args + 1] = resolve_file_path(opts['package-path'])
+    args[#args + 1] = resolve_file_path(global_config['package-path'])
   end
 
   -- Add --input flags for each input variable
