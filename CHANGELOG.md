@@ -8,6 +8,8 @@
 - feat: add `package-path` option to specify a local Typst package directory (`--package-path`).
 - feat: `font-path` now accepts a list of paths for multiple font directories.
 - feat: add `cache: clean` mode to remove stale cache files after each render.
+- feat: add multi-page output support with `pages` and `layout-ncol` options.
+- refactor: use per-document cache subdirectories under `.quarto/typst-render/<doc-stem>/`.
 - refactor: use stdin instead of temporary files for Typst compilation.
 
 ## 0.4.0 (2026-03-09)
