@@ -308,14 +308,12 @@ local function compile_typst(source, opts, img_format)
     end
   end
 
-  -- Resolve --root: global config, project directory, or working directory
+  -- Resolve --root: global config or Quarto project directory
   local resolved_root
   if global_config.root then
     resolved_root = resolve_file_path(global_config.root)
-  elseif quarto.project and quarto.project.directory then
-    resolved_root = quarto.project.directory
   else
-    resolved_root = pandoc.system.get_working_directory()
+    resolved_root = quarto.project.directory
   end
 
   local args = { 'compile', '--format', img_format, '--ppi', dpi, '--root', resolved_root }
