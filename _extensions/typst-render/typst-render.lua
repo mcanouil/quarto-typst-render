@@ -282,6 +282,13 @@ local function compile_typst(source, opts, img_format)
   end
 
   local dpi = tostring(opts.dpi)
+  if not dpi:match('^%d+$') or tonumber(dpi) <= 0 then
+    utils.log_warning(
+      EXTENSION_NAME,
+      'Invalid dpi value "' .. dpi .. '"; falling back to default (' .. DEFAULTS.dpi .. ').'
+    )
+    dpi = DEFAULTS.dpi
+  end
 
   -- Merge global and per-block input variables
   local merged_input = merge_inputs(opts.input, opts._block_input)
@@ -633,7 +640,14 @@ local function process_codeblock(el)
 
   -- Determine image format
   local img_format = opts.format
-  if not img_format or not VALID_FORMAT_SET[img_format] then
+  if img_format and not VALID_FORMAT_SET[img_format] then
+    utils.log_warning(
+      EXTENSION_NAME,
+      'Invalid format "' .. img_format .. '"; auto-detecting from output format.'
+    )
+    img_format = nil
+  end
+  if not img_format then
     img_format = get_image_format_for_output()
   end
 
