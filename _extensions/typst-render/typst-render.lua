@@ -67,8 +67,11 @@ local function is_known_key(key)
   return key:match('^%a+%-cap$') ~= nil or key:match('^%a+%-alt$') ~= nil
 end
 
---- Cache subdirectory within the .quarto scratch directory
-local CACHE_SUBDIR = '.quarto/typst-render'
+--- Cache base directory within the .quarto scratch directory
+local CACHE_BASE = '.quarto/typst-render'
+
+--- Per-document cache subdirectory (set during Meta pass)
+local cache_subdir = nil
 
 -- ============================================================================
 -- MODULE STATE
@@ -329,13 +332,17 @@ end
 --- @return string|nil Absolute path to the cache directory, or nil on failure
 --- @return string|nil Relative path to the cache directory (for image references)
 local function ensure_cache_dir()
-  local abs_path = pandoc.path.join({ quarto.project.directory, CACHE_SUBDIR })
+  if not cache_subdir then
+    utils.log_error(EXTENSION_NAME, 'Cache subdirectory not initialised.')
+    return nil, nil
+  end
+  local abs_path = pandoc.path.join({ quarto.project.directory, cache_subdir })
   local ok, err = pcall(pandoc.system.make_directory, abs_path, true)
   if not ok then
     utils.log_error(EXTENSION_NAME, 'Could not create cache directory: ' .. tostring(err))
     return nil, nil
   end
-  return abs_path, CACHE_SUBDIR
+  return abs_path, cache_subdir
 end
 
 --- Discover page-numbered output files produced by Typst CLI.
@@ -400,20 +407,22 @@ local function compile_typst(source, opts, img_format)
   if not abs_cache then
     return nil
   end
-  local abs_output = pandoc.path.join({ abs_cache, stem .. '.' .. img_format })
-  local rel_output = pandoc.path.join({ rel_cache, stem .. '.' .. img_format })
-
   used_cache_formats[img_format] = true
 
+  -- PDF uses a direct output path; PNG/SVG use a page-number template
+  -- so Typst CLI can produce one file per page ({stem}{p}.{ext}).
+  local is_paged = img_format ~= 'pdf'
+  local abs_output, rel_output
+  if is_paged then
+    abs_output = pandoc.path.join({ abs_cache, stem .. '{p}.' .. img_format })
+    rel_output = nil -- not used directly; discover_page_files builds paths
+  else
+    abs_output = pandoc.path.join({ abs_cache, stem .. '.' .. img_format })
+    rel_output = pandoc.path.join({ rel_cache, stem .. '.' .. img_format })
+  end
+
   if use_cache then
-    if img_format == 'pdf' then
-      local f = io.open(abs_output, 'r')
-      if f then
-        f:close()
-        used_cache_files[stem .. '.' .. img_format] = true
-        return { rel_output }
-      end
-    else
+    if is_paged then
       local first_page = pandoc.path.join({ abs_cache, stem .. '1.' .. img_format })
       local f = io.open(first_page, 'r')
       if f then
@@ -423,8 +432,8 @@ local function compile_typst(source, opts, img_format)
           return pages
         end
       end
-      -- Fallback: check direct path for single-page output (old cache format)
-      f = io.open(abs_output, 'r')
+    else
+      local f = io.open(abs_output, 'r')
       if f then
         f:close()
         used_cache_files[stem .. '.' .. img_format] = true
@@ -482,8 +491,16 @@ local function compile_typst(source, opts, img_format)
     return nil
   end
 
-  -- PDF always produces a single file at the exact output path
-  if img_format == 'pdf' then
+  if is_paged then
+    -- PNG/SVG: Typst CLI generates {stem}1.{ext}, {stem}2.{ext}, ...
+    local pages = discover_page_files(abs_cache, rel_cache, stem, img_format)
+    if #pages > 0 then
+      return pages
+    end
+    utils.log_error(EXTENSION_NAME, 'No compiled page files found for stem: ' .. stem)
+    return nil
+  else
+    -- PDF: single file at the exact output path
     local f = io.open(abs_output, 'r')
     if f then
       f:close()
@@ -493,23 +510,6 @@ local function compile_typst(source, opts, img_format)
     utils.log_error(EXTENSION_NAME, 'Compiled file not found: ' .. abs_output)
     return nil
   end
-
-  -- PNG/SVG: Typst CLI generates {stem}1.{ext}, {stem}2.{ext}, ...
-  local pages = discover_page_files(abs_cache, rel_cache, stem, img_format)
-  if #pages > 0 then
-    return pages
-  end
-
-  -- Fallback: check direct path (single-page, no page number suffix)
-  local f = io.open(abs_output, 'r')
-  if f then
-    f:close()
-    used_cache_files[stem .. '.' .. img_format] = true
-    return { rel_output }
-  end
-
-  utils.log_error(EXTENSION_NAME, 'Compiled file not found: ' .. abs_output)
-  return nil
 end
 
 --- Map from cross-reference prefix to Quarto FloatRefTarget type name.
@@ -625,6 +625,15 @@ end
 local function get_configuration(meta)
   register_custom_crossref_types(meta)
 
+  -- Build per-document cache subdirectory from the input file stem
+  local doc_stem = 'default'
+  local input_file = quarto.doc.input_file
+  if input_file and input_file ~= '' then
+    local input_name = pandoc.path.filename(input_file)
+    doc_stem = input_name:match('^(.+)%.[^.]+$') or input_name
+  end
+  cache_subdir = pandoc.path.join({ CACHE_BASE, doc_stem })
+
   local ext_config = nil
 
   if utils.get_extension_config(meta, EXTENSION_NAME) then
@@ -704,6 +713,20 @@ local function get_configuration(meta)
           input_map[tostring(k)] = pandoc.utils.stringify(v)
         end
         global_config['input'] = input_map
+      end
+    end
+  end
+
+  -- Clear per-document cache when caching is disabled (cache: false).
+  -- When cache is true or 'clean', existing files are preserved.
+  if global_config.cache == false and not quarto.format.is_typst_output() then
+    local abs_cache = pandoc.path.join({ quarto.project.directory, cache_subdir })
+    local list_ok, entries = pcall(pandoc.system.list_directory, abs_cache)
+    if list_ok then
+      for _, filename in ipairs(entries) do
+        if filename:match('^typst%-') then
+          os.remove(pandoc.path.join({ abs_cache, filename }))
+        end
       end
     end
   end
@@ -901,7 +924,7 @@ local function cleanup_cache(doc) -- luacheck: ignore 212
     return nil
   end
 
-  local abs_cache = pandoc.path.join({ quarto.project.directory, CACHE_SUBDIR })
+  local abs_cache = pandoc.path.join({ quarto.project.directory, cache_subdir })
   local ok, entries = pcall(pandoc.system.list_directory, abs_cache)
   if not ok then
     return nil
