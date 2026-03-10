@@ -259,7 +259,7 @@ local function parse_pages(pages_str, total_pages)
         else
           utils.log_warning(
             EXTENSION_NAME,
-            'Page ' .. i .. ' is out of range (1-' .. total_pages .. '); skipping.'
+            'Page ' .. tostring(i) .. ' is out of range (1-' .. tostring(total_pages) .. '); skipping.'
           )
         end
       end

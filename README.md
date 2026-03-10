@@ -212,8 +212,8 @@ Per-block input override using comma-separated syntax:
 | `output`          | boolean         | `true`    | Show rendered output. Set `false` to skip compilation.                            |
 | `output-location` | string          | (none)    | Output placement in Reveal.js (`fragment`, `slide`, `column`, `column-fragment`). |
 | `classes`         | string          | (none)    | Space-separated CSS classes on the output image (e.g., `r-stretch`).              |
-| `pages`           | string          | `"all"`   | Pages to include: `all`, `1`, `1-3`, `2,5`, `3-`.                                |
-| `layout-ncol`     | string          | (none)    | Number of columns for multi-page layout.                                          |
+| `pages`           | string          | `"all"`   | Pages to include from multi-page output: `all`, `1`, `1-3`, `2,5`, `3-`.          |
+| `layout-ncol`     | string          | (none)    | Number of columns for arranging multi-page output. Omit for vertical stack.       |
 
 Any unknown option with a string value is forwarded as an HTML attribute on the output image element (e.g., `//| style: "max-height: 300px;"`).
 Values that look like booleans (`true`/`false`) must be quoted to be forwarded (e.g., `//| data-lazy: "true"`).
@@ -222,11 +222,11 @@ Values that look like booleans (`true`/`false`) must be quoted to be forwarded (
 
 These options can only be set in the document YAML and cannot be overridden per block.
 
-| Option         | Type          | Default              | Description                                                        |
-| -------------- | ------------- | -------------------- | ------------------------------------------------------------------ |
-| `root`         | string        | (project directory)  | Root directory for Typst compilation.                              |
-| `font-path`    | string\|array | (none)               | Path or list of paths to directories containing additional fonts.  |
-| `package-path` | string        | (none)               | Path to a directory containing Typst packages (offline/reproducible). |
+| Option         | Type          | Default             | Description                                                           |
+| -------------- | ------------- | ------------------- | --------------------------------------------------------------------- |
+| `root`         | string        | (project directory) | Root directory for Typst compilation.                                 |
+| `font-path`    | string\|array | (none)              | Path or list of paths to directories containing additional fonts.     |
+| `package-path` | string        | (none)              | Path to a directory containing Typst packages (offline/reproducible). |
 
 ### Per-Block Cross-Referencing Options
 
