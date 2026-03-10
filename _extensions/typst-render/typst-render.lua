@@ -257,11 +257,15 @@ local function compute_cache_stem(source, fmt, dpi, label)
 end
 
 --- Ensure the cache directory exists.
---- @return string Absolute path to the cache directory
---- @return string Relative path to the cache directory (for image references)
+--- @return string|nil Absolute path to the cache directory, or nil on failure
+--- @return string|nil Relative path to the cache directory (for image references)
 local function ensure_cache_dir()
   local abs_path = pandoc.path.join({ quarto.project.directory, CACHE_SUBDIR })
-  pandoc.system.make_directory(abs_path, true)
+  local ok, err = pcall(pandoc.system.make_directory, abs_path, true)
+  if not ok then
+    utils.log_error(EXTENSION_NAME, 'Could not create cache directory: ' .. tostring(err))
+    return nil, nil
+  end
   return abs_path, CACHE_SUBDIR
 end
 
@@ -292,6 +296,9 @@ local function compile_typst(source, opts, img_format)
   local use_cache = opts.cache ~= false
   local stem = compute_cache_stem(hash_source, img_format, dpi, opts.label)
   local abs_cache, rel_cache = ensure_cache_dir()
+  if not abs_cache then
+    return nil
+  end
   local abs_output = pandoc.path.join({ abs_cache, stem .. '.' .. img_format })
   local rel_output = pandoc.path.join({ rel_cache, stem .. '.' .. img_format })
 
@@ -360,7 +367,11 @@ local function compile_typst(source, opts, img_format)
     local page_f = io.open(page_path, 'r')
     if page_f then
       page_f:close()
-      os.rename(page_path, abs_output)
+      local rename_ok, rename_err = os.rename(page_path, abs_output)
+      if not rename_ok then
+        utils.log_error(EXTENSION_NAME, 'Could not rename output file: ' .. tostring(rename_err))
+        return nil
+      end
     else
       utils.log_error(EXTENSION_NAME, 'Compiled file not found: ' .. abs_output)
       return nil
