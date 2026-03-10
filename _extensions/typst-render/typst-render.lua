@@ -88,6 +88,19 @@ local block_counter = 0
 -- HELPER FUNCTIONS
 -- ============================================================================
 
+--- Read the entire contents of a file.
+--- @param path string The file path to read
+--- @return string|nil File contents, or nil if the file cannot be opened
+local function read_file(path)
+  local f = io.open(path, 'r')
+  if not f then
+    return nil
+  end
+  local content = f:read('*a')
+  f:close()
+  return content
+end
+
 --- Resolve the Typst binary path.
 --- @return string|nil Path to the Typst binary, or nil if not found
 local function resolve_typst_bin()
@@ -131,10 +144,8 @@ local function resolve_preamble(value)
   end
   if value:match('%.typ$') then
     local file_path = utils.resolve_project_path(value)
-    local f = io.open(file_path, 'r')
-    if f then
-      local content = f:read('*a')
-      f:close()
+    local content = read_file(file_path)
+    if content then
       return content
     end
     utils.log_error(EXTENSION_NAME, 'Could not read preamble file: ' .. value)
@@ -410,10 +421,8 @@ end
 --- @return string|nil File contents, or nil on failure
 local function read_external_file(file_opt)
   local file_path = utils.resolve_project_path(file_opt)
-  local f = io.open(file_path, 'r')
-  if f then
-    local content = f:read('*a')
-    f:close()
+  local content = read_file(file_path)
+  if content then
     return content
   end
   utils.log_error(EXTENSION_NAME, 'Could not read file: ' .. file_opt)
