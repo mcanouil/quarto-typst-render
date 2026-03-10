@@ -115,7 +115,8 @@ The filter processes these after engine execution.
 ## Configuration
 
 Configure the filter globally in your document YAML.
-All options can be set globally and overridden per block using comment+pipe syntax (`//| key: value`).
+Most options can be set globally and overridden per block using comment+pipe syntax (`//| key: value`).
+See [Global-Only Options](#global-only-options) for options that cannot be overridden per block.
 
 Inline preamble:
 
