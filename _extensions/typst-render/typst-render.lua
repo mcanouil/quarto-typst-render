@@ -84,6 +84,12 @@ local typst_checked = false
 --- Block counter for auto-numbering unlabelled blocks
 local block_counter = 0
 
+--- Set of cache filenames produced or hit during this render (for cleanup)
+local used_cache_files = {}
+
+--- Set of image format extensions produced during this render (for cleanup)
+local used_cache_formats = {}
+
 -- ============================================================================
 -- HELPER FUNCTIONS
 -- ============================================================================
@@ -309,6 +315,10 @@ local function compile_typst(source, opts, img_format)
   local abs_output = pandoc.path.join({ abs_cache, stem .. '.' .. img_format })
   local rel_output = pandoc.path.join({ rel_cache, stem .. '.' .. img_format })
 
+  -- Track this file for cache cleanup
+  used_cache_files[stem .. '.' .. img_format] = true
+  used_cache_formats[img_format] = true
+
   if use_cache then
     local f = io.open(abs_output, 'r')
     if f then
@@ -499,7 +509,18 @@ local function get_configuration(meta)
       local default_val = DEFAULTS[k]
       if ext_config[k] ~= nil then
         local val = ext_config[k]
-        if k == 'echo' then
+        if k == 'cache' then
+          if type(val) == 'boolean' then
+            global_config[k] = val
+          else
+            local str = pandoc.utils.stringify(val)
+            if str == 'clean' then
+              global_config[k] = 'clean'
+            else
+              global_config[k] = str == 'true'
+            end
+          end
+        elseif k == 'echo' then
           if type(val) == 'boolean' then
             global_config[k] = val
           else
@@ -573,6 +594,18 @@ local function process_codeblock(el)
 
   local opts = cell.merge_options(block_opts, global_config, DEFAULTS)
   opts._block_input = block_input_str
+
+  -- Per-block "cache: clean" is not supported; warn and treat as true
+  if type(block_opts.cache) == 'string' and block_opts.cache:lower() == 'clean' then
+    utils.log_warning(
+      EXTENSION_NAME,
+      'Per-block "cache: clean" is not supported; treating as "cache: true".'
+    )
+    opts.cache = true
+  elseif opts.cache == 'clean' then
+    -- Global 'clean' mode: normalise to true for this block's compilation
+    opts.cache = true
+  end
 
   if not cell.should_include(opts) then
     return pandoc.Null()
@@ -697,6 +730,56 @@ local function process_codeblock(el)
   return result
 end
 
+--- Remove stale cache files after all blocks have been processed.
+--- Only runs when global `cache` is `'clean'`. Only removes files whose
+--- extension matches a format produced during the current render, so an HTML
+--- render (producing `.svg`) will not wipe `.png` files from a previous PDF render.
+--- @param doc pandoc.Pandoc
+--- @return nil
+local function cleanup_cache(doc) -- luacheck: ignore 212
+  if global_config.cache ~= 'clean' then
+    return nil
+  end
+  if quarto.format.is_typst_output() then
+    return nil
+  end
+
+  local abs_cache = pandoc.path.join({ quarto.project.directory, CACHE_SUBDIR })
+  local ok, entries = pcall(pandoc.system.list_directory, abs_cache)
+  if not ok then
+    return nil
+  end
+
+  local removed = 0
+  for _, filename in ipairs(entries) do
+    if filename:match('^typst%-') and not used_cache_files[filename] then
+      local ext = filename:match('%.(%w+)$')
+      if ext and used_cache_formats[ext] then
+        local filepath = pandoc.path.join({ abs_cache, filename })
+        local rm_ok, rm_err = os.remove(filepath)
+        if rm_ok then
+          removed = removed + 1
+          utils.log_output(EXTENSION_NAME, 'Removed stale cache file: ' .. filename)
+        else
+          utils.log_warning(
+            EXTENSION_NAME,
+            'Could not remove cache file: ' .. filename .. ' (' .. tostring(rm_err) .. ')'
+          )
+        end
+      end
+    end
+  end
+
+  if removed > 0 then
+    utils.log_output(
+      EXTENSION_NAME,
+      'Cache cleanup: removed ' .. removed .. ' stale file(s).'
+    )
+  end
+
+  return nil
+end
+
 -- ============================================================================
 -- FILTER EXPORT
 -- ============================================================================
@@ -704,4 +787,5 @@ end
 return {
   { Meta = get_configuration },
   { CodeBlock = process_codeblock },
+  { Pandoc = cleanup_cache },
 }

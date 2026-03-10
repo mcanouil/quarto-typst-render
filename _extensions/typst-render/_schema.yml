@@ -59,9 +59,10 @@ options:
     additionalProperties:
       type: string
   cache:
-    type: boolean
+    type: [boolean, string]
+    enum: [true, false, clean]
     default: true
-    description: "Cache compiled images to avoid recompilation."
+    description: "Cache compiled images to avoid recompilation. Use 'clean' to also remove stale cache files after each render."
   echo:
     type: [boolean, string]
     enum: [true, false, fenced]
@@ -121,7 +122,7 @@ attributes:
       description: "Comma-separated key=value pairs passed as --input flags (e.g., 'theme=dark,lang=en')."
     cache:
       type: boolean
-      description: "Enable or disable caching for this block."
+      description: "Enable or disable caching for this block. The 'clean' value is only supported globally."
     file:
       type: string
       description: "Path to external .typ file to render instead of block content."
