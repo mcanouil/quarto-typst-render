@@ -314,16 +314,13 @@ local function compile_typst(source, opts, img_format)
 
   local args = { 'compile', '--format', img_format, '--ppi', dpi, '--root', resolved_root }
 
-  -- Add --font-path flags (global-only; single string or list of paths)
+  -- Add --font-path flags (global-only; always a list after get_configuration)
   local font_paths = global_config['font-path']
-  if type(font_paths) == 'table' then
+  if font_paths then
     for _, p in ipairs(font_paths) do
       args[#args + 1] = '--font-path'
       args[#args + 1] = resolve_file_path(p)
     end
-  elseif type(font_paths) == 'string' then
-    args[#args + 1] = '--font-path'
-    args[#args + 1] = resolve_file_path(font_paths)
   end
 
   -- Add --package-path if specified (global-only)
