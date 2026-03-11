@@ -998,23 +998,6 @@ local function process_inline_code(el)
   opts.margin = '0.5pt'
   opts._inline = true
 
-  local inline_attr_keys = {
-    output = true,
-    format = true,
-    dpi = true,
-    preamble = true,
-    background = true,
-    classes = true,
-  }
-  for k, v in pairs(el.attributes) do
-    if inline_attr_keys[k] then
-      opts[k] = v
-    end
-  end
-  if el.attributes['input'] then
-    opts._block_input = el.attributes['input']
-  end
-
   local output_mode = cell.resolve_output_mode(opts)
 
   if output_mode == 'false' then
