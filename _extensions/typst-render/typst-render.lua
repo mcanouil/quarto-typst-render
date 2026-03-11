@@ -956,7 +956,12 @@ local function create_inline_image_element(img_path, opts)
     extra_classes = ' ' .. opts.classes
   end
 
-  local style = 'height: 1.1em; width: auto; vertical-align: -0.1em;'
+  local style
+  if quarto.doc.is_format('revealjs') then
+    style = 'height: 1.1em; width: auto; vertical-align: -0.25em;'
+  else
+    style = 'height: 1.1em; width: auto; vertical-align: -0.1em;'
+  end
 
   return pandoc.RawInline(
     'html',
