@@ -938,7 +938,10 @@ end
 --- @return pandoc.Inline Inline image element
 local function create_inline_image_element(img_path, opts)
   if quarto.format.is_typst_output() then
-    return pandoc.RawInline('typst', '#box(height: 1em, baseline: 20%, image("' .. img_path .. '"))')
+    return pandoc.RawInline(
+      'typst',
+      '#box(height: 1.1em, baseline: 20%, image("' .. img_path .. '"))'
+    )
   end
 
   if quarto.format.is_latex_output() then
@@ -960,7 +963,7 @@ local function create_inline_image_element(img_path, opts)
     img_path,
     '',
     pandoc.Attr('', classes, {
-      { 'style', 'height: 1em; width: auto; vertical-align: middle;' },
+      { 'style', 'height: 1.1em; width: auto; vertical-align: text-bottom;' },
     })
   )
 end
@@ -982,7 +985,7 @@ local function process_inline_code(el)
   local opts = cell.merge_options({}, global_config, DEFAULTS)
   opts.width = 'auto'
   opts.height = 'auto'
-  opts.margin = '0pt'
+  opts.margin = '2pt'
   opts._inline = true
 
   local inline_attr_keys = {
