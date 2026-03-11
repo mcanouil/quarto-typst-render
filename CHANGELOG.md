@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.6.0 (2026-03-11)
+
 - feat: add inline Typst rendering support for `` `{typst} ...` `` expressions, compiled to images sized to match surrounding text.
 - feat!: compile to image by default for Typst output (breaking change).
   The `output` option now accepts `true`, `false`, or `asis`.
