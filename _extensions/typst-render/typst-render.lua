@@ -966,7 +966,7 @@ local function process_inline_code(el)
     return nil
   end
 
-  local code = el.text
+  local code = cell.inline_code_text(el)
   if not code or code:match('^%s*$') then
     return nil
   end
