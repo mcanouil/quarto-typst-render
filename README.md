@@ -9,7 +9,7 @@ Use `output: asis` for native passthrough when the output format is Typst.
 ## Installation
 
 ```bash
-quarto add mcanouil/quarto-typst-render@0.5.0
+quarto add mcanouil/quarto-typst-render@0.6.0
 ```
 
 This will install the extension under the `_extensions` subdirectory.
