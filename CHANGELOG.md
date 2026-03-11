@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- feat: add inline Typst rendering support for `` `{typst} ...` `` expressions, compiled to images sized to match surrounding text.
 - feat!: compile to image by default for Typst output (breaking change).
   The `output` option now accepts `true`, `false`, or `asis`.
   Use `output: asis` for native Typst passthrough (previously the default).

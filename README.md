@@ -1,6 +1,6 @@
 # Typst Render Extension For Quarto
 
-A Quarto filter extension that compiles ` ```{typst} ` code blocks to images (PNG, SVG, or PDF) using the Typst binary bundled with Quarto.
+A Quarto filter extension that compiles ` ```{typst} ` code blocks and inline `` `{typst} ...` `` expressions to images (PNG, SVG, or PDF) using the Typst binary bundled with Quarto.
 This makes Typst diagrams, figures, tables, and equations usable across all output formats (HTML, PDF via LaTeX, DOCX, RevealJS, and more).
 
 By default, blocks are compiled to images for all output formats, including Typst.
@@ -41,6 +41,20 @@ Then write Typst code blocks in your document:
 Hello from *Typst*!
 ```
 ````
+
+### Inline Expressions
+
+Render Typst expressions inline using backtick code with the `typst` class.
+The rendered image scales to match the surrounding text size.
+
+```markdown
+Here is a red word `{typst} #text(red)[hello]` in the middle of a sentence.
+
+Inline maths: `{typst} $ x^2 + y^2 = z^2 $` renders as a formula image.
+```
+
+Global options (`format`, `dpi`, `preamble`, `background`, `output`) apply to inline expressions.
+Block-only options (`echo`, `eval`, `label`, `cap`, `alt`, `file`, `pages`, `layout-ncol`, `output-location`) are not available for inline expressions.
 
 ### Per-Block Options
 

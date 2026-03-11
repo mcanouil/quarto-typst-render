@@ -42,6 +42,7 @@ format:
     shift-heading-level-by: -1
     embed-resources: true
     smaller: true
+    scrollable: true
   beamer:
     output-file: example-beamer
     aspectratio: 169
@@ -70,6 +71,8 @@ extensions:
   typst-render:
     margin: "0.5em"
 ---
+
+::: {.content-hidden when-format="revealjs" when-format="pptx"}
 
 A Quarto filter extension that compiles ` ```{typst} ` code blocks to images (PNG, SVG, or PDF) using the Typst binary bundled with Quarto.
 This makes Typst diagrams, figures, tables, and equations usable across all output formats (HTML, PDF via LaTeX, DOCX, RevealJS, and more).
@@ -112,6 +115,8 @@ Then write Typst code blocks in your document:
 Hello from *Typst*!
 ```
 ````
+
+:::
 
 ## Basic Usage
 
@@ -282,8 +287,6 @@ This source is visible, but the rendered image is suppressed.
 
 ### Output: Native Passthrough (Typst Only)
 
-::: {.content-visible when-format="typst"}
-
 Setting `output: asis` passes the Typst code through natively when the output format is Typst.
 For all other formats, `output: asis` behaves the same as `output: true` (compiles to an image).
 
@@ -293,8 +296,6 @@ For all other formats, `output: asis` behaves the same as `output: true` (compil
 #set text(size: 14pt)
 This block uses native passthrough in Typst output.
 ```
-
-:::
 
 ## Output Location (Reveal.js)
 
@@ -404,6 +405,8 @@ Render an external `.typ` file instead of inline code:
 //| file: _extensions/typst-render/_example.typ
 ```
 
+::: {.content-hidden when-format="revealjs" when-format="pptx"}
+
 ## Preamble
 
 Typst code can be prepended before each block using the `preamble` option.
@@ -427,9 +430,9 @@ extensions:
     preamble: "preamble.typ"
 ```
 
-## Social Card
+:::
 
-::: {.content-hidden when-format="typst"}
+## Social Card
 
 A repository social card built entirely in Typst, rendered as a high-resolution PNG.
 
@@ -442,6 +445,7 @@ A repository social card built entirely in Typst, rendered as a high-resolution 
 //| width: 1280pt
 //| height: 640pt
 //| margin: 0pt
+//| output-location: slide
 
 #let gradient-bg = gradient.linear(
   rgb("#1a1a2e"),
@@ -519,7 +523,18 @@ A repository social card built entirely in Typst, rendered as a high-resolution 
 ]
 ```
 
-:::
+## Inline Typst
+
+Render Typst expressions inline using backtick code with the `typst` class.
+The rendered image scales to match the surrounding text size.
+
+Here is a red word `{typst} #text(red)[hello]` in the middle of a sentence.
+
+Inline maths: `{typst} $ x^2 + y^2 = z^2 $` renders as a formula image.
+
+Escaped inline code is not evaluated: `` `{typst} #text(red)[hello]` ``.
+
+::: {.content-hidden when-format="revealjs" when-format="pptx"}
 
 ## Global Configuration
 
@@ -608,3 +623,5 @@ The `include` and `output` options take precedence over the eval/echo matrix:
 - `include: false` hides the entire block regardless of eval/echo settings.
 - `output: false` skips compilation and shows only the source code (if echo is enabled).
 - `output: asis` uses native passthrough for Typst output; behaves as `true` for other formats.
+
+:::
