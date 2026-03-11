@@ -931,12 +931,23 @@ local function process_codeblock(el)
 end
 
 --- Create a bare inline Image element from a compiled image.
---- Uses `height: 1em; width: auto; vertical-align: middle;` in HTML
---- to scale the image to match surrounding text size.
+--- Emits format-specific raw markup to size the image to match
+--- surrounding text (height: 1em, auto width, vertical centring).
 --- @param img_path string Path to the image file
 --- @param opts table Merged options
---- @return pandoc.Image Inline image element
+--- @return pandoc.Inline Inline image element
 local function create_inline_image_element(img_path, opts)
+  if quarto.format.is_typst_output() then
+    return pandoc.RawInline('typst', '#box(height: 1em, baseline: 20%, image("' .. img_path .. '"))')
+  end
+
+  if quarto.format.is_latex_output() then
+    return pandoc.RawInline(
+      'latex',
+      '\\raisebox{-0.2em}{\\includegraphics[height=1em]{' .. img_path .. '}}'
+    )
+  end
+
   local classes = { 'typst-inline' }
   if type(opts.classes) == 'string' and opts.classes ~= '' then
     for cls in opts.classes:gmatch('%S+') do
@@ -944,16 +955,13 @@ local function create_inline_image_element(img_path, opts)
     end
   end
 
-  local kvpairs = {}
-  if quarto.format.is_html_output() then
-    kvpairs[#kvpairs + 1] = { 'style', 'height: 1em; width: auto; vertical-align: middle;' }
-  end
-
   return pandoc.Image(
     { pandoc.Str('typst inline expression') },
     img_path,
     '',
-    pandoc.Attr('', classes, kvpairs)
+    pandoc.Attr('', classes, {
+      { 'style', 'height: 1em; width: auto; vertical-align: middle;' },
+    })
   )
 end
 
