@@ -952,7 +952,7 @@ local function create_inline_image_element(img_path, opts)
   if quarto.format.is_latex_output() then
     return pandoc.RawInline(
       'latex',
-      '\\raisebox{-0.2em}{\\includegraphics[height=1em]{' .. img_path .. '}}'
+      '\\raisebox{-0.3em}{\\includegraphics[height=1.3em]{' .. img_path .. '}}'
     )
   end
 
@@ -963,9 +963,9 @@ local function create_inline_image_element(img_path, opts)
 
   local style
   if quarto.doc.is_format('revealjs') then
-    style = 'height: 1.1em; width: auto; vertical-align: -0.5em;'
+    style = 'height: 1.1em; width: auto; vertical-align: -0.55em;'
   else
-    style = 'height: 1.1em; width: auto; vertical-align: -0.1em;'
+    style = 'height: 1.15em; width: auto; vertical-align: -0.35em;'
   end
 
   return pandoc.RawInline(
@@ -995,7 +995,7 @@ local function process_inline_code(el)
   local opts = cell.merge_options({}, global_config, DEFAULTS)
   opts.width = 'auto'
   opts.height = 'auto'
-  opts.margin = '0.5pt'
+  opts.margin = '(x: 0.5pt, top: 0.5pt, bottom: 0.25em)'
   opts._inline = true
 
   local output_mode = cell.resolve_output_mode(opts)
