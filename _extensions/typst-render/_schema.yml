@@ -16,19 +16,19 @@ options:
   width:
     type: string
     default: "auto"
-    description: "Page width for image compilation (ignored in Typst output)."
+    description: "Page width for image compilation (ignored with output: asis)."
   height:
     type: string
     default: "auto"
-    description: "Page height for image compilation (ignored in Typst output)."
+    description: "Page height for image compilation (ignored with output: asis)."
   margin:
     type: string
     default: "0.5em"
-    description: "Page margin for image compilation; block inset in Typst output."
+    description: "Page margin for image compilation; block inset with output: asis."
   background:
     type: string
     default: "none"
-    description: "Page fill for image compilation; block fill in Typst output."
+    description: "Page fill for image compilation; block fill with output: asis."
   preamble:
     type: string
     default: ""
@@ -109,16 +109,16 @@ attributes:
       description: "Pixels per inch for PNG output."
     width:
       type: string
-      description: "Page width for image compilation (ignored in Typst output)."
+      description: "Page width for image compilation (ignored with output: asis)."
     height:
       type: string
-      description: "Page height for image compilation (ignored in Typst output)."
+      description: "Page height for image compilation (ignored with output: asis)."
     margin:
       type: string
-      description: "Page margin for image compilation; block inset in Typst output."
+      description: "Page margin for image compilation; block inset with output: asis."
     background:
       type: string
-      description: "Page fill for image compilation; block fill in Typst output."
+      description: "Page fill for image compilation; block fill with output: asis."
     preamble:
       type: string
       description: "Typst code prepended before this block's code, or path to a .typ file."

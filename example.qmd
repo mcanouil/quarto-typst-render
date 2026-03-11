@@ -121,7 +121,7 @@ A simple Typst block rendered as an image:
 //| echo: fenced
 #set text(size: 16pt)
 Hello from *Typst*!
-This is rendered as an image in non-Typst outputs.
+This is rendered as an image in all output formats.
 ```
 
 ## Per-Block Options
@@ -131,8 +131,8 @@ Use comment+pipe syntax (`//| key: value`) at the top of the code block to set p
 ### Page Dimensions
 
 Control the width, height, and margin of the rendered image page.
-These options set the Typst page dimensions for image compilation (non-Typst output formats).
-In native Typst output, `width` and `height` are ignored; `margin` is applied as block `inset`.
+These options set the Typst page dimensions for image compilation.
+With `output: asis`, `width` and `height` are ignored; `margin` is applied as block `inset`.
 
 ```{typst}
 //| echo: fenced
@@ -164,7 +164,7 @@ Set the output image format and resolution:
 ### Background Colour
 
 Set a fill colour for the rendered image page.
-In native Typst output, the colour is applied as block `fill`.
+With `output: asis`, the colour is applied as block `fill`.
 
 ```{typst}
 //| echo: fenced
@@ -542,10 +542,10 @@ extensions:
 | ----------------- | --------------- | --------- | --------------------------------------------------------------------------------- |
 | `format`          | string          | (auto)    | Image format: `png`, `svg`, `pdf`.                                                |
 | `dpi`             | string          | `"144"`   | Pixels per inch (PNG only).                                                       |
-| `width`           | string          | `"auto"`  | Page width for image compilation (ignored in Typst output).                       |
-| `height`          | string          | `"auto"`  | Page height for image compilation (ignored in Typst output).                      |
-| `margin`          | string          | `"0.5em"` | Page margin for image compilation; block `inset` in Typst output.                 |
-| `background`      | string          | `"none"`  | Page fill for image compilation; block `fill` in Typst output.                    |
+| `width`           | string          | `"auto"`  | Page width for image compilation (ignored with `output: asis`).                   |
+| `height`          | string          | `"auto"`  | Page height for image compilation (ignored with `output: asis`).                  |
+| `margin`          | string          | `"0.5em"` | Page margin for image compilation; block `inset` with `output: asis`.             |
+| `background`      | string          | `"none"`  | Page fill for image compilation; block `fill` with `output: asis`.                |
 | `preamble`        | string          | `""`      | Typst code or path to a `.typ` file prepended before user code.                   |
 | `cache`           | boolean\|string | `true`    | Cache compiled images. Use `"clean"` to also remove stale cache files.            |
 | `input`           | object          | (none)    | Key-value pairs passed as `--input` flags to Typst CLI.                           |
