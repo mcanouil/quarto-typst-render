@@ -940,7 +940,7 @@ local function create_inline_image_element(img_path, opts)
   if quarto.format.is_typst_output() then
     return pandoc.RawInline(
       'typst',
-      '#box(height: 1.1em, baseline: 20%, image("' .. img_path .. '"))'
+      '#box(height: 1em, baseline: 20%, image("' .. img_path .. '"))'
     )
   end
 
@@ -951,20 +951,18 @@ local function create_inline_image_element(img_path, opts)
     )
   end
 
-  local classes = { 'typst-inline' }
+  local extra_classes = ''
   if type(opts.classes) == 'string' and opts.classes ~= '' then
-    for cls in opts.classes:gmatch('%S+') do
-      classes[#classes + 1] = cls
-    end
+    extra_classes = ' ' .. opts.classes
   end
 
-  return pandoc.Image(
-    { pandoc.Str('typst inline expression') },
-    img_path,
-    '',
-    pandoc.Attr('', classes, {
-      { 'style', 'height: 1.1em; width: auto; vertical-align: -0.15em;' },
-    })
+  return pandoc.RawInline(
+    'html',
+    '<span class="typst-inline' .. extra_classes .. '">'
+      .. '<img src="' .. img_path .. '"'
+      .. ' alt="typst inline expression"'
+      .. ' style="height: 1em; width: auto; vertical-align: middle;"'
+      .. '></span>'
   )
 end
 
@@ -985,7 +983,7 @@ local function process_inline_code(el)
   local opts = cell.merge_options({}, global_config, DEFAULTS)
   opts.width = 'auto'
   opts.height = 'auto'
-  opts.margin = '2pt'
+  opts.margin = '0.5pt'
   opts._inline = true
 
   local inline_attr_keys = {
