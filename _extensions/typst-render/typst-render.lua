@@ -940,7 +940,7 @@ local function create_inline_image_element(img_path, opts)
   if quarto.format.is_typst_output() then
     return pandoc.RawInline(
       'typst',
-      '#box(height: 1em, baseline: 20%, image("' .. img_path .. '"))'
+      '#box(height: 1.1em, baseline: 20%, image("' .. img_path .. '"))'
     )
   end
 
@@ -956,12 +956,19 @@ local function create_inline_image_element(img_path, opts)
     extra_classes = ' ' .. opts.classes
   end
 
+  local style
+  if quarto.doc.is_format('revealjs') then
+    style = 'height: 1em; width: auto; vertical-align: middle;'
+  else
+    style = 'height: 1.1em; width: auto; vertical-align: -0.15em;'
+  end
+
   return pandoc.RawInline(
     'html',
     '<span class="typst-inline' .. extra_classes .. '">'
       .. '<img src="' .. img_path .. '"'
       .. ' alt="typst inline expression"'
-      .. ' style="height: 1em; width: auto; vertical-align: middle;"'
+      .. ' style="' .. style .. '"'
       .. '></span>'
   )
 end
