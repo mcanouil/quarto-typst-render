@@ -49,7 +49,7 @@ local DEFAULTS = {
 
 --- Keys consumed by the filter; any other option is forwarded as an HTML attribute.
 local KNOWN_KEYS = {
-  cap = true, alt = true, _block_input = true,
+  cap = true, alt = true, _block_input = true, _inline = true,
   root = true, ['font-path'] = true, ['package-path'] = true,
 }
 for k in pairs(DEFAULTS) do
@@ -88,6 +88,9 @@ local typst_checked = false
 
 --- Block counter for auto-numbering unlabelled blocks
 local block_counter = 0
+
+--- Inline counter for auto-numbering inline expressions
+local inline_counter = 0
 
 --- Set of cache filenames produced or hit during this render (for cleanup)
 local used_cache_files = {}
@@ -321,10 +324,14 @@ end
 --- @param dpi string DPI value
 --- @param label string|nil Cross-reference label
 --- @return string File stem (without extension)
-local function compute_cache_stem(source, fmt, dpi, label)
+local function compute_cache_stem(source, fmt, dpi, label, inline)
   local hash = pandoc.utils.sha1(source .. '|' .. fmt .. '|' .. dpi):sub(1, 8)
   if type(label) == 'string' and label ~= '' then
     return 'typst-' .. label .. '-' .. hash
+  end
+  if inline then
+    inline_counter = inline_counter + 1
+    return 'typst-inline-' .. inline_counter .. '-' .. hash
   end
   block_counter = block_counter + 1
   return 'typst-block-' .. block_counter .. '-' .. hash
@@ -404,7 +411,7 @@ local function compile_typst(source, opts, img_format)
   end
 
   local use_cache = opts.cache ~= false
-  local stem = compute_cache_stem(hash_source, img_format, dpi, opts.label)
+  local stem = compute_cache_stem(hash_source, img_format, dpi, opts.label, opts._inline)
   local abs_cache, rel_cache = ensure_cache_dir()
   if not abs_cache then
     return nil
@@ -923,6 +930,99 @@ local function process_codeblock(el)
   return result
 end
 
+--- Create a bare inline Image element from a compiled image.
+--- Uses `height: 1em; width: auto; vertical-align: middle;` in HTML
+--- to scale the image to match surrounding text size.
+--- @param img_path string Path to the image file
+--- @param opts table Merged options
+--- @return pandoc.Image Inline image element
+local function create_inline_image_element(img_path, opts)
+  local classes = { 'typst-inline' }
+  if type(opts.classes) == 'string' and opts.classes ~= '' then
+    for cls in opts.classes:gmatch('%S+') do
+      classes[#classes + 1] = cls
+    end
+  end
+
+  local kvpairs = {}
+  if quarto.format.is_html_output() then
+    kvpairs[#kvpairs + 1] = { 'style', 'height: 1em; width: auto; vertical-align: middle;' }
+  end
+
+  return pandoc.Image(
+    { pandoc.Str('typst inline expression') },
+    img_path,
+    '',
+    pandoc.Attr('', classes, kvpairs)
+  )
+end
+
+--- Process a {typst} inline Code element.
+--- Compiles inline Typst expressions to tightly-cropped images.
+--- @param el pandoc.Code
+--- @return pandoc.Inline|pandoc.List|nil
+local function process_inline_code(el)
+  if not cell.is_inline_code(el) then
+    return nil
+  end
+
+  local code = el.text
+  if not code or code:match('^%s*$') then
+    return nil
+  end
+
+  local opts = cell.merge_options({}, global_config, DEFAULTS)
+  opts.width = 'auto'
+  opts.height = 'auto'
+  opts.margin = '0pt'
+  opts._inline = true
+
+  local inline_attr_keys = {
+    output = true, format = true, dpi = true, preamble = true,
+    background = true, classes = true,
+  }
+  for k, v in pairs(el.attributes) do
+    if inline_attr_keys[k] then
+      opts[k] = v
+    end
+  end
+  if el.attributes['input'] then
+    opts._block_input = el.attributes['input']
+  end
+
+  local output_mode = cell.resolve_output_mode(opts)
+
+  if output_mode == 'false' then
+    return {}
+  end
+
+  if output_mode == 'asis' then
+    return pandoc.RawInline('typst', code)
+  end
+
+  local img_format = opts.format
+  if img_format and not VALID_FORMAT_SET[img_format] then
+    utils.log_warning(EXTENSION_NAME, 'Invalid inline format "' .. img_format .. '"; auto-detecting.')
+    img_format = nil
+  end
+  if not img_format then
+    img_format = get_image_format_for_output()
+  end
+  if img_format == 'pdf' and quarto.format.is_html_output() then
+    img_format = 'png'
+  end
+
+  local full_source = build_typst_source(code, opts)
+  local pages = compile_typst(full_source, opts, img_format)
+
+  if not pages or #pages == 0 then
+    utils.log_warning(EXTENSION_NAME, 'Inline Typst compilation failed.')
+    return el
+  end
+
+  return create_inline_image_element(pages[1], opts)
+end
+
 --- Remove stale cache files after all blocks have been processed.
 --- Only runs when global `cache` is `'clean'`. Only removes files whose
 --- extension matches a format produced during the current render, so an HTML
@@ -975,6 +1075,6 @@ end
 
 return {
   { Meta = get_configuration },
-  { CodeBlock = process_codeblock },
+  { CodeBlock = process_codeblock, Code = process_inline_code },
   { Pandoc = cleanup_cache },
 }

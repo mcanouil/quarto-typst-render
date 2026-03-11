@@ -521,6 +521,15 @@ A repository social card built entirely in Typst, rendered as a high-resolution 
 
 :::
 
+## Inline Typst
+
+Render Typst expressions inline using backtick code with the `typst` class.
+The rendered image scales to match the surrounding text size.
+
+Here is a red word `#text(red)[hello]`{typst} in the middle of a sentence.
+
+Inline maths: `$ x^2 + y^2 = z^2 $`{typst} renders as a formula image.
+
 ## Global Configuration
 
 Configure the filter globally in your document YAML.
@@ -561,6 +570,9 @@ extensions:
 
 Any unknown option with a string value is forwarded as an HTML attribute on the output image element (e.g., `//| style: "max-height: 300px;"`).
 Values that look like booleans (`true`/`false`) must be quoted to be forwarded (e.g., `//| data-lazy: "true"`).
+
+For inline expressions (`` `...`{typst} ``), only `output`, `format`, `dpi`, `preamble`, `background`, `classes`, and `input` are supported as per-element attributes.
+Block-only options (`width`, `height`, `margin`, `echo`, `eval`, `label`, `cap`, `alt`, `file`, `pages`, `layout-ncol`, `output-location`) are not applicable to inline expressions.
 
 ### Global-Only Options
 

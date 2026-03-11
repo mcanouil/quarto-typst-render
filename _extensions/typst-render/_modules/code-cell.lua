@@ -42,6 +42,14 @@ function M.new(config)
     return el.classes:includes(language) or el.classes:includes('{' .. language .. '}')
   end
 
+  --- Check if an inline Code element has the configured language class.
+  --- Handles both `lang` and `{lang}` (Quarto markdown engine literal).
+  --- @param el pandoc.Code
+  --- @return boolean
+  function cell.is_inline_code(el)
+    return el.classes:includes(language) or el.classes:includes('{' .. language .. '}')
+  end
+
   --- Parse comment-pipe options from code block text.
   --- comment-pipe lines use `<prefix> key: value` syntax.
   --- @param text string The raw code block text
