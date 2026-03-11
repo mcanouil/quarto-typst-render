@@ -526,6 +526,8 @@ A repository social card built entirely in Typst, rendered as a high-resolution 
 Render Typst expressions inline using backtick code with the `typst` class.
 The rendered image scales to match the surrounding text size.
 
+`` `{typst} #text(red)[hello]` `` escaped
+
 Here is a red word `{typst} #text(red)[hello]` in the middle of a sentence.
 
 Inline maths: `{typst} $ x^2 + y^2 = z^2 $` renders as a formula image.

@@ -49,8 +49,13 @@ local DEFAULTS = {
 
 --- Keys consumed by the filter; any other option is forwarded as an HTML attribute.
 local KNOWN_KEYS = {
-  cap = true, alt = true, _block_input = true, _inline = true,
-  root = true, ['font-path'] = true, ['package-path'] = true,
+  cap = true,
+  alt = true,
+  _block_input = true,
+  _inline = true,
+  root = true,
+  ['font-path'] = true,
+  ['package-path'] = true,
 }
 for k in pairs(DEFAULTS) do
   KNOWN_KEYS[k] = true
@@ -299,7 +304,7 @@ end
 --- @return boolean
 local function has_custom_block_options(opts)
   return opts.background ~= DEFAULTS.background
-    or opts.margin ~= DEFAULTS.margin
+      or opts.margin ~= DEFAULTS.margin
 end
 
 --- Build the full Typst source with page template.
@@ -958,7 +963,7 @@ local function create_inline_image_element(img_path, opts)
 
   local style
   if quarto.doc.is_format('revealjs') then
-    style = 'height: 1.1em; width: auto; vertical-align: -0.25em;'
+    style = 'height: 1.1em; width: auto; vertical-align: -0.5em;'
   else
     style = 'height: 1.1em; width: auto; vertical-align: -0.1em;'
   end
@@ -966,10 +971,10 @@ local function create_inline_image_element(img_path, opts)
   return pandoc.RawInline(
     'html',
     '<span class="typst-inline' .. extra_classes .. '">'
-      .. '<img src="' .. img_path .. '"'
-      .. ' alt="typst inline expression"'
-      .. ' style="' .. style .. '"'
-      .. '></span>'
+    .. '<img src="' .. img_path .. '"'
+    .. ' alt="typst inline expression"'
+    .. ' style="' .. style .. '"'
+    .. '></span>'
   )
 end
 
@@ -994,8 +999,12 @@ local function process_inline_code(el)
   opts._inline = true
 
   local inline_attr_keys = {
-    output = true, format = true, dpi = true, preamble = true,
-    background = true, classes = true,
+    output = true,
+    format = true,
+    dpi = true,
+    preamble = true,
+    background = true,
+    classes = true,
   }
   for k, v in pairs(el.attributes) do
     if inline_attr_keys[k] then
