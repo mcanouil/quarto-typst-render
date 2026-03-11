@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.6.1 (2026-03-11)
+
 - fix: support inline Typst rendering in DOCX output with proper text-height sizing.
 - fix: skip inline Typst for PowerPoint output with a warning (Pandoc limitation).
 - fix: add generic `pandoc.Image` fallback for inline Typst in non-HTML formats.
