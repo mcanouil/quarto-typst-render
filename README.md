@@ -56,6 +56,11 @@ Inline maths: `{typst} $ x^2 + y^2 = z^2 $` renders as a formula image.
 Global options (`format`, `dpi`, `preamble`, `background`, `output`) apply to inline expressions.
 Block-only options (`echo`, `eval`, `label`, `cap`, `alt`, `file`, `pages`, `layout-ncol`, `output-location`) are not available for inline expressions.
 
+> [!NOTE]
+> Inline Typst is not supported for PowerPoint (PPTX) output.
+> Pandoc cannot embed images inside text runs in PPTX slides, so inline code is kept as-is.
+> Block-level `{typst}` code blocks work normally in PPTX.
+
 ### Per-Block Options
 
 Use comment+pipe syntax (`//| key: value`) at the top of the code block:
