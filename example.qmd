@@ -74,7 +74,8 @@ extensions:
 A Quarto filter extension that compiles ` ```{typst} ` code blocks to images (PNG, SVG, or PDF) using the Typst binary bundled with Quarto.
 This makes Typst diagrams, figures, tables, and equations usable across all output formats (HTML, PDF via LaTeX, DOCX, RevealJS, and more).
 
-When the output format is Typst, blocks pass through natively without image conversion.
+By default, blocks are compiled to images for all output formats, including Typst.
+Use `output: asis` for native passthrough when the output format is Typst.
 
 ## Installation
 
@@ -278,6 +279,22 @@ When combined with `echo: true`, only the source code is shown.
 #set text(size: 14pt)
 This source is visible, but the rendered image is suppressed.
 ```
+
+### Output: Native Passthrough (Typst Only)
+
+::: {.content-visible when-format="typst"}
+
+Setting `output: asis` passes the Typst code through natively when the output format is Typst.
+For all other formats, `output: asis` behaves the same as `output: true` (compiles to an image).
+
+```{typst}
+//| echo: fenced
+//| output: asis
+#set text(size: 14pt)
+This block uses native passthrough in Typst output.
+```
+
+:::
 
 ## Output Location (Reveal.js)
 
@@ -536,7 +553,7 @@ extensions:
 | `echo`            | boolean\|string | `false`   | Show Typst source code alongside output (`true`, `false`, `fenced`).              |
 | `eval`            | boolean         | `true`    | Compile Typst code to image.                                                      |
 | `include`         | boolean         | `true`    | Include block in output. Set `false` to suppress entirely.                        |
-| `output`          | boolean         | `true`    | Show rendered output. Set `false` to skip compilation.                            |
+| `output`          | boolean\|string | `true`    | Show rendered output (`true`, `false`, `asis`). Use `asis` for native passthrough in Typst output. |
 | `output-location` | string          | (none)    | Output placement in Reveal.js (`fragment`, `slide`, `column`, `column-fragment`). |
 | `classes`         | string          | (none)    | Space-separated CSS classes on the output image (e.g., `r-stretch`).              |
 | `pages`           | string          | `"all"`   | Pages to include from multi-page output: `all`, `1`, `1-3`, `2,5`, `3-`.          |
@@ -571,7 +588,7 @@ These options can only be set in the document YAML and cannot be overridden per 
 | --------------- | --------------------- |
 | HTML / RevealJS | `svg`                 |
 | LaTeX / Beamer  | `pdf`                 |
-| Typst           | (native pass-through) |
+| Typst           | `png`                 |
 | DOCX / PPTX     | `png`                 |
 | Other           | `png`                 |
 
@@ -590,3 +607,4 @@ The `include` and `output` options take precedence over the eval/echo matrix:
 
 - `include: false` hides the entire block regardless of eval/echo settings.
 - `output: false` skips compilation and shows only the source code (if echo is enabled).
+- `output: asis` uses native passthrough for Typst output; behaves as `true` for other formats.

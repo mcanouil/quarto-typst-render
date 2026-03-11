@@ -77,9 +77,10 @@ options:
     default: true
     description: "Include block in output. Set false to suppress entirely."
   output:
-    type: boolean
+    type: [boolean, string]
+    enum: [true, false, asis]
     default: true
-    description: "Show rendered output. Use false to skip compilation and suppress image."
+    description: "Show rendered output. Use 'asis' for native passthrough in Typst output."
   output-location:
     type: string
     enum: [fragment, slide, column, column-fragment]
@@ -147,8 +148,9 @@ attributes:
       type: boolean
       description: "Include this block in output. Set false to suppress entirely."
     output:
-      type: boolean
-      description: "Show rendered output for this block. Use false to skip compilation."
+      type: [boolean, string]
+      enum: [true, false, asis]
+      description: "Show rendered output for this block. Use 'asis' for native passthrough in Typst output."
     output-location:
       type: string
       enum: [fragment, slide, column, column-fragment]
