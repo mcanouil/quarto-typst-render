@@ -97,6 +97,9 @@ local block_counter = 0
 --- Inline counter for auto-numbering inline expressions
 local inline_counter = 0
 
+--- Whether the PPTX inline warning has been shown
+local pptx_inline_warned = false
+
 --- Set of cache filenames produced or hit during this render (for cleanup)
 local used_cache_files = {}
 
@@ -956,6 +959,22 @@ local function create_inline_image_element(img_path, opts)
     )
   end
 
+  if quarto.format.is_docx_output() then
+    local img = pandoc.Image(
+      { pandoc.Str('typst inline expression') },
+      img_path
+    )
+    img.attr = pandoc.Attr('', {}, { { 'height', '1em' } })
+    return img
+  end
+
+  if not quarto.format.is_html_output() then
+    return pandoc.Image(
+      { pandoc.Str('typst inline expression') },
+      img_path
+    )
+  end
+
   local extra_classes = ''
   if type(opts.classes) == 'string' and opts.classes ~= '' then
     extra_classes = ' ' .. opts.classes
@@ -984,6 +1003,18 @@ end
 --- @return pandoc.Inline|pandoc.List|nil
 local function process_inline_code(el)
   if not cell.is_inline_code(el) then
+    return nil
+  end
+
+  if quarto.format.is_powerpoint_output() then
+    if not pptx_inline_warned then
+      pptx_inline_warned = true
+      utils.log_warning(
+        EXTENSION_NAME,
+        'Inline Typst is not supported for PowerPoint output; '
+          .. 'inline code will be kept as-is.'
+      )
+    end
     return nil
   end
 
