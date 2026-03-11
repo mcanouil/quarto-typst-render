@@ -210,7 +210,7 @@ Per-block input override using comma-separated syntax:
 | `echo`            | boolean\|string | `false`   | Show Typst source code alongside output (`true`, `false`, `fenced`).              |
 | `eval`            | boolean         | `true`    | Compile Typst code to image.                                                      |
 | `include`         | boolean         | `true`    | Include block in output. Set `false` to suppress entirely.                        |
-| `output`          | boolean\|string | `true`    | Show rendered output (`true`, `false`, `asis`). Use `asis` for native passthrough in Typst output. |
+| `output`          | boolean\|string | `true`    | Show rendered output. Use `asis` for native Typst passthrough.                    |
 | `output-location` | string          | (none)    | Output placement in Reveal.js (`fragment`, `slide`, `column`, `column-fragment`). |
 | `classes`         | string          | (none)    | Space-separated CSS classes on the output image (e.g., `r-stretch`).              |
 | `pages`           | string          | `"all"`   | Pages to include from multi-page output: `all`, `1`, `1-3`, `2,5`, `3-`.          |
