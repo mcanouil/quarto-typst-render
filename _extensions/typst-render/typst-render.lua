@@ -963,7 +963,7 @@ local function create_inline_image_element(img_path, opts)
     img_path,
     '',
     pandoc.Attr('', classes, {
-      { 'style', 'height: 1.1em; width: auto; vertical-align: text-bottom;' },
+      { 'style', 'height: 1.1em; width: auto; vertical-align: -0.15em;' },
     })
   )
 end
