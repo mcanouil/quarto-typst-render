@@ -241,13 +241,13 @@ These options can only be set in the document YAML and cannot be overridden per 
 
 ### Auto-Selected Image Format
 
-| Output Format   | Default Image Format  |
-| --------------- | --------------------- |
-| HTML / RevealJS | `svg`                 |
-| LaTeX / Beamer  | `pdf`                 |
-| Typst           | `png`                 |
-| DOCX / PPTX     | `png`                 |
-| Other           | `png`                 |
+| Output Format   | Default Image Format |
+| --------------- | -------------------- |
+| HTML / RevealJS | `svg`                |
+| LaTeX / Beamer  | `pdf`                |
+| Typst           | `png`                |
+| DOCX / PPTX     | `png`                |
+| Other           | `png`                |
 
 ### Echo/Eval Behaviour
 
