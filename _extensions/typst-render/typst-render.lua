@@ -139,6 +139,8 @@ local function get_image_format_for_output()
     return 'pdf'
   elseif quarto.format.is_docx_output() or quarto.format.is_powerpoint_output() then
     return 'png'
+  elseif quarto.format.is_typst_output() then
+    return 'png'
   else
     return 'png'
   end
@@ -676,6 +678,17 @@ local function get_configuration(meta)
               global_config[k] = str == 'true'
             end
           end
+        elseif k == 'output' then
+          if type(val) == 'boolean' then
+            global_config[k] = val
+          else
+            local str = pandoc.utils.stringify(val)
+            if str == 'asis' then
+              global_config[k] = 'asis'
+            else
+              global_config[k] = str == 'true'
+            end
+          end
         elseif type(default_val) == 'boolean' then
           if type(val) == 'boolean' then
             global_config[k] = val
@@ -719,7 +732,7 @@ local function get_configuration(meta)
 
   -- Clear per-document cache when caching is disabled (cache: false).
   -- When cache is true or 'clean', existing files are preserved.
-  if global_config.cache == false and not quarto.format.is_typst_output() then
+  if global_config.cache == false then
     local abs_cache = pandoc.path.join({ quarto.project.directory, cache_subdir })
     local list_ok, entries = pcall(pandoc.system.list_directory, abs_cache)
     if list_ok then
@@ -801,7 +814,7 @@ local function process_codeblock(el)
   end
 
   -- Native Typst output: pass through as scoped RawBlock, wrapped in crossref if needed
-  if quarto.format.is_typst_output() then
+  if quarto.format.is_typst_output() and output_mode == 'asis' then
     local preamble = resolve_preamble(opts.preamble)
     local parts = {}
     if preamble then
@@ -920,10 +933,6 @@ local function cleanup_cache(doc) -- luacheck: ignore 212
   if global_config.cache ~= 'clean' then
     return nil
   end
-  if quarto.format.is_typst_output() then
-    return nil
-  end
-
   local abs_cache = pandoc.path.join({ quarto.project.directory, cache_subdir })
   local ok, entries = pcall(pandoc.system.list_directory, abs_cache)
   if not ok then

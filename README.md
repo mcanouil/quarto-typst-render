@@ -3,7 +3,8 @@
 A Quarto filter extension that compiles ` ```{typst} ` code blocks to images (PNG, SVG, or PDF) using the Typst binary bundled with Quarto.
 This makes Typst diagrams, figures, tables, and equations usable across all output formats (HTML, PDF via LaTeX, DOCX, RevealJS, and more).
 
-When the output format is Typst, blocks pass through natively without image conversion.
+By default, blocks are compiled to images for all output formats, including Typst.
+Use `output: asis` for native passthrough when the output format is Typst.
 
 ## Installation
 
@@ -198,10 +199,10 @@ Per-block input override using comma-separated syntax:
 | ----------------- | --------------- | --------- | --------------------------------------------------------------------------------- |
 | `format`          | string          | (auto)    | Image format: `png`, `svg`, `pdf`.                                                |
 | `dpi`             | string          | `"144"`   | Pixels per inch (PNG only).                                                       |
-| `width`           | string          | `"auto"`  | Page width for image compilation (ignored in Typst output).                       |
-| `height`          | string          | `"auto"`  | Page height for image compilation (ignored in Typst output).                      |
-| `margin`          | string          | `"0.5em"` | Page margin for image compilation; block `inset` in Typst output.                 |
-| `background`      | string          | `"none"`  | Page fill for image compilation; block `fill` in Typst output.                    |
+| `width`           | string          | `"auto"`  | Page width for image compilation (ignored with `output: asis`).                   |
+| `height`          | string          | `"auto"`  | Page height for image compilation (ignored with `output: asis`).                  |
+| `margin`          | string          | `"0.5em"` | Page margin for image compilation; block `inset` with `output: asis`.             |
+| `background`      | string          | `"none"`  | Page fill for image compilation; block `fill` with `output: asis`.                |
 | `preamble`        | string          | `""`      | Typst code or path to a `.typ` file prepended before user code.                   |
 | `cache`           | boolean\|string | `true`    | Cache compiled images. Use `"clean"` to also remove stale cache files.            |
 | `input`           | object          | (none)    | Key-value pairs passed as `--input` flags to Typst CLI.                           |
@@ -209,7 +210,7 @@ Per-block input override using comma-separated syntax:
 | `echo`            | boolean\|string | `false`   | Show Typst source code alongside output (`true`, `false`, `fenced`).              |
 | `eval`            | boolean         | `true`    | Compile Typst code to image.                                                      |
 | `include`         | boolean         | `true`    | Include block in output. Set `false` to suppress entirely.                        |
-| `output`          | boolean         | `true`    | Show rendered output. Set `false` to skip compilation.                            |
+| `output`          | boolean\|string | `true`    | Show rendered output. Use `asis` for native Typst passthrough.                    |
 | `output-location` | string          | (none)    | Output placement in Reveal.js (`fragment`, `slide`, `column`, `column-fragment`). |
 | `classes`         | string          | (none)    | Space-separated CSS classes on the output image (e.g., `r-stretch`).              |
 | `pages`           | string          | `"all"`   | Pages to include from multi-page output: `all`, `1`, `1-3`, `2,5`, `3-`.          |
@@ -240,13 +241,13 @@ These options can only be set in the document YAML and cannot be overridden per 
 
 ### Auto-Selected Image Format
 
-| Output Format   | Default Image Format  |
-| --------------- | --------------------- |
-| HTML / RevealJS | `svg`                 |
-| LaTeX / Beamer  | `pdf`                 |
-| Typst           | (native pass-through) |
-| DOCX / PPTX     | `png`                 |
-| Other           | `png`                 |
+| Output Format   | Default Image Format |
+| --------------- | -------------------- |
+| HTML / RevealJS | `svg`                |
+| LaTeX / Beamer  | `pdf`                |
+| Typst           | `png`                |
+| DOCX / PPTX     | `png`                |
+| Other           | `png`                |
 
 ### Echo/Eval Behaviour
 
@@ -263,6 +264,7 @@ The `include` and `output` options take precedence over the eval/echo matrix:
 
 - `include: false` hides the entire block regardless of eval/echo settings.
 - `output: false` skips compilation and shows only the source code (if echo is enabled).
+- `output: asis` uses native passthrough for Typst output; behaves as `true` for other formats.
 
 ## Example
 

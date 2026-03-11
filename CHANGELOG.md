@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- feat!: compile to image by default for Typst output (breaking change).
+  The `output` option now accepts `true`, `false`, or `asis`.
+  Use `output: asis` for native Typst passthrough (previously the default).
+
 ## 0.5.0 (2026-03-10)
 
 - feat: add `root` option to set the Typst compilation root directory (`--root`).
