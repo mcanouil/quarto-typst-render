@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- feat: add alt text accessibility for block and inline rendered images.
+  Block images fall back to caption, then truncated source code, instead of empty alt text.
+  Inline images use the Typst source code as alt text instead of a generic string.
+  Users can provide explicit alt text on inline code via `` `{typst} ..`{alt="..."} ``.
+
 ## 0.6.1 (2026-03-11)
 
 - fix: support inline Typst rendering in DOCX output with proper text-height sizing.
