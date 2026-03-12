@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.7.0 (2026-03-12)
+
 - feat: add alt text accessibility for block and inline rendered images.
   Block images fall back to caption, then truncated source code, instead of empty alt text.
   Inline images use the Typst source code as alt text instead of a generic string.
