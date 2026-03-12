@@ -56,6 +56,14 @@ Inline maths: `{typst} $ x^2 + y^2 = z^2 $` renders as a formula image.
 Global options (`format`, `dpi`, `preamble`, `background`, `output`) apply to inline expressions.
 Block-only options (`echo`, `eval`, `label`, `cap`, `alt`, `file`, `pages`, `layout-ncol`, `output-location`) are not available for inline expressions.
 
+Provide explicit alt text for accessibility using the `alt` attribute:
+
+```markdown
+The area is `{typst} $pi r^2$`{alt="pi r squared"} for a circle of radius r.
+```
+
+When no `alt` attribute is provided, the Typst source code is used as alt text.
+
 > [!NOTE]
 > Inline Typst is not supported for PowerPoint (PPTX) output.
 > Pandoc cannot embed images inside text runs in PPTX slides, so inline code is kept as-is.
@@ -254,7 +262,7 @@ These options can only be set in the document YAML and cannot be overridden per 
 | -------------- | ------ | -------------------------------------------------------------------------------- |
 | `label`        | string | Quarto cross-ref label (e.g., `fig-x`, `tbl-y`, `lst-z`).                        |
 | `cap`          | string | Caption text for the labelled block.                                             |
-| `alt`          | string | Alternative text for accessibility.                                              |
+| `alt`          | string | Alternative text for accessibility. Falls back to caption, then source code.     |
 | `<prefix>-cap` | string | Prefix-specific caption (e.g., `fig-cap`). Overrides `cap` for matching labels.  |
 | `<prefix>-alt` | string | Prefix-specific alt text (e.g., `fig-alt`). Overrides `alt` for matching labels. |
 
