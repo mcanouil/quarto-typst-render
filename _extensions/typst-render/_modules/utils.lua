@@ -101,6 +101,13 @@ function M.escape_typst(text)
   return text
 end
 
+--- Escape characters for Typst string literals (inside `"..."`).
+--- @param text string The text to escape
+--- @return string The escaped text safe for Typst string literals
+function M.escape_typst_string(text)
+  return text:gsub('\\', '\\\\'):gsub('"', '\\"')
+end
+
 --- Escape special Lua pattern characters for use in string.gsub.
 --- @param text string The text containing characters to escape
 --- @return string The escaped text safe for Lua patterns
