@@ -53,6 +53,8 @@ local KNOWN_KEYS = {
   alt = true,
   _block_input = true,
   _inline = true,
+  _alt = true,
+  _source = true,
   root = true,
   ['font-path'] = true,
   ['package-path'] = true,
@@ -544,7 +546,8 @@ local REF_TYPE_NAMES = {
 --- @return pandoc.Para Para containing the image
 local function create_image_element(img_path, opts)
   local caption_text = cell.resolve_caption(opts)
-  local alt_text = cell.resolve_alt(opts, caption_text)
+  local fallback = caption_text ~= '' and caption_text or opts._source or ''
+  local alt_text = cell.resolve_alt(opts, fallback)
 
   local classes = {}
   if quarto.format.is_html_output() then
@@ -815,6 +818,8 @@ local function process_codeblock(el)
     if not code then return el end
   end
 
+  opts._source = code:sub(1, 200)
+
   -- Echo-only: show source listing without compilation
   if not do_eval then
     return cell.create_echo_block(code, is_fenced, option_lines)
@@ -946,9 +951,10 @@ end
 --- @return pandoc.Inline Inline image element
 local function create_inline_image_element(img_path, opts)
   if quarto.format.is_typst_output() then
+    local escaped_alt = utils.escape_typst_string(opts._alt or '')
     return pandoc.RawInline(
       'typst',
-      '#box(height: 1.1em, baseline: 20%, image("' .. img_path .. '"))'
+      '#box(height: 1.1em, baseline: 20%, image("' .. img_path .. '", alt: "' .. escaped_alt .. '"))'
     )
   end
 
@@ -961,7 +967,7 @@ local function create_inline_image_element(img_path, opts)
 
   if quarto.format.is_docx_output() then
     local img = pandoc.Image(
-      { pandoc.Str('typst inline expression') },
+      { pandoc.Str(opts._alt or '') },
       img_path
     )
     img.attr = pandoc.Attr('', {}, { { 'height', '1em' } })
@@ -970,7 +976,7 @@ local function create_inline_image_element(img_path, opts)
 
   if not quarto.format.is_html_output() then
     return pandoc.Image(
-      { pandoc.Str('typst inline expression') },
+      { pandoc.Str(opts._alt or '') },
       img_path
     )
   end
@@ -991,7 +997,7 @@ local function create_inline_image_element(img_path, opts)
     'html',
     '<span class="typst-inline' .. extra_classes .. '">'
     .. '<img src="' .. img_path .. '"'
-    .. ' alt="typst inline expression"'
+    .. ' alt="' .. utils.escape_attribute(opts._alt or '') .. '"'
     .. ' style="' .. style .. '"'
     .. '></span>'
   )
@@ -1028,6 +1034,9 @@ local function process_inline_code(el)
   opts.height = 'auto'
   opts.margin = '(x: 0.5pt, top: 0.5pt, bottom: 0.25em)'
   opts._inline = true
+  opts._alt = (el.attributes and el.attributes['alt'] and el.attributes['alt'] ~= '')
+    and el.attributes['alt']
+    or code
 
   local output_mode = cell.resolve_output_mode(opts)
 

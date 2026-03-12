@@ -532,6 +532,8 @@ Here is a red word `{typst} #text(red)[hello]` in the middle of a sentence.
 
 Inline maths: `{typst} $ x^2 + y^2 = z^2 $` renders as a formula image.
 
+Inline with explicit alt text: `{typst} $pi r^2$`{alt="pi r squared"} for the area of a circle.
+
 Escaped inline code is not evaluated: `` `{typst} #text(red)[hello]` ``.
 
 ::: {.content-hidden when-format="revealjs" when-format="pptx"}
@@ -593,7 +595,7 @@ These options can only be set in the document YAML and cannot be overridden per 
 | --------------- | ------ | ------------------------------------------------------------------------------------ |
 | `label`         | string | Quarto cross-ref label (e.g., `fig-x`, `tbl-y`, `lst-z`).                           |
 | `cap`           | string | Caption text for the labelled block.                                                 |
-| `alt`           | string | Alternative text for accessibility.                                                  |
+| `alt`           | string | Alternative text for accessibility. Falls back to caption, then source code.         |
 | `<prefix>-cap`  | string | Prefix-specific caption (e.g., `fig-cap`). Overrides `cap` for matching labels.      |
 | `<prefix>-alt`  | string | Prefix-specific alt text (e.g., `fig-alt`). Overrides `alt` for matching labels.     |
 
