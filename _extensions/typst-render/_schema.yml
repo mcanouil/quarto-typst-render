@@ -95,6 +95,10 @@ options:
   layout-ncol:
     type: string
     description: "Number of columns for arranging multi-page output. Omit for vertical stack."
+  align:
+    type: string
+    enum: [left, center, right, default]
+    description: "Horizontal alignment for the rendered image block."
 
 # Per-block comment+pipe attributes (//| key: value).
 # These are parsed from the code block text, not from element attributes.
@@ -164,6 +168,10 @@ attributes:
     layout-ncol:
       type: string
       description: "Number of columns for arranging multi-page output. Omit for vertical stack."
+    align:
+      type: string
+      enum: [left, center, right, default]
+      description: "Horizontal alignment for the rendered image block."
     label:
       type: string
       description: "Cross-reference label (e.g., 'fig-my-diagram', 'tbl-results')."

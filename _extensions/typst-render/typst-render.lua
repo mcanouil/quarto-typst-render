@@ -24,6 +24,9 @@ local cell = code_cell.new({ language = 'typst', comment_prefix = '//|' })
 --- Valid image format set for O(1) lookup
 local VALID_FORMAT_SET = { png = true, svg = true, pdf = true }
 
+--- Valid alignment values
+local VALID_ALIGN_SET = { left = true, center = true, right = true, default = true }
+
 --- Default option values
 local DEFAULTS = {
   format = nil,
@@ -45,6 +48,7 @@ local DEFAULTS = {
   label = nil,
   pages = 'all',
   ['layout-ncol'] = nil,
+  align = nil,
 }
 
 --- Keys consumed by the filter; any other option is forwarded as an HTML attribute.
@@ -600,6 +604,36 @@ local function create_multi_page_element(page_paths, opts)
   return pandoc.Div(blocks, pandoc.Attr('', {}, div_attrs))
 end
 
+--- Wrap a block in an alignment container if the `align` option is set.
+--- Returns the block unchanged when alignment is nil or "default".
+--- @param block pandoc.Block The content block
+--- @param opts table Merged options
+--- @return pandoc.Block The original or wrapped block
+local function wrap_alignment(block, opts)
+  local align = opts.align
+  if not align or align == 'default' then
+    return block
+  end
+  if not VALID_ALIGN_SET[align] then
+    utils.log_warning(
+      EXTENSION_NAME,
+      'Invalid align value "' .. align .. '"; ignoring. '
+        .. 'Valid values: left, center, right, default.'
+    )
+    return block
+  end
+  if quarto.format.is_typst_output() then
+    local raw = pandoc.RawBlock('typst', '#align(' .. align .. ')[')
+    local raw_close = pandoc.RawBlock('typst', ']')
+    return pandoc.Div(pandoc.Blocks({ raw, block, raw_close }))
+  end
+  local style = 'text-align: ' .. align .. ';'
+  return pandoc.Div(
+    pandoc.Blocks({ block }),
+    pandoc.Attr('', {}, { { 'style', style } })
+  )
+end
+
 --- Read an external `.typ` file, resolving relative to the project directory.
 --- @param file_opt string Path from the `file` option
 --- @return string|nil File contents, or nil on failure
@@ -662,7 +696,7 @@ local function get_configuration(meta)
     local config_keys = {
       'format', 'dpi', 'width', 'height', 'margin', 'background',
       'preamble', 'cache', 'echo', 'eval', 'include', 'output', 'output-location', 'classes',
-      'root', 'package-path', 'pages', 'layout-ncol',
+      'root', 'package-path', 'pages', 'layout-ncol', 'align',
     }
     for _, k in ipairs(config_keys) do
       local default_val = DEFAULTS[k]
@@ -854,6 +888,9 @@ local function process_codeblock(el)
     else
       scoped_code = '#[\n' .. inner .. '\n]'
     end
+    if opts.align and opts.align ~= 'default' and VALID_ALIGN_SET[opts.align] then
+      scoped_code = '#align(' .. opts.align .. ')[\n' .. scoped_code .. '\n]'
+    end
     local result = cell.wrap_crossref(pandoc.RawBlock('typst', scoped_code), opts, REF_TYPE_NAMES)
     if do_echo then
       local echo_block = cell.create_echo_block(code, is_fenced, option_lines)
@@ -926,7 +963,8 @@ local function process_codeblock(el)
     return pandoc.Null()
   end
 
-  local result = cell.wrap_crossref(create_multi_page_element(selected_pages, opts), opts, REF_TYPE_NAMES)
+  local content = wrap_alignment(create_multi_page_element(selected_pages, opts), opts)
+  local result = cell.wrap_crossref(content, opts, REF_TYPE_NAMES)
 
   local output_location = cell.resolve_output_location(opts, EXTENSION_NAME)
   if output_location then
