@@ -995,7 +995,7 @@ local function create_inline_image_element(img_path, opts)
   return pandoc.RawInline(
     'html',
     '<span class="typst-inline' .. extra_classes .. '">'
-    .. '<img src="' .. img_path .. '"'
+    .. '<img src="' .. utils.escape_attribute(img_path) .. '"'
     .. ' alt="' .. utils.escape_attribute(opts._alt or '') .. '"'
     .. ' style="' .. style .. '"'
     .. '></span>'
