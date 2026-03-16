@@ -163,12 +163,12 @@ local function get_image_format_for_output()
   end
 end
 
---- Resolve a preamble value to Typst code.
+--- Resolve a single preamble entry to Typst code.
 --- If the value ends with `.typ`, it is treated as a file path and its contents
 --- are read; otherwise the value is used as inline Typst code.
 --- @param value string Inline Typst code or path to a `.typ` file
 --- @return string|nil Resolved Typst code, or nil on read failure
-local function resolve_preamble(value)
+local function resolve_preamble_entry(value)
   if not value or value == '' then
     return nil
   end
@@ -182,6 +182,33 @@ local function resolve_preamble(value)
     return nil
   end
   return value
+end
+
+--- Resolve a preamble option to Typst code.
+--- Accepts a string, a list of strings, or nil.
+--- Each entry is resolved individually via resolve_preamble_entry.
+--- @param value string|table|nil Preamble option value
+--- @return string|nil Concatenated Typst code, or nil if empty
+local function resolve_preamble(value)
+  if not value then
+    return nil
+  end
+  if type(value) == 'string' then
+    return resolve_preamble_entry(value)
+  end
+  if type(value) == 'table' then
+    local parts = {}
+    for _, entry in ipairs(value) do
+      local resolved = resolve_preamble_entry(entry)
+      if resolved then
+        parts[#parts + 1] = resolved
+      end
+    end
+    if #parts > 0 then
+      return table.concat(parts, '\n')
+    end
+  end
+  return nil
 end
 
 --- Parse a comma-separated string of key=value pairs into a table.
@@ -696,7 +723,7 @@ local function get_configuration(meta)
     -- so we use a separate key list to ensure 'format' etc. are not missed.
     local config_keys = {
       'format', 'dpi', 'width', 'height', 'margin', 'background',
-      'preamble', 'cache', 'echo', 'eval', 'include', 'output', 'output-location', 'classes',
+      'cache', 'echo', 'eval', 'include', 'output', 'output-location', 'classes',
       'root', 'package-path', 'pages', 'layout-ncol', 'align',
     }
     for _, k in ipairs(config_keys) do
@@ -761,6 +788,22 @@ local function get_configuration(meta)
         global_config['font-path'] = paths
       else
         global_config['font-path'] = { pandoc.utils.stringify(raw) }
+      end
+    end
+
+    -- Handle 'preamble' separately: accept a string or list of strings
+    if ext_config['preamble'] ~= nil then
+      local raw = ext_config['preamble']
+      local raw_type = pandoc.utils.type(raw)
+      if raw_type == 'List' then
+        local items = {}
+        for _, v in ipairs(raw) do
+          items[#items + 1] = pandoc.utils.stringify(v)
+        end
+        global_config['preamble'] = items
+      else
+        local str = pandoc.utils.stringify(raw)
+        global_config['preamble'] = str ~= '' and { str } or {}
       end
     end
 

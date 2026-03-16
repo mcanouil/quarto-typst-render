@@ -30,9 +30,11 @@ options:
     default: "none"
     description: "Page fill for image compilation; block fill with output: asis."
   preamble:
-    type: string
+    type: [string, array]
     default: ""
-    description: "Typst code prepended before user code, or path to a .typ file."
+    description: "Typst code or path(s) to .typ file(s) prepended before user code. Accepts a string or list of strings."
+    items:
+      type: string
     completion:
       type: file
       extensions: [.typ]
