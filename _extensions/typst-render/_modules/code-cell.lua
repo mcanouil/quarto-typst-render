@@ -96,6 +96,13 @@ function M.new(config)
           code_lines[#code_lines + 1] = line
         end
       else
+        if line:match('^%s*' .. escaped_prefix .. '%s*[%w%-]+:%s') then
+          utils.log_warning(
+            language,
+            'Comment-pipe option "' .. utils.trim(line) .. '" appears after code '
+              .. 'and will be treated as code. Move all options to the top of the block.'
+          )
+        end
         code_lines[#code_lines + 1] = line
       end
     end
