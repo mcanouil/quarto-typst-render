@@ -507,11 +507,12 @@ local function compile_typst(source, opts, img_format)
 
   local ok, result = pcall(pandoc.pipe, bin, args, source)
   if not ok then
+    local err_msg = tostring(result)
     utils.log_error(
       EXTENSION_NAME,
-      'Typst compilation failed:\n' .. tostring(result)
+      'Typst compilation failed:\n' .. err_msg
     )
-    return nil
+    return nil, err_msg
   end
 
   if is_paged then
@@ -923,15 +924,20 @@ local function process_codeblock(el)
 
   -- Build and compile
   local full_source = build_typst_source(code, opts)
-  local all_pages = compile_typst(full_source, opts, img_format)
+  local all_pages, compile_err = compile_typst(full_source, opts, img_format)
 
   if not all_pages then
     utils.log_warning(EXTENSION_NAME, 'Compilation failed; returning error block.')
+    local error_inlines = {
+      pandoc.Strong({ pandoc.Str('[typst-render] Compilation failed for this block.') }),
+    }
+    if compile_err then
+      error_inlines[#error_inlines + 1] = pandoc.LineBreak()
+      error_inlines[#error_inlines + 1] = pandoc.Code(compile_err)
+    end
     local error_block = pandoc.Div(
       pandoc.Blocks({
-        pandoc.Para({
-          pandoc.Strong({ pandoc.Str('[typst-render] Compilation failed for this block.') }),
-        }),
+        pandoc.Para(error_inlines),
       }),
       pandoc.Attr('', { 'typst-render-error' }, {})
     )
@@ -1098,10 +1104,11 @@ local function process_inline_code(el)
   end
 
   local full_source = build_typst_source(code, opts)
-  local pages = compile_typst(full_source, opts, img_format)
+  local pages, compile_err = compile_typst(full_source, opts, img_format)
 
   if not pages or #pages == 0 then
-    utils.log_warning(EXTENSION_NAME, 'Inline Typst compilation failed.')
+    local detail = compile_err and (': ' .. compile_err) or '.'
+    utils.log_warning(EXTENSION_NAME, 'Inline Typst compilation failed' .. detail)
     return el
   end
 
