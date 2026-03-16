@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- feat: add `foreground` option to set text fill colour for rendered images.
+- feat: add brand/theme-aware colour support for `foreground` and `background`.
+  Both options now accept Typst colour literals, CSS hex strings (auto-converted),
+  `auto` (reads from `_brand.yml`), or a `{light, dark}` map for theme-aware rendering.
+  HTML/Reveal.js outputs render both variants using Quarto's `.light-content`/`.dark-content` classes;
+  other formats use `brand-mode` to select one variant.
+- fix: prevent nil-defaulted options (`format`, `file`, `input`, `classes`, `label`, `align`, etc.)
+  from leaking as HTML attributes on output images.
+- fix: resolve table-valued colours for inline code to avoid runtime crashes with dual-mode global config.
+
 ## 0.7.0 (2026-03-12)
 
 - feat: add alt text accessibility for block and inline rendered images.
