@@ -654,13 +654,7 @@ local function get_configuration(meta)
   end
   cache_subdir = pandoc.path.join({ CACHE_BASE, doc_stem })
 
-  local ext_config = nil
-
-  if utils.get_extension_config(meta, EXTENSION_NAME) then
-    ext_config = utils.get_extension_config(meta, EXTENSION_NAME)
-  elseif meta['typst-render'] then
-    ext_config = meta['typst-render']
-  end
+  local ext_config = utils.get_extension_config(meta, EXTENSION_NAME) or meta['typst-render']
 
   if ext_config then
     -- Iterate all DEFAULTS keys explicitly; pairs() skips nil-valued keys,
