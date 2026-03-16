@@ -38,19 +38,19 @@ options:
       extensions: [.typ]
   root:
     type: string
-    description: "Root directory for Typst compilation. Defaults to the Quarto project directory."
+    description: "Global only. Root directory for Typst compilation. Defaults to the Quarto project directory."
     completion:
       type: directory
   font-path:
     type: [string, array]
-    description: "Path or list of paths to directories containing additional fonts for Typst compilation."
+    description: "Global only. Path or list of paths to directories containing additional fonts for Typst compilation."
     items:
       type: string
     completion:
       type: directory
   package-path:
     type: string
-    description: "Path to a directory containing Typst packages for offline or reproducible builds."
+    description: "Global only. Path to a directory containing Typst packages for offline or reproducible builds."
     completion:
       type: directory
   input:
