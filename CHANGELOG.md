@@ -8,9 +8,17 @@
   `auto` (reads from `_brand.yml`), or a `{light, dark}` map for theme-aware rendering.
   HTML/Reveal.js outputs render both variants using Quarto's `.light-content`/`.dark-content` classes;
   other formats use `brand-mode` to select one variant.
+- feat: add `align` option for horizontal image alignment (`left`, `center`, `right`, `default`).
+- feat: support multiple preamble files via a list of strings or `.typ` paths.
+- feat: surface Typst stderr in compilation error output for easier debugging.
 - fix: prevent nil-defaulted options (`format`, `file`, `input`, `classes`, `label`, `align`, etc.)
   from leaking as HTML attributes on output images.
 - fix: resolve table-valued colours for inline code to avoid runtime crashes with dual-mode global config.
+- fix: escape image path in inline HTML image `src` attribute.
+- fix: warn when global `input` option is not a YAML map.
+- fix: warn when comment-pipe options appear after code instead of silently ignoring them.
+- refactor: remove redundant `get_extension_config` call.
+- docs: annotate global-only options in schema descriptions.
 
 ## 0.7.0 (2026-03-12)
 
