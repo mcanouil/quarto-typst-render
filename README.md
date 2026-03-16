@@ -53,7 +53,7 @@ Here is a red word `{typst} #text(red)[hello]` in the middle of a sentence.
 Inline maths: `{typst} $ x^2 + y^2 = z^2 $` renders as a formula image.
 ```
 
-Global options (`format`, `dpi`, `preamble`, `background`, `output`) apply to inline expressions.
+Global options (`format`, `dpi`, `preamble`, `background`, `foreground`, `output`) apply to inline expressions.
 Block-only options (`echo`, `eval`, `label`, `cap`, `alt`, `file`, `pages`, `layout-ncol`, `output-location`) are not available for inline expressions.
 
 Provide explicit alt text for accessibility using the `alt` attribute:
@@ -211,6 +211,53 @@ extensions:
     cache: clean
 ```
 
+### Foreground and Background Colours
+
+Set text and page fill colours for rendered images.
+Values can be Typst colour literals, CSS hex strings (converted automatically), `auto` (reads from `_brand.yml`), or a map with `light`/`dark` keys for theme-aware rendering.
+
+Static colours:
+
+```yaml
+extensions:
+  typst-render:
+    foreground: "eastern"
+    background: "luma(245)"
+```
+
+Brand-aware colours (requires a `_brand.yml` with `color.foreground` and/or `color.background` defined):
+
+```yaml
+extensions:
+  typst-render:
+    foreground: auto
+    background: auto
+```
+
+Explicit light/dark values (HTML/Reveal.js renders both variants using Quarto's `.light-content`/`.dark-content` classes; other formats use `brand-mode` to select one):
+
+```yaml
+brand-mode: light
+extensions:
+  typst-render:
+    foreground:
+      light: "#1a1a2e"
+      dark: "#eaeaea"
+    background:
+      light: "#ffffff"
+      dark: "#1a1a2e"
+```
+
+Per-block override using comment+pipe syntax:
+
+````markdown
+```{typst}
+//| foreground: eastern
+//| background: luma(245)
+#align(center)[Styled text.]
+```
+````
+
 Per-block input override using comma-separated syntax:
 
 ````markdown
@@ -222,26 +269,28 @@ Per-block input override using comma-separated syntax:
 
 ### Options
 
-| Option            | Type            | Default   | Description                                                                       |
-| ----------------- | --------------- | --------- | --------------------------------------------------------------------------------- |
-| `format`          | string          | (auto)    | Image format: `png`, `svg`, `pdf`.                                                |
-| `dpi`             | string          | `"144"`   | Pixels per inch (PNG only).                                                       |
-| `width`           | string          | `"auto"`  | Page width for image compilation (ignored with `output: asis`).                   |
-| `height`          | string          | `"auto"`  | Page height for image compilation (ignored with `output: asis`).                  |
-| `margin`          | string          | `"0.5em"` | Page margin for image compilation; block `inset` with `output: asis`.             |
-| `background`      | string          | `"none"`  | Page fill for image compilation; block `fill` with `output: asis`.                |
-| `preamble`        | string          | `""`      | Typst code or path to a `.typ` file prepended before user code.                   |
-| `cache`           | boolean\|string | `true`    | Cache compiled images. Use `"clean"` to also remove stale cache files.            |
-| `input`           | object          | (none)    | Key-value pairs passed as `--input` flags to Typst CLI.                           |
-| `file`            | string          | (none)    | Path to external `.typ` file to render.                                           |
-| `echo`            | boolean\|string | `false`   | Show Typst source code alongside output (`true`, `false`, `fenced`).              |
-| `eval`            | boolean         | `true`    | Compile Typst code to image.                                                      |
-| `include`         | boolean         | `true`    | Include block in output. Set `false` to suppress entirely.                        |
-| `output`          | boolean\|string | `true`    | Show rendered output. Use `asis` for native Typst passthrough.                    |
-| `output-location` | string          | (none)    | Output placement in Reveal.js (`fragment`, `slide`, `column`, `column-fragment`). |
-| `classes`         | string          | (none)    | Space-separated CSS classes on the output image (e.g., `r-stretch`).              |
-| `pages`           | string          | `"all"`   | Pages to include from multi-page output: `all`, `1`, `1-3`, `2,5`, `3-`.          |
-| `layout-ncol`     | string          | (none)    | Number of columns for arranging multi-page output. Omit for vertical stack.       |
+| Option            | Type            | Default   | Description                                                                                   |
+| ----------------- | --------------- | --------- | --------------------------------------------------------------------------------------------- |
+| `format`          | string          | (auto)    | Image format: `png`, `svg`, `pdf`.                                                            |
+| `dpi`             | string          | `"144"`   | Pixels per inch (PNG only).                                                                   |
+| `width`           | string          | `"auto"`  | Page width for image compilation (ignored with `output: asis`).                               |
+| `height`          | string          | `"auto"`  | Page height for image compilation (ignored with `output: asis`).                              |
+| `margin`          | string          | `"0.5em"` | Page margin for image compilation; block `inset` with `output: asis`.                         |
+| `background`      | string\|object  | `"none"`  | Page fill colour. Accepts a Typst colour, `auto` (from `_brand.yml`), or `{light, dark}` map. |
+| `foreground`      | string\|object  | (none)    | Text fill colour. Accepts a Typst colour, `auto` (from `_brand.yml`), or `{light, dark}` map. |
+| `preamble`        | string          | `""`      | Typst code or path to a `.typ` file prepended before user code.                               |
+| `cache`           | boolean\|string | `true`    | Cache compiled images. Use `"clean"` to also remove stale cache files.                        |
+| `input`           | object          | (none)    | Key-value pairs passed as `--input` flags to Typst CLI.                                       |
+| `file`            | string          | (none)    | Path to external `.typ` file to render.                                                       |
+| `echo`            | boolean\|string | `false`   | Show Typst source code alongside output (`true`, `false`, `fenced`).                          |
+| `eval`            | boolean         | `true`    | Compile Typst code to image.                                                                  |
+| `include`         | boolean         | `true`    | Include block in output. Set `false` to suppress entirely.                                    |
+| `output`          | boolean\|string | `true`    | Show rendered output. Use `asis` for native Typst passthrough.                                |
+| `output-location` | string          | (none)    | Output placement in Reveal.js (`fragment`, `slide`, `column`, `column-fragment`).             |
+| `classes`         | string          | (none)    | Space-separated CSS classes on the output image (e.g., `r-stretch`).                          |
+| `pages`           | string          | `"all"`   | Pages to include from multi-page output: `all`, `1`, `1-3`, `2,5`, `3-`.                      |
+| `layout-ncol`     | string          | (none)    | Number of columns for arranging multi-page output. Omit for vertical stack.                   |
+| `align`           | string          | (none)    | Horizontal alignment: `left`, `center`, `right`, `default`.                                   |
 
 Any unknown option with a string value is forwarded as an HTML attribute on the output image element (e.g., `//| style: "max-height: 300px;"`).
 Values that look like booleans (`true`/`false`) must be quoted to be forwarded (e.g., `//| data-lazy: "true"`).

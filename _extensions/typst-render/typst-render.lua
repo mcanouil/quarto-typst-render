@@ -35,6 +35,7 @@ local DEFAULTS = {
   height = 'auto',
   margin = '0.5em',
   background = 'none',
+  foreground = nil,
   preamble = '',
   cache = true,
   file = nil,
@@ -52,6 +53,8 @@ local DEFAULTS = {
 }
 
 --- Keys consumed by the filter; any other option is forwarded as an HTML attribute.
+--- NOTE: pairs(DEFAULTS) skips nil-valued keys, so all keys with nil defaults
+--- must be listed explicitly here to prevent them leaking as HTML attributes.
 local KNOWN_KEYS = {
   cap = true,
   alt = true,
@@ -62,6 +65,15 @@ local KNOWN_KEYS = {
   root = true,
   ['font-path'] = true,
   ['package-path'] = true,
+  format = true,
+  foreground = true,
+  file = true,
+  input = true,
+  ['output-location'] = true,
+  classes = true,
+  label = true,
+  ['layout-ncol'] = true,
+  align = true,
 }
 for k in pairs(DEFAULTS) do
   KNOWN_KEYS[k] = true
@@ -91,6 +103,9 @@ local cache_subdir = nil
 --- Global configuration from document metadata
 local global_config = {}
 
+--- Detected brand mode ("light" or "dark")
+local global_brand_mode = 'light'
+
 --- Resolved Typst binary path (cached)
 local typst_bin = nil
 
@@ -111,6 +126,122 @@ local used_cache_files = {}
 
 --- Set of image format extensions produced during this render (for cleanup)
 local used_cache_formats = {}
+
+-- ============================================================================
+-- BRAND / THEME COLOUR RESOLUTION
+-- ============================================================================
+
+--- Cached brand module (nil = not yet attempted, false = unavailable)
+local brand_module = nil
+
+--- Load the Quarto brand module if available.
+--- @return table|nil The brand module, or nil if unavailable
+local function get_brand_module()
+  if brand_module == false then
+    return nil
+  end
+  if brand_module ~= nil then
+    return brand_module
+  end
+  local ok, mod = pcall(require, 'modules/brand/brand')
+  if ok and mod then
+    brand_module = mod
+    return mod
+  end
+  brand_module = false
+  return nil
+end
+
+--- Convert a CSS colour string to a Typst colour literal.
+--- Wraps hex values like "#fdfdfd" as rgb("#fdfdfd") for Typst.
+--- Passes through values that are already Typst-native (e.g., "blue", "luma(240)").
+--- @param css_colour string CSS colour string
+--- @return string Typst-compatible colour string
+local function css_colour_to_typst(css_colour)
+  if css_colour:match('^#') then
+    return 'rgb("' .. css_colour .. '")'
+  end
+  if css_colour:match('^rgb%(') or css_colour:match('^hsl%(') then
+    return 'rgb("' .. css_colour .. '")'
+  end
+  return css_colour
+end
+
+--- Resolve a colour option to a config value preserving both modes when available.
+--- Returns a {light=..., dark=...} table when both modes are present,
+--- or a plain string when only one value is available.
+--- @param raw any Raw value from config (string, MetaInlines, or MetaMap)
+--- @param colour_name string Brand colour name ("foreground" or "background")
+--- @return string|table|nil Resolved config value
+local function resolve_colour_config(raw, colour_name)
+  if raw == nil then
+    return nil
+  end
+
+  -- Handle MetaMap / table with light/dark keys
+  if type(raw) == 'table' and not pandoc.utils.type(raw):match('Inlines') then
+    local light = raw['light'] and css_colour_to_typst(pandoc.utils.stringify(raw['light'])) or nil
+    local dark = raw['dark'] and css_colour_to_typst(pandoc.utils.stringify(raw['dark'])) or nil
+    if light and dark then
+      return { light = light, dark = dark }
+    end
+    return light or dark
+  end
+
+  local str = pandoc.utils.stringify(raw)
+
+  if str == 'auto' then
+    local brand = get_brand_module()
+    if brand and brand.get_color then
+      local ok_l, light = pcall(brand.get_color, 'light', colour_name)
+      local ok_d, dark = pcall(brand.get_color, 'dark', colour_name)
+      local have_light = ok_l and light and light ~= ''
+      local have_dark = ok_d and dark and dark ~= ''
+      if have_light and have_dark and light ~= dark then
+        return { light = css_colour_to_typst(light), dark = css_colour_to_typst(dark) }
+      end
+      if have_light then
+        return css_colour_to_typst(light)
+      end
+      if have_dark then
+        return css_colour_to_typst(dark)
+      end
+    end
+    utils.log_warning(
+      EXTENSION_NAME,
+      colour_name .. ': auto requires a _brand.yml with "' .. colour_name
+        .. '" defined; falling back to default.'
+    )
+    return nil
+  end
+
+  if str ~= '' then
+    return css_colour_to_typst(str)
+  end
+  return nil
+end
+
+--- Extract a single colour string from a colour config value for a given mode.
+--- @param config string|table|nil Colour config (string or {light, dark} table)
+--- @param brand_mode string "light" or "dark"
+--- @return string|nil Resolved colour string
+local function resolve_colour_value(config, brand_mode)
+  if type(config) == 'string' then
+    return config
+  end
+  if type(config) == 'table' then
+    local other = brand_mode == 'light' and 'dark' or 'light'
+    return config[brand_mode] or config[other]
+  end
+  return nil
+end
+
+--- Check whether a colour config has both light and dark values.
+--- @param config string|table|nil Colour config
+--- @return boolean
+local function is_dual_colour(config)
+  return type(config) == 'table' and config.light ~= nil and config.dark ~= nil
+end
 
 -- ============================================================================
 -- HELPER FUNCTIONS
@@ -324,6 +455,28 @@ local function parse_pages(pages_str, total_pages)
   return result
 end
 
+--- Check whether opts contain any dual-mode colour values requiring dual rendering.
+--- @param opts table Merged options
+--- @return boolean
+local function has_dual_mode_colours(opts)
+  return is_dual_colour(opts.background) or is_dual_colour(opts.foreground)
+end
+
+--- Resolve table-valued colours in opts to strings for a specific mode.
+--- Returns a shallow copy of opts with background/foreground as plain strings.
+--- @param opts table Merged options (may contain table-valued colours)
+--- @param mode string "light" or "dark"
+--- @return table Copy of opts with colours resolved to strings
+local function resolve_opts_colours(opts, mode)
+  local resolved = {}
+  for k, v in pairs(opts) do
+    resolved[k] = v
+  end
+  resolved.background = resolve_colour_value(opts.background, mode) or DEFAULTS.background
+  resolved.foreground = resolve_colour_value(opts.foreground, mode)
+  return resolved
+end
+
 --- Build the `#set page(...)` directive from options (for image compilation).
 --- @param opts table Merged options
 --- @return string Typst page directive
@@ -335,11 +488,12 @@ local function build_page_directive(opts)
 end
 
 --- Check whether block-level options differ from defaults for native Typst output.
---- Only `background` and `margin` are propagated (as `fill` and `inset`).
+--- Background, foreground, and margin are propagated.
 --- @param opts table Merged options
 --- @return boolean
 local function has_custom_block_options(opts)
   return opts.background ~= DEFAULTS.background
+      or opts.foreground ~= DEFAULTS.foreground
       or opts.margin ~= DEFAULTS.margin
 end
 
@@ -350,6 +504,9 @@ end
 local function build_typst_source(code, opts)
   local parts = {}
   parts[#parts + 1] = build_page_directive(opts)
+  if opts.foreground then
+    parts[#parts + 1] = '#set text(fill: ' .. opts.foreground .. ')'
+  end
   local preamble = resolve_preamble(opts.preamble)
   if preamble then
     parts[#parts + 1] = preamble
@@ -662,6 +819,59 @@ local function wrap_alignment(block, opts)
   )
 end
 
+--- Create an error block for failed Typst compilation.
+--- @param err string|nil Error message from the compiler
+--- @return pandoc.Div Error block
+local function create_error_block(err)
+  local error_inlines = {
+    pandoc.Strong({ pandoc.Str('[typst-render] Compilation failed for this block.') }),
+  }
+  if err then
+    error_inlines[#error_inlines + 1] = pandoc.LineBreak()
+    error_inlines[#error_inlines + 1] = pandoc.Code(err)
+  end
+  return pandoc.Div(
+    pandoc.Blocks({ pandoc.Para(error_inlines) }),
+    pandoc.Attr('', { 'typst-render-error' }, {})
+  )
+end
+
+--- Compile Typst code and produce a result block (image element with alignment).
+--- @param code string User Typst code
+--- @param opts table Resolved options (colours must be plain strings)
+--- @param img_format string Target image format
+--- @return pandoc.Block|nil Result block, or nil on failure
+--- @return string|nil Error message on compilation failure
+local function compile_to_result(code, opts, img_format)
+  local full_source = build_typst_source(code, opts)
+  local all_pages, compile_err = compile_typst(full_source, opts, img_format)
+
+  if not all_pages then
+    return nil, compile_err
+  end
+
+  local selected_pages
+  if img_format == 'pdf' and opts.pages ~= 'all' then
+    utils.log_warning(
+      EXTENSION_NAME,
+      'Page selection is not supported for PDF format; embedding the full PDF.'
+    )
+    selected_pages = all_pages
+  else
+    local page_indices = parse_pages(opts.pages, #all_pages)
+    selected_pages = {}
+    for _, idx in ipairs(page_indices) do
+      selected_pages[#selected_pages + 1] = all_pages[idx]
+    end
+  end
+
+  if #selected_pages == 0 then
+    return nil, nil
+  end
+
+  return wrap_alignment(create_multi_page_element(selected_pages, opts), opts), nil
+end
+
 --- Read an external `.typ` file, resolving relative to the project directory.
 --- @param file_opt string Path from the `file` option
 --- @return string|nil File contents, or nil on failure
@@ -716,13 +926,17 @@ local function get_configuration(meta)
   end
   cache_subdir = pandoc.path.join({ CACHE_BASE, doc_stem })
 
+  -- Detect brand mode from document metadata (used for colour resolution)
+  global_brand_mode = (meta['brand-mode'] and pandoc.utils.stringify(meta['brand-mode']) == 'dark')
+    and 'dark' or 'light'
+
   local ext_config = utils.get_extension_config(meta, EXTENSION_NAME) or meta['typst-render']
 
   if ext_config then
     -- Iterate all DEFAULTS keys explicitly; pairs() skips nil-valued keys,
     -- so we use a separate key list to ensure 'format' etc. are not missed.
     local config_keys = {
-      'format', 'dpi', 'width', 'height', 'margin', 'background',
+      'format', 'dpi', 'width', 'height', 'margin',
       'cache', 'echo', 'eval', 'include', 'output', 'output-location', 'classes',
       'root', 'package-path', 'pages', 'layout-ncol', 'align',
     }
@@ -823,6 +1037,16 @@ local function get_configuration(meta)
         )
       end
     end
+
+    -- Handle 'background' and 'foreground' separately: support string, "auto", or {light, dark} map
+    for _, colour_key in ipairs({ 'background', 'foreground' }) do
+      if ext_config[colour_key] ~= nil then
+        local resolved = resolve_colour_config(ext_config[colour_key], colour_key)
+        if resolved then
+          global_config[colour_key] = resolved
+        end
+      end
+    end
   end
 
   -- Clear per-document cache when caching is disabled (cache: false).
@@ -861,6 +1085,17 @@ local function process_codeblock(el)
 
   local opts = cell.merge_options(block_opts, global_config, DEFAULTS)
   opts._block_input = block_input_str
+
+  -- Resolve per-block colour values (convert "auto" via brand, hex via css_colour_to_typst)
+  for _, colour_key in ipairs({ 'background', 'foreground' }) do
+    local val = opts[colour_key]
+    if val == 'auto' then
+      local resolved = resolve_colour_config('auto', colour_key)
+      opts[colour_key] = resolved or DEFAULTS[colour_key]
+    elseif type(val) == 'string' and val ~= DEFAULTS[colour_key] then
+      opts[colour_key] = css_colour_to_typst(val)
+    end
+  end
 
   -- Per-block "cache: clean" is not supported; warn and treat as true
   if type(block_opts.cache) == 'string' and block_opts.cache:lower() == 'clean' then
@@ -912,21 +1147,27 @@ local function process_codeblock(el)
 
   -- Native Typst output: pass through as scoped RawBlock, wrapped in crossref if needed
   if quarto.format.is_typst_output() and output_mode == 'asis' then
-    local preamble = resolve_preamble(opts.preamble)
+    local typst_opts = has_dual_mode_colours(opts)
+      and resolve_opts_colours(opts, global_brand_mode)
+      or opts
+    local preamble = resolve_preamble(typst_opts.preamble)
     local parts = {}
+    if typst_opts.foreground then
+      parts[#parts + 1] = '#set text(fill: ' .. typst_opts.foreground .. ')'
+    end
     if preamble then
       parts[#parts + 1] = preamble
     end
     parts[#parts + 1] = code
     local inner = table.concat(parts, '\n')
     local scoped_code
-    if has_custom_block_options(opts) then
+    if has_custom_block_options(typst_opts) then
       local params = { 'width: 100%' }
-      if opts.margin ~= DEFAULTS.margin then
-        params[#params + 1] = 'inset: ' .. opts.margin
+      if typst_opts.margin ~= DEFAULTS.margin then
+        params[#params + 1] = 'inset: ' .. typst_opts.margin
       end
-      if opts.background ~= DEFAULTS.background then
-        params[#params + 1] = 'fill: ' .. opts.background
+      if typst_opts.background ~= DEFAULTS.background then
+        params[#params + 1] = 'fill: ' .. typst_opts.background
       end
       scoped_code = '#[\n#block(' .. table.concat(params, ', ') .. ')[\n' .. inner .. '\n]\n]'
     else
@@ -965,55 +1206,63 @@ local function process_codeblock(el)
     img_format = 'png'
   end
 
-  -- Build and compile
-  local full_source = build_typst_source(code, opts)
-  local all_pages, compile_err = compile_typst(full_source, opts, img_format)
+  -- Dual-mode rendering for HTML/Reveal.js when both light and dark colours are present
+  local dual_mode = quarto.format.is_html_output() and has_dual_mode_colours(opts)
 
-  if not all_pages then
-    utils.log_warning(EXTENSION_NAME, 'Compilation failed; returning error block.')
-    local error_inlines = {
-      pandoc.Strong({ pandoc.Str('[typst-render] Compilation failed for this block.') }),
-    }
-    if compile_err then
-      error_inlines[#error_inlines + 1] = pandoc.LineBreak()
-      error_inlines[#error_inlines + 1] = pandoc.Code(compile_err)
-    end
-    local error_block = pandoc.Div(
-      pandoc.Blocks({
-        pandoc.Para(error_inlines),
-      }),
-      pandoc.Attr('', { 'typst-render-error' }, {})
-    )
-    if do_echo then
-      local echo_block = cell.create_echo_block(code, is_fenced, option_lines)
-      return pandoc.Blocks({ echo_block, error_block })
-    end
-    return error_block
-  end
+  local result
+  if dual_mode then
+    local light_opts = resolve_opts_colours(opts, 'light')
+    local dark_opts = resolve_opts_colours(opts, 'dark')
+    local light_content, light_err = compile_to_result(code, light_opts, img_format)
+    local dark_content, dark_err = compile_to_result(code, dark_opts, img_format)
 
-  -- Apply page selection
-  local selected_pages
-  if img_format == 'pdf' and opts.pages ~= 'all' then
-    utils.log_warning(
-      EXTENSION_NAME,
-      'Page selection is not supported for PDF format; embedding the full PDF.'
-    )
-    selected_pages = all_pages
+    if not light_content and not dark_content then
+      utils.log_warning(EXTENSION_NAME, 'Compilation failed; returning error block.')
+      local error_block = create_error_block(light_err or dark_err)
+      if do_echo then
+        local echo_block = cell.create_echo_block(code, is_fenced, option_lines)
+        return pandoc.Blocks({ echo_block, error_block })
+      end
+      return error_block
+    end
+
+    local blocks = {}
+    if light_content then
+      blocks[#blocks + 1] = pandoc.Div(
+        pandoc.Blocks({ light_content }),
+        pandoc.Attr('', { 'light-content' }, {})
+      )
+    end
+    if dark_content then
+      blocks[#blocks + 1] = pandoc.Div(
+        pandoc.Blocks({ dark_content }),
+        pandoc.Attr('', { 'dark-content' }, {})
+      )
+    end
+    result = cell.wrap_crossref(pandoc.Div(blocks), opts, REF_TYPE_NAMES)
   else
-    local page_indices = parse_pages(opts.pages, #all_pages)
-    selected_pages = {}
-    for _, idx in ipairs(page_indices) do
-      selected_pages[#selected_pages + 1] = all_pages[idx]
+    -- Single-mode: resolve colours to brand mode
+    local resolved_opts = has_dual_mode_colours(opts)
+      and resolve_opts_colours(opts, global_brand_mode)
+      or opts
+    local content, compile_err = compile_to_result(code, resolved_opts, img_format)
+
+    if not content then
+      if compile_err then
+        utils.log_warning(EXTENSION_NAME, 'Compilation failed; returning error block.')
+        local error_block = create_error_block(compile_err)
+        if do_echo then
+          local echo_block = cell.create_echo_block(code, is_fenced, option_lines)
+          return pandoc.Blocks({ echo_block, error_block })
+        end
+        return error_block
+      end
+      utils.log_warning(EXTENSION_NAME, 'No pages matched the selection; returning empty block.')
+      return pandoc.Null()
     end
-  end
 
-  if #selected_pages == 0 then
-    utils.log_warning(EXTENSION_NAME, 'No pages matched the selection; returning empty block.')
-    return pandoc.Null()
+    result = cell.wrap_crossref(content, opts, REF_TYPE_NAMES)
   end
-
-  local content = wrap_alignment(create_multi_page_element(selected_pages, opts), opts)
-  local result = cell.wrap_crossref(content, opts, REF_TYPE_NAMES)
 
   local output_location = cell.resolve_output_location(opts, EXTENSION_NAME)
   if output_location then
@@ -1123,6 +1372,11 @@ local function process_inline_code(el)
   opts._alt = (el.attributes and el.attributes['alt'] and el.attributes['alt'] ~= '')
     and el.attributes['alt']
     or code
+
+  -- Resolve table-valued colours to strings (inline can't do dual-mode rendering)
+  if has_dual_mode_colours(opts) then
+    opts = resolve_opts_colours(opts, global_brand_mode)
+  end
 
   local output_mode = cell.resolve_output_mode(opts)
 

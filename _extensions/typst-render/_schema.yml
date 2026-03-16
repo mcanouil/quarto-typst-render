@@ -26,9 +26,26 @@ options:
     default: "0.5em"
     description: "Page margin for image compilation; block inset with output: asis."
   background:
-    type: string
+    type: [string, object]
     default: "none"
-    description: "Page fill for image compilation; block fill with output: asis."
+    description: "Page fill for image compilation; block fill with output: asis. Accepts a Typst colour string, 'auto' (reads from _brand.yml), or a map with light/dark keys."
+    properties:
+      light:
+        type: string
+        description: "Background colour for light brand mode."
+      dark:
+        type: string
+        description: "Background colour for dark brand mode."
+  foreground:
+    type: [string, object]
+    description: "Text fill colour for rendered images. Accepts a Typst colour string, 'auto' (reads from _brand.yml), or a map with light/dark keys."
+    properties:
+      light:
+        type: string
+        description: "Foreground colour for light brand mode."
+      dark:
+        type: string
+        description: "Foreground colour for dark brand mode."
   preamble:
     type: [string, array]
     default: ""
@@ -124,7 +141,10 @@ attributes:
       description: "Page margin for image compilation; block inset with output: asis."
     background:
       type: string
-      description: "Page fill for image compilation; block fill with output: asis."
+      description: "Page fill for image compilation; block fill with output: asis. Use 'auto' to read from _brand.yml."
+    foreground:
+      type: string
+      description: "Text fill colour for this block. Use 'auto' to read from _brand.yml."
     preamble:
       type: string
       description: "Typst code prepended before this block's code, or path to a .typ file."
