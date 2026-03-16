@@ -738,6 +738,11 @@ local function get_configuration(meta)
           input_map[tostring(k)] = pandoc.utils.stringify(v)
         end
         global_config['input'] = input_map
+      else
+        utils.log_warning(
+          EXTENSION_NAME,
+          'Global "input" must be a YAML map (e.g., input: {key: value}), not a string.'
+        )
       end
     end
   end
