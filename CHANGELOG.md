@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.8.0 (2026-03-18)
+
 - feat: add `foreground` option to set text fill colour for rendered images.
 - feat: add brand/theme-aware colour support for `foreground` and `background`.
   Both options now accept Typst colour literals, CSS hex strings (auto-converted),
