@@ -8,7 +8,8 @@
 ---   manages output-location, and provides cross-referencing and prefix-aware
 ---   option resolution for custom executable code blocks.
 
-local utils = require(quarto.utils.resolve_path('_modules/utils.lua'):gsub('%.lua$', ''))
+local str = require(quarto.utils.resolve_path('_modules/string.lua'):gsub('%.lua$', ''))
+local log = require(quarto.utils.resolve_path('_modules/logging.lua'):gsub('%.lua$', ''))
 
 local M = {}
 
@@ -30,7 +31,7 @@ function M.new(config)
 
   local language = config.language
   local comment_prefix = config.comment_prefix
-  local escaped_prefix = utils.escape_lua_pattern(comment_prefix)
+  local escaped_prefix = str.escape_lua_pattern(comment_prefix)
 
   local cell = {}
 
@@ -51,7 +52,7 @@ function M.new(config)
     if el.classes:includes(language) or el.classes:includes('{' .. language .. '}') then
       return true
     end
-    return el.text:match('^{' .. utils.escape_lua_pattern(language) .. '}%s') ~= nil
+    return el.text:match('^{' .. str.escape_lua_pattern(language) .. '}%s') ~= nil
   end
 
   --- Extract inline code text, stripping the `{lang} ` prefix if present.
@@ -61,7 +62,7 @@ function M.new(config)
     if el.classes:includes(language) or el.classes:includes('{' .. language .. '}') then
       return el.text
     end
-    return el.text:match('^{' .. utils.escape_lua_pattern(language) .. '}%s+(.+)$') or el.text
+    return el.text:match('^{' .. str.escape_lua_pattern(language) .. '}%s+(.+)$') or el.text
   end
 
   --- Parse comment-pipe options from code block text.
@@ -81,7 +82,7 @@ function M.new(config)
       if in_commentpipe then
         local key, value = line:match(key_pattern)
         if key then
-          value = utils.trim(value)
+          value = str.trim(value)
           if value == 'true' then
             opts[key] = true
           elseif value == 'false' then
@@ -97,9 +98,9 @@ function M.new(config)
         end
       else
         if line:match('^%s*' .. escaped_prefix .. '%s*[%w%-]+:%s') then
-          utils.log_warning(
+          log.log_warning(
             language,
-            'Comment-pipe option "' .. utils.trim(line) .. '" appears after code '
+            'Comment-pipe option "' .. str.trim(line) .. '" appears after code '
               .. 'and will be treated as code. Move all options to the top of the block.'
           )
         end
@@ -179,7 +180,7 @@ function M.new(config)
       return nil
     end
     if not VALID_OUTPUT_LOCATION_SET[loc] then
-      utils.log_warning(
+      log.log_warning(
         extension_name,
         'Invalid output-location value: "' .. loc .. '". '
           .. 'Valid values: fragment, slide, column, column-fragment.'

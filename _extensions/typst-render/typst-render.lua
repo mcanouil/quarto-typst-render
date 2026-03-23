@@ -13,7 +13,10 @@
 local EXTENSION_NAME = 'typst-render'
 
 --- Load modules
-local utils = require(quarto.utils.resolve_path('_modules/utils.lua'):gsub('%.lua$', ''))
+local str = require(quarto.utils.resolve_path('_modules/string.lua'):gsub('%.lua$', ''))
+local log = require(quarto.utils.resolve_path('_modules/logging.lua'):gsub('%.lua$', ''))
+local paths = require(quarto.utils.resolve_path('_modules/paths.lua'):gsub('%.lua$', ''))
+local meta_mod = require(quarto.utils.resolve_path('_modules/metadata.lua'):gsub('%.lua$', ''))
 local code_cell = require(quarto.utils.resolve_path('_modules/code-cell.lua'):gsub('%.lua$', ''))
 local cell = code_cell.new({ language = 'typst', comment_prefix = '//|' })
 
@@ -207,7 +210,7 @@ local function resolve_colour_config(raw, colour_name)
         return css_colour_to_typst(dark)
       end
     end
-    utils.log_warning(
+    log.log_warning(
       EXTENSION_NAME,
       colour_name .. ': auto requires a _brand.yml with "' .. colour_name
         .. '" defined; falling back to default.'
@@ -274,7 +277,7 @@ local function resolve_typst_bin()
     return typst_bin
   end
 
-  utils.log_error(EXTENSION_NAME, 'Typst binary not found. Ensure Quarto >= 1.6 is installed.')
+  log.log_error(EXTENSION_NAME, 'Typst binary not found. Ensure Quarto >= 1.6 is installed.')
   return nil
 end
 
@@ -304,12 +307,12 @@ local function resolve_preamble_entry(value)
     return nil
   end
   if value:match('%.typ$') then
-    local file_path = utils.resolve_project_path(value)
+    local file_path = paths.resolve_project_path(value)
     local content = read_file(file_path)
     if content then
       return content
     end
-    utils.log_error(EXTENSION_NAME, 'Could not read preamble file: ' .. value)
+    log.log_error(EXTENSION_NAME, 'Could not read preamble file: ' .. value)
     return nil
   end
   return value
@@ -437,14 +440,14 @@ local function parse_pages(pages_str, total_pages)
             result[#result + 1] = i
           end
         else
-          utils.log_warning(
+          log.log_warning(
             EXTENSION_NAME,
             'Page ' .. tostring(i) .. ' is out of range (1-' .. tostring(total_pages) .. '); skipping.'
           )
         end
       end
     else
-      utils.log_warning(
+      log.log_warning(
         EXTENSION_NAME,
         'Invalid page specification "' .. part .. '"; skipping.'
       )
@@ -540,13 +543,13 @@ end
 --- @return string|nil Relative path to the cache directory (for image references)
 local function ensure_cache_dir()
   if not cache_subdir then
-    utils.log_error(EXTENSION_NAME, 'Cache subdirectory not initialised.')
+    log.log_error(EXTENSION_NAME, 'Cache subdirectory not initialised.')
     return nil, nil
   end
   local abs_path = pandoc.path.join({ quarto.project.directory, cache_subdir })
   local ok, err = pcall(pandoc.system.make_directory, abs_path, true)
   if not ok then
-    utils.log_error(EXTENSION_NAME, 'Could not create cache directory: ' .. tostring(err))
+    log.log_error(EXTENSION_NAME, 'Could not create cache directory: ' .. tostring(err))
     return nil, nil
   end
   return abs_path, cache_subdir
@@ -591,7 +594,7 @@ local function compile_typst(source, opts, img_format)
 
   local dpi = tostring(opts.dpi)
   if not dpi:match('^%d+$') or tonumber(dpi) <= 0 then
-    utils.log_warning(
+    log.log_warning(
       EXTENSION_NAME,
       'Invalid dpi value "' .. dpi .. '"; falling back to default (' .. DEFAULTS.dpi .. ').'
     )
@@ -652,7 +655,7 @@ local function compile_typst(source, opts, img_format)
   -- Resolve --root: global config or Quarto project directory
   local resolved_root
   if global_config.root then
-    resolved_root = utils.resolve_project_path(global_config.root)
+    resolved_root = paths.resolve_project_path(global_config.root)
   else
     resolved_root = quarto.project.directory
   end
@@ -664,14 +667,14 @@ local function compile_typst(source, opts, img_format)
   if font_paths then
     for _, p in ipairs(font_paths) do
       args[#args + 1] = '--font-path'
-      args[#args + 1] = utils.resolve_project_path(p)
+      args[#args + 1] = paths.resolve_project_path(p)
     end
   end
 
   -- Add --package-path if specified (global-only)
   if global_config['package-path'] then
     args[#args + 1] = '--package-path'
-    args[#args + 1] = utils.resolve_project_path(global_config['package-path'])
+    args[#args + 1] = paths.resolve_project_path(global_config['package-path'])
   end
 
   -- Add --input flags for each input variable
@@ -692,7 +695,7 @@ local function compile_typst(source, opts, img_format)
   local ok, result = pcall(pandoc.pipe, bin, args, source)
   if not ok then
     local err_msg = tostring(result)
-    utils.log_error(
+    log.log_error(
       EXTENSION_NAME,
       'Typst compilation failed:\n' .. err_msg
     )
@@ -705,7 +708,7 @@ local function compile_typst(source, opts, img_format)
     if #pages > 0 then
       return pages
     end
-    utils.log_error(EXTENSION_NAME, 'No compiled page files found for stem: ' .. stem)
+    log.log_error(EXTENSION_NAME, 'No compiled page files found for stem: ' .. stem)
     return nil
   else
     -- PDF: single file at the exact output path
@@ -715,7 +718,7 @@ local function compile_typst(source, opts, img_format)
       used_cache_files[stem .. '.' .. img_format] = true
       return { rel_output }
     end
-    utils.log_error(EXTENSION_NAME, 'Compiled file not found: ' .. abs_output)
+    log.log_error(EXTENSION_NAME, 'Compiled file not found: ' .. abs_output)
     return nil
   end
 end
@@ -800,7 +803,7 @@ local function wrap_alignment(block, opts)
     return block
   end
   if not VALID_ALIGN_SET[align] then
-    utils.log_warning(
+    log.log_warning(
       EXTENSION_NAME,
       'Invalid align value "' .. align .. '"; ignoring. '
         .. 'Valid values: left, center, right, default.'
@@ -852,7 +855,7 @@ local function compile_to_result(code, opts, img_format)
 
   local selected_pages
   if img_format == 'pdf' and opts.pages ~= 'all' then
-    utils.log_warning(
+    log.log_warning(
       EXTENSION_NAME,
       'Page selection is not supported for PDF format; embedding the full PDF.'
     )
@@ -876,12 +879,12 @@ end
 --- @param file_opt string Path from the `file` option
 --- @return string|nil File contents, or nil on failure
 local function read_external_file(file_opt)
-  local file_path = utils.resolve_project_path(file_opt)
+  local file_path = paths.resolve_project_path(file_opt)
   local content = read_file(file_path)
   if content then
     return content
   end
-  utils.log_error(EXTENSION_NAME, 'Could not read file: ' .. file_opt)
+  log.log_error(EXTENSION_NAME, 'Could not read file: ' .. file_opt)
   return nil
 end
 
@@ -930,7 +933,7 @@ local function get_configuration(meta)
   global_brand_mode = (meta['brand-mode'] and pandoc.utils.stringify(meta['brand-mode']) == 'dark')
     and 'dark' or 'light'
 
-  local ext_config = utils.get_extension_config(meta, EXTENSION_NAME) or meta['typst-render']
+  local ext_config = meta_mod.get_extension_config(meta, EXTENSION_NAME) or meta['typst-render']
 
   if ext_config then
     -- Iterate all DEFAULTS keys explicitly; pairs() skips nil-valued keys,
@@ -1031,7 +1034,7 @@ local function get_configuration(meta)
         end
         global_config['input'] = input_map
       else
-        utils.log_warning(
+        log.log_warning(
           EXTENSION_NAME,
           'Global "input" must be a YAML map (e.g., input: {key: value}), not a string.'
         )
@@ -1099,7 +1102,7 @@ local function process_codeblock(el)
 
   -- Per-block "cache: clean" is not supported; warn and treat as true
   if type(block_opts.cache) == 'string' and block_opts.cache:lower() == 'clean' then
-    utils.log_warning(
+    log.log_warning(
       EXTENSION_NAME,
       'Per-block "cache: clean" is not supported; treating as "cache: true".'
     )
@@ -1187,7 +1190,7 @@ local function process_codeblock(el)
   -- Determine image format
   local img_format = opts.format
   if img_format and not VALID_FORMAT_SET[img_format] then
-    utils.log_warning(
+    log.log_warning(
       EXTENSION_NAME,
       'Invalid format "' .. img_format .. '"; auto-detecting from output format.'
     )
@@ -1199,7 +1202,7 @@ local function process_codeblock(el)
 
   -- Warn about PDF in HTML
   if img_format == 'pdf' and quarto.format.is_html_output() then
-    utils.log_warning(
+    log.log_warning(
       EXTENSION_NAME,
       'PDF images are not supported in HTML output. Falling back to PNG.'
     )
@@ -1217,7 +1220,7 @@ local function process_codeblock(el)
     local dark_content, dark_err = compile_to_result(code, dark_opts, img_format)
 
     if not light_content and not dark_content then
-      utils.log_warning(EXTENSION_NAME, 'Compilation failed; returning error block.')
+      log.log_warning(EXTENSION_NAME, 'Compilation failed; returning error block.')
       local error_block = create_error_block(light_err or dark_err)
       if do_echo then
         local echo_block = cell.create_echo_block(code, is_fenced, option_lines)
@@ -1249,7 +1252,7 @@ local function process_codeblock(el)
 
     if not content then
       if compile_err then
-        utils.log_warning(EXTENSION_NAME, 'Compilation failed; returning error block.')
+        log.log_warning(EXTENSION_NAME, 'Compilation failed; returning error block.')
         local error_block = create_error_block(compile_err)
         if do_echo then
           local echo_block = cell.create_echo_block(code, is_fenced, option_lines)
@@ -1257,7 +1260,7 @@ local function process_codeblock(el)
         end
         return error_block
       end
-      utils.log_warning(EXTENSION_NAME, 'No pages matched the selection; returning empty block.')
+      log.log_warning(EXTENSION_NAME, 'No pages matched the selection; returning empty block.')
       return pandoc.Null()
     end
 
@@ -1286,7 +1289,7 @@ end
 --- @return pandoc.Inline Inline image element
 local function create_inline_image_element(img_path, opts)
   if quarto.format.is_typst_output() then
-    local escaped_alt = utils.escape_typst_string(opts._alt or '')
+    local escaped_alt = str.escape_typst_string(opts._alt or '')
     return pandoc.RawInline(
       'typst',
       '#box(height: 1.1em, baseline: 20%, image("' .. img_path .. '", alt: "' .. escaped_alt .. '"))'
@@ -1331,8 +1334,8 @@ local function create_inline_image_element(img_path, opts)
   return pandoc.RawInline(
     'html',
     '<span class="typst-inline' .. extra_classes .. '">'
-    .. '<img src="' .. utils.escape_attribute(img_path) .. '"'
-    .. ' alt="' .. utils.escape_attribute(opts._alt or '') .. '"'
+    .. '<img src="' .. str.escape_attribute(img_path) .. '"'
+    .. ' alt="' .. str.escape_attribute(opts._alt or '') .. '"'
     .. ' style="' .. style .. '"'
     .. '></span>'
   )
@@ -1350,7 +1353,7 @@ local function process_inline_code(el)
   if quarto.format.is_powerpoint_output() then
     if not pptx_inline_warned then
       pptx_inline_warned = true
-      utils.log_warning(
+      log.log_warning(
         EXTENSION_NAME,
         'Inline Typst is not supported for PowerPoint output; '
           .. 'inline code will be kept as-is.'
@@ -1390,7 +1393,7 @@ local function process_inline_code(el)
 
   local img_format = opts.format
   if img_format and not VALID_FORMAT_SET[img_format] then
-    utils.log_warning(EXTENSION_NAME, 'Invalid inline format "' .. img_format .. '"; auto-detecting.')
+    log.log_warning(EXTENSION_NAME, 'Invalid inline format "' .. img_format .. '"; auto-detecting.')
     img_format = nil
   end
   if not img_format then
@@ -1405,7 +1408,7 @@ local function process_inline_code(el)
 
   if not pages or #pages == 0 then
     local detail = compile_err and (': ' .. compile_err) or '.'
-    utils.log_warning(EXTENSION_NAME, 'Inline Typst compilation failed' .. detail)
+    log.log_warning(EXTENSION_NAME, 'Inline Typst compilation failed' .. detail)
     return el
   end
 
@@ -1437,9 +1440,9 @@ local function cleanup_cache(doc) -- luacheck: ignore 212
         local rm_ok, rm_err = os.remove(filepath)
         if rm_ok then
           removed = removed + 1
-          utils.log_output(EXTENSION_NAME, 'Removed stale cache file: ' .. filename)
+          log.log_output(EXTENSION_NAME, 'Removed stale cache file: ' .. filename)
         else
-          utils.log_warning(
+          log.log_warning(
             EXTENSION_NAME,
             'Could not remove cache file: ' .. filename .. ' (' .. tostring(rm_err) .. ')'
           )
@@ -1449,7 +1452,7 @@ local function cleanup_cache(doc) -- luacheck: ignore 212
   end
 
   if removed > 0 then
-    utils.log_output(
+    log.log_output(
       EXTENSION_NAME,
       'Cache cleanup: removed ' .. removed .. ' stale file(s).'
     )
