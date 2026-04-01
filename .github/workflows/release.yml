@@ -7,7 +7,7 @@ on:
         type: choice
         description: "Version"
         required: false
-        default: "patch"
+        default: "minor"
         options:
           - "patch"
           - "minor"
@@ -29,15 +29,9 @@ permissions:
 
 jobs:
   release:
-    uses: mcanouil/quarto-workflows/.github/workflows/release-extension.yml@main
+    uses: mcanouil/quarto-workflows/.github/workflows/release.yml@main
     secrets: inherit
     with:
       gh-app-id: ${{ vars.APP_ID }}
       version: "${{ github.event.inputs.version }}"
-      formats: "html typst pdf-xelatex pdf-lualatex pdf-pdflatex revealjs beamer docx pptx"
       quarto: "${{ github.event.inputs.quarto }}"
-      post-render: false
-      tinytex: true
-      r: false
-      python: false
-      julia: false
