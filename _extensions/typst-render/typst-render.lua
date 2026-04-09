@@ -600,7 +600,7 @@ local function compile_typst(source, opts, img_format)
     )
     dpi = DEFAULTS.dpi
   end
-  dpi = tostring(dpi)
+  dpi = tostring(math.floor(dpi))
 
   -- Merge global and per-block input variables
   local merged_input = merge_inputs(opts.input, opts._block_input)
