@@ -10,8 +10,8 @@ options:
     enum: [png, svg, pdf]
     description: "Image output format. Auto-detected from output format if not set."
   dpi:
-    type: string
-    default: "144"
+    type: number
+    default: 144
     description: "Pixels per inch for PNG output."
   width:
     type: string
@@ -128,7 +128,7 @@ attributes:
       enum: [png, svg, pdf]
       description: "Image output format for this block."
     dpi:
-      type: string
+      type: number
       description: "Pixels per inch for PNG output."
     width:
       type: string
