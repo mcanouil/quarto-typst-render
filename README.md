@@ -180,7 +180,7 @@ Inline preamble:
 ```yaml
 extensions:
   typst-render:
-    dpi: "288"
+    dpi: 288
     margin: "1em"
     preamble: '#set text(font: "Libertinus Serif")'
 ```
@@ -272,7 +272,7 @@ Per-block input override using comma-separated syntax:
 | Option            | Type            | Default   | Description                                                                                   |
 | ----------------- | --------------- | --------- | --------------------------------------------------------------------------------------------- |
 | `format`          | string          | (auto)    | Image format: `png`, `svg`, `pdf`.                                                            |
-| `dpi`             | string          | `"144"`   | Pixels per inch (PNG only).                                                                   |
+| `dpi`             | number          | `144`     | Pixels per inch (PNG only).                                                                   |
 | `width`           | string          | `"auto"`  | Page width for image compilation (ignored with `output: asis`).                               |
 | `height`          | string          | `"auto"`  | Page height for image compilation (ignored with `output: asis`).                              |
 | `margin`          | string          | `"0.5em"` | Page margin for image compilation; block `inset` with `output: asis`.                         |

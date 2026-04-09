@@ -560,7 +560,7 @@ See [Global-Only Options](#global-only-options) for options that cannot be overr
 ```yaml
 extensions:
   typst-render:
-    dpi: "288"
+    dpi: 288
     margin: "1em"
     format: png
     cache: true
@@ -571,7 +571,7 @@ extensions:
 | Option            | Type            | Default   | Description                                                                       |
 | ----------------- | --------------- | --------- | --------------------------------------------------------------------------------- |
 | `format`          | string          | (auto)    | Image format: `png`, `svg`, `pdf`.                                                |
-| `dpi`             | string          | `"144"`   | Pixels per inch (PNG only).                                                       |
+| `dpi`             | number          | `144`     | Pixels per inch (PNG only).                                                       |
 | `width`           | string          | `"auto"`  | Page width for image compilation (ignored with `output: asis`).                   |
 | `height`          | string          | `"auto"`  | Page height for image compilation (ignored with `output: asis`).                  |
 | `margin`          | string          | `"0.5em"` | Page margin for image compilation; block `inset` with `output: asis`.             |

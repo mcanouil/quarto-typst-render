@@ -33,7 +33,7 @@ local VALID_ALIGN_SET = { left = true, center = true, right = true, default = tr
 --- Default option values
 local DEFAULTS = {
   format = nil,
-  dpi = '144',
+  dpi = 144,
   width = 'auto',
   height = 'auto',
   margin = '0.5em',
@@ -592,14 +592,15 @@ local function compile_typst(source, opts, img_format)
     return nil
   end
 
-  local dpi = tostring(opts.dpi)
-  if not dpi:match('^%d+$') or tonumber(dpi) <= 0 then
+  local dpi = tonumber(opts.dpi)
+  if not dpi or dpi <= 0 or dpi ~= math.floor(dpi) then
     log.log_warning(
       EXTENSION_NAME,
-      'Invalid dpi value "' .. dpi .. '"; falling back to default (' .. DEFAULTS.dpi .. ').'
+      'Invalid dpi value "' .. tostring(opts.dpi) .. '"; falling back to default (' .. DEFAULTS.dpi .. ').'
     )
     dpi = DEFAULTS.dpi
   end
+  dpi = tostring(math.floor(dpi))
 
   -- Merge global and per-block input variables
   local merged_input = merge_inputs(opts.input, opts._block_input)
@@ -979,6 +980,11 @@ local function get_configuration(meta)
             else
               global_config[k] = str == 'true'
             end
+          end
+        elseif type(default_val) == 'number' then
+          local n = tonumber(pandoc.utils.stringify(val))
+          if n then
+            global_config[k] = n
           end
         elseif type(default_val) == 'boolean' then
           if type(val) == 'boolean' then
