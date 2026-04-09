@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.9.1 (2026-04-09)
+
 ### Bug Fixes
 
 - fix: Use numeric type for `dpi` option instead of string.
