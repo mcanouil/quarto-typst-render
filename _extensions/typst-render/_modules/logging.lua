@@ -45,16 +45,14 @@ function M.log_output(extension_name, message)
 end
 
 --- Format and log a debug message with extension prefix.
---- Only emits output when QUARTO_LOG_LEVEL is DEBUG.
+--- Provides standardised debug messages with consistent formatting across extensions.
+--- Format: [extension-name] Message with details.
 ---
---- @param extension_name string The name of the extension
+--- @param extension_name string The name of the extension (e.g., "lua-env")
 --- @param message string The debug message to display
---- @usage M.log_debug("typst-render", "Saved image to /path/to/file.png")
+--- @usage M.log_debug("lua-env", "Variable 'x' has value: 42")
 function M.log_debug(extension_name, message)
-  local level = os.getenv('QUARTO_LOG_LEVEL')
-  if level and level:upper() == 'DEBUG' then
-    quarto.log.output('(D) [' .. extension_name .. '] ' .. message)
-  end
+  quarto.log.debug('[' .. extension_name .. '] ' .. message)
 end
 
 -- ============================================================================

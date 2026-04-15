@@ -600,6 +600,10 @@ local function copy_file(src, dst)
   end
   local data = f_in:read('*a')
   f_in:close()
+  if not data then
+    log.log_warning(EXTENSION_NAME, 'output-file: failed to read data from ' .. src)
+    return false
+  end
   local f_out = io.open(dst, 'wb')
   if not f_out then
     log.log_warning(EXTENSION_NAME, 'output-file: could not write to destination: ' .. dst)
@@ -668,12 +672,7 @@ local function resolve_output_path(global_dir, block_dir, block_filename, label,
   end
 
   -- Join directory and filename
-  local joined = dir
-  -- Ensure trailing separator for joining
-  if joined:sub(-1) ~= '/' then
-    joined = joined .. '/'
-  end
-  joined = joined .. filename
+  local joined = pandoc.path.join({ dir, filename })
 
   return resolve_to_absolute(joined)
 end
@@ -1407,6 +1406,11 @@ local function process_codeblock(el)
   -- Dual-mode rendering for HTML/Reveal.js when both light and dark colours are present
   local dual_mode = quarto.format.is_html_output() and has_dual_mode_colours(opts)
 
+  -- Capture the next block counter value before compilations increment it.
+  -- In dual-mode, compile_to_result is called twice, each incrementing block_counter,
+  -- but we want the first value for the auto-generated output filename.
+  local next_block_counter = block_counter + 1
+
   local result
   if dual_mode then
     local light_opts = resolve_opts_colours(opts, 'light')
@@ -1424,11 +1428,10 @@ local function process_codeblock(el)
       return error_block
     end
 
-    -- Resolve output path after compilation so block_counter is current
     local output_path = resolve_output_path(
       global_config['output-directory'], opts['output-directory'],
       opts['output-filename'], opts.label,
-      'typst-block-' .. block_counter, img_format
+      'typst-block-' .. next_block_counter, img_format
     )
 
     -- Save to output directory and rebuild elements using output paths
@@ -1482,11 +1485,10 @@ local function process_codeblock(el)
       return pandoc.Null()
     end
 
-    -- Resolve output path after compilation so block_counter is current
     local output_path = resolve_output_path(
       global_config['output-directory'], opts['output-directory'],
       opts['output-filename'], opts.label,
-      'typst-block-' .. block_counter, img_format
+      'typst-block-' .. next_block_counter, img_format
     )
 
     -- Save to output directory and rebuild element using output paths
