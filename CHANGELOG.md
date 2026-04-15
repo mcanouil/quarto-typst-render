@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Bug Fixes
+
+- fix: resolve cache image paths relative to document directory for subdirectory rendering.
+
 ## 0.9.1 (2026-04-09)
 
 ### Bug Fixes

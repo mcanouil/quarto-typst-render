@@ -415,7 +415,7 @@ Render an external `.typ` file instead of inline code:
 
 ```{typst}
 //| echo: fenced
-//| file: _extensions/typst-render/_example.typ
+//| file: _example.typ
 ```
 
 ::: {.content-hidden when-format="revealjs" when-format="pptx"}

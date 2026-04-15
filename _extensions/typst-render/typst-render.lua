@@ -552,7 +552,11 @@ local function ensure_cache_dir()
     log.log_error(EXTENSION_NAME, 'Could not create cache directory: ' .. tostring(err))
     return nil, nil
   end
-  return abs_path, cache_subdir
+  local rel_path = cache_subdir
+  if quarto.project.offset and quarto.project.offset ~= '' and quarto.project.offset ~= '.' then
+    rel_path = pandoc.path.join({ quarto.project.offset, cache_subdir })
+  end
+  return abs_path, rel_path
 end
 
 --- Discover page-numbered output files produced by Typst CLI.
