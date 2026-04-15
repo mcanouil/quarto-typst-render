@@ -18,7 +18,7 @@ local log = require(quarto.utils.resolve_path('_modules/logging.lua'):gsub('%.lu
 local paths = require(quarto.utils.resolve_path('_modules/paths.lua'):gsub('%.lua$', ''))
 local meta_mod = require(quarto.utils.resolve_path('_modules/metadata.lua'):gsub('%.lua$', ''))
 local code_cell = require(quarto.utils.resolve_path('_modules/code-cell.lua'):gsub('%.lua$', ''))
-local cell = code_cell.new({ language = 'typst', comment_prefix = '//|' })
+local cell = code_cell.new({ language = '{typst}', comment_prefix = '//|' })
 
 -- ============================================================================
 -- CONSTANTS
@@ -213,7 +213,7 @@ local function resolve_colour_config(raw, colour_name)
     log.log_warning(
       EXTENSION_NAME,
       colour_name .. ': auto requires a _brand.yml with "' .. colour_name
-        .. '" defined; falling back to default.'
+      .. '" defined; falling back to default.'
     )
     return nil
   end
@@ -811,7 +811,7 @@ local function wrap_alignment(block, opts)
     log.log_warning(
       EXTENSION_NAME,
       'Invalid align value "' .. align .. '"; ignoring. '
-        .. 'Valid values: left, center, right, default.'
+      .. 'Valid values: left, center, right, default.'
     )
     return block
   end
@@ -936,7 +936,7 @@ local function get_configuration(meta)
 
   -- Detect brand mode from document metadata (used for colour resolution)
   global_brand_mode = (meta['brand-mode'] and pandoc.utils.stringify(meta['brand-mode']) == 'dark')
-    and 'dark' or 'light'
+      and 'dark' or 'light'
 
   local ext_config = meta_mod.get_extension_config(meta, EXTENSION_NAME) or meta['typst-render']
 
@@ -1161,8 +1161,8 @@ local function process_codeblock(el)
   -- Native Typst output: pass through as scoped RawBlock, wrapped in crossref if needed
   if quarto.format.is_typst_output() and output_mode == 'asis' then
     local typst_opts = has_dual_mode_colours(opts)
-      and resolve_opts_colours(opts, global_brand_mode)
-      or opts
+        and resolve_opts_colours(opts, global_brand_mode)
+        or opts
     local preamble = resolve_preamble(typst_opts.preamble)
     local parts = {}
     if typst_opts.foreground then
@@ -1256,8 +1256,8 @@ local function process_codeblock(el)
   else
     -- Single-mode: resolve colours to brand mode
     local resolved_opts = has_dual_mode_colours(opts)
-      and resolve_opts_colours(opts, global_brand_mode)
-      or opts
+        and resolve_opts_colours(opts, global_brand_mode)
+        or opts
     local content, compile_err = compile_to_result(code, resolved_opts, img_format)
 
     if not content then
@@ -1366,7 +1366,7 @@ local function process_inline_code(el)
       log.log_warning(
         EXTENSION_NAME,
         'Inline Typst is not supported for PowerPoint output; '
-          .. 'inline code will be kept as-is.'
+        .. 'inline code will be kept as-is.'
       )
     end
     return nil
@@ -1383,8 +1383,8 @@ local function process_inline_code(el)
   opts.margin = '(x: 0.5pt, top: 0.5pt, bottom: 0.25em)'
   opts._inline = true
   opts._alt = (el.attributes and el.attributes['alt'] and el.attributes['alt'] ~= '')
-    and el.attributes['alt']
-    or code
+      and el.attributes['alt']
+      or code
 
   -- Resolve table-valued colours to strings (inline can't do dual-mode rendering)
   if has_dual_mode_colours(opts) then
