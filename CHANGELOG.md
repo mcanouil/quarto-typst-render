@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.9.3 (2026-04-15)
+
 ### Bug Fixes
 
 - fix: update the Typst language declaration to use curly braces ('{typst}') for CodeBlock.
