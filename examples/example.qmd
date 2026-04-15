@@ -10,59 +10,7 @@ format:
     output-file: index
     toc: true
     embed-resources: true
-  typst:
-    output-file: example-typst
-    papersize: a4
-    margin:
-      x: 2.5cm
-      y: 2.5cm
-  pdf-xelatex:
-    output-file: example-xelatex
-    pdf-engine: xelatex
-    papersize: a4
-    margin:
-      x: 2.5cm
-      y: 2.5cm
-  pdf-lualatex:
-    output-file: example-lualatex
-    pdf-engine: lualatex
-    papersize: a4
-    margin:
-      x: 2.5cm
-      y: 2.5cm
-  pdf-pdflatex:
-    output-file: example-pdflatex
-    pdf-engine: pdflatex
-    papersize: a4
-    margin:
-      x: 2.5cm
-      y: 2.5cm
-  revealjs:
-    output-file: example-revealjs
-    shift-heading-level-by: -1
-    embed-resources: true
-    smaller: true
-    scrollable: true
-  beamer:
-    output-file: example-beamer
-    aspectratio: 169
-  docx:
-    output-file: example-docx
-  pptx:
-    output-file: example-pptx
-format-links:
-  - html
-  - typst
-  - format: pdf-xelatex
-    text: "PDF (XeLaTeX)"
-  - format: pdf-lualatex
-    text: "PDF (LuaLaTeX)"
-  - format: pdf-pdflatex
-    text: "PDF (PDFLaTeX)"
-  - revealjs
-  - beamer
-  - docx
-  - pptx
+keep-md: true
 engine: markdown
 filters:
   - path: typst-render
@@ -415,7 +363,7 @@ Render an external `.typ` file instead of inline code:
 
 ```{typst}
 //| echo: fenced
-//| file: _example.typ
+//| file: /_example.typ
 ```
 
 ::: {.content-hidden when-format="revealjs" when-format="pptx"}
