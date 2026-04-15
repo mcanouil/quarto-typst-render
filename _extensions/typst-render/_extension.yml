@@ -1,6 +1,6 @@
 title: Typst Render
 author: Mickaël Canouil
-version: 0.9.1
+version: 0.9.2
 quarto-required: ">=1.6.0"
 contributes:
   filters:
