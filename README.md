@@ -54,7 +54,7 @@ Inline maths: `{typst} $ x^2 + y^2 = z^2 $` renders as a formula image.
 ```
 
 Global options (`format`, `dpi`, `preamble`, `background`, `foreground`, `output`) apply to inline expressions.
-Block-only options (`echo`, `eval`, `label`, `cap`, `alt`, `file`, `pages`, `layout-ncol`, `output-location`) are not available for inline expressions.
+Block-only options (`echo`, `eval`, `label`, `cap`, `alt`, `file`, `output-filename`, `pages`, `layout-ncol`, `output-location`) are not available for inline expressions.
 
 Provide explicit alt text for accessibility using the `alt` attribute:
 
@@ -211,6 +211,48 @@ extensions:
     cache: clean
 ```
 
+### Output Directory
+
+By default, compiled images are only stored in the internal cache directory (`.quarto/typst-render/`) with auto-generated filenames.
+Set `output-directory` to also save copies to a predictable location, and optionally override the filename per block with `output-filename`.
+
+Paths follow Quarto conventions: a leading `/` is relative to the project root, otherwise relative to the document directory.
+
+Global directory (all blocks are saved automatically):
+
+```yaml
+extensions:
+  typst-render:
+    output-directory: /images/typst/
+```
+
+When `output-directory` is set and no `output-filename` is given, the filename is auto-generated from the block label (e.g., `fig-diagram.png`) or block counter (e.g., `typst-block-1.png`).
+
+Per-block filename override:
+
+````markdown
+```{typst}
+//| output-filename: my-diagram.png
+#circle(radius: 1cm, fill: blue)
+```
+````
+
+Combined usage:
+
+````markdown
+```{typst}
+//| label: fig-chart
+//| output-filename: chart.svg
+#rect(width: 3cm, height: 2cm, fill: eastern)
+```
+````
+
+With a global `output-directory: /images/`, this saves to `/images/chart.svg` (project root).
+A per-block `output-filename` starting with `/` overrides the global directory entirely (e.g., `//| output-filename: /other/result.png` saves to `/other/result.png`).
+
+For multi-page output, page numbers are appended before the extension (e.g., `diagram1.png`, `diagram2.png`).
+For dual-mode (light/dark) rendering, `-light` and `-dark` suffixes are appended (e.g., `diagram-light.svg`, `diagram-dark.svg`).
+
 ### Foreground and Background Colours
 
 Set text and page fill colours for rendered images.
@@ -282,6 +324,8 @@ Per-block input override using comma-separated syntax:
 | `cache`           | boolean\|string | `true`    | Cache compiled images. Use `"clean"` to also remove stale cache files.                        |
 | `input`           | object          | (none)    | Key-value pairs passed as `--input` flags to Typst CLI.                                       |
 | `file`            | string          | (none)    | Path to external `.typ` file to render.                                                       |
+| `output-directory` | string         | (none)    | Directory for saving compiled images. See [Output Directory](#output-directory).               |
+| `output-filename`  | string         | (none)    | Filename for the saved image. Leading `/` overrides `output-directory`. Auto-generated if omitted. |
 | `echo`            | boolean\|string | `false`   | Show Typst source code alongside output (`true`, `false`, `fenced`).                          |
 | `eval`            | boolean         | `true`    | Compile Typst code to image.                                                                  |
 | `include`         | boolean         | `true`    | Include block in output. Set `false` to suppress entirely.                                    |

@@ -118,6 +118,11 @@ options:
     type: string
     enum: [left, center, right, default]
     description: "Horizontal alignment for the rendered image block."
+  output-directory:
+    type: string
+    description: "Default output directory for saving compiled images. Per-block output-filename paths are resolved relative to this directory."
+    completion:
+      type: directory
 
 # Per-block comment+pipe attributes (//| key: value).
 # These are parsed from the code block text, not from element attributes.
@@ -163,6 +168,17 @@ attributes:
       completion:
         type: file
         extensions: [.typ]
+    output-directory:
+      type: string
+      description: "Output directory for this block, overrides the global output-directory."
+      completion:
+        type: directory
+    output-filename:
+      type: string
+      description: "Path to save the compiled image. Leading '/' means project root (ignores output-directory). Otherwise resolved relative to output-directory. Auto-generated from label or block counter if omitted."
+      completion:
+        type: file
+        extensions: [.png, .svg, .pdf]
     echo:
       type: [boolean, string]
       enum: [true, false, fenced]

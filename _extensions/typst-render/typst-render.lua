@@ -42,6 +42,8 @@ local DEFAULTS = {
   preamble = '',
   cache = true,
   file = nil,
+  ['output-directory'] = nil,
+  ['output-filename'] = nil,
   input = nil,
   echo = false,
   eval = true,
@@ -71,6 +73,8 @@ local KNOWN_KEYS = {
   format = true,
   foreground = true,
   file = true,
+  ['output-directory'] = true,
+  ['output-filename'] = true,
   input = true,
   ['output-location'] = true,
   classes = true,
@@ -584,6 +588,185 @@ local function discover_page_files(abs_cache, rel_cache, stem, ext)
   return pages
 end
 
+--- Copy a file in binary mode.
+--- @param src string Source file path
+--- @param dst string Destination file path
+--- @return boolean True on success
+local function copy_file(src, dst)
+  local f_in = io.open(src, 'rb')
+  if not f_in then
+    log.log_warning(EXTENSION_NAME, 'output-file: could not read source file: ' .. src)
+    return false
+  end
+  local data = f_in:read('*a')
+  f_in:close()
+  local f_out = io.open(dst, 'wb')
+  if not f_out then
+    log.log_warning(EXTENSION_NAME, 'output-file: could not write to destination: ' .. dst)
+    return false
+  end
+  f_out:write(data)
+  f_out:close()
+  return true
+end
+
+--- Resolve a path to absolute, accounting for document directory.
+--- Leading '/' paths are resolved relative to the project root.
+--- Other paths are resolved relative to the document directory.
+--- @param path string The path to resolve
+--- @return string Absolute path
+local function resolve_to_absolute(path)
+  -- Leading '/' means project root
+  if path:sub(1, 1) == '/' then
+    return paths.resolve_project_path(path)
+  end
+  -- Relative path: resolve against the document's directory
+  local input_file = quarto.doc.input_file
+  if input_file and input_file ~= '' then
+    local doc_dir = pandoc.path.directory(input_file)
+    if doc_dir and doc_dir ~= '' and doc_dir ~= '.' then
+      return pandoc.path.join({ quarto.project.directory, doc_dir, path })
+    end
+  end
+  -- Document is at project root
+  if quarto.project.directory then
+    return pandoc.path.join({ quarto.project.directory, path })
+  end
+  return path
+end
+
+--- Resolve the output path for saving compiled images.
+--- @param global_dir string|nil Global output-directory value
+--- @param block_dir string|nil Per-block output-directory value
+--- @param block_filename string|nil Per-block output-filename value
+--- @param label string|nil Block label (e.g., "fig-diagram")
+--- @param counter_name string Auto-generated name (e.g., "typst-block-3")
+--- @param img_format string Image format extension (e.g., "png")
+--- @return string|nil Resolved absolute path, or nil if no output path
+local function resolve_output_path(global_dir, block_dir, block_filename, label, counter_name, img_format)
+  -- Determine the filename
+  local filename = block_filename
+  if not filename or filename == '' then
+    -- Auto-generate from label or counter
+    local stem = (type(label) == 'string' and label ~= '') and label or counter_name
+    filename = stem .. '.' .. img_format
+  end
+
+  -- If filename starts with '/', it is a project-root path; ignore directory
+  if filename:sub(1, 1) == '/' then
+    return resolve_to_absolute(filename)
+  end
+
+  -- Determine the directory (per-block overrides global)
+  local dir = block_dir or global_dir
+  if not dir or dir == '' then
+    -- No directory and filename was explicitly set (not auto-generated)
+    if block_filename and block_filename ~= '' then
+      return resolve_to_absolute(filename)
+    end
+    return nil
+  end
+
+  -- Join directory and filename
+  local joined = dir
+  -- Ensure trailing separator for joining
+  if joined:sub(-1) ~= '/' then
+    joined = joined .. '/'
+  end
+  joined = joined .. filename
+
+  return resolve_to_absolute(joined)
+end
+
+--- Compute a document-relative path from an absolute path.
+--- Uses the same approach as ensure_cache_dir: paths are relative to the
+--- project root, then prepended with quarto.project.offset when the document
+--- lives in a subdirectory.
+--- @param abs_path string Absolute path
+--- @return string Document-relative path suitable for pandoc Image elements
+local function make_doc_relative(abs_path)
+  local rel = pandoc.path.make_relative(abs_path, quarto.project.directory)
+  if quarto.project.offset and quarto.project.offset ~= '' and quarto.project.offset ~= '.' then
+    rel = pandoc.path.join({ quarto.project.offset, rel })
+  end
+  return rel
+end
+
+--- Save compiled image files to the resolved output path.
+--- Copies from the cache to the output location and returns
+--- document-relative paths so the pandoc elements can reference them.
+--- @param page_paths table List of relative page paths from compilation
+--- @param output_path string Resolved absolute output path
+--- @param mode_suffix string|nil Optional suffix for dual-mode ("-light", "-dark")
+--- @param img_format string Image format (e.g., "png")
+--- @return table|nil List of document-relative destination paths, or nil on failure
+local function save_output_files(page_paths, output_path, mode_suffix, img_format)
+  if not page_paths or #page_paths == 0 or not output_path then
+    return nil
+  end
+
+  local dir = pandoc.path.directory(output_path)
+  local filename = pandoc.path.filename(output_path)
+  local stem, ext = filename:match('^(.+)%.([^.]+)$')
+  if not stem then
+    stem = filename
+    ext = img_format
+  end
+
+  if ext ~= img_format then
+    log.log_warning(
+      EXTENSION_NAME,
+      'output-filename extension ".' .. ext .. '" does not match output format "' .. img_format .. '".'
+    )
+  end
+
+  -- Create intermediate directories
+  if dir and dir ~= '' and dir ~= '.' then
+    local ok, err = pcall(pandoc.system.make_directory, dir, true)
+    if not ok then
+      log.log_warning(EXTENSION_NAME, 'output-directory: could not create directory: ' .. tostring(err))
+      return nil
+    end
+  end
+
+  mode_suffix = mode_suffix or ''
+  local result_paths = {}
+
+  -- page_paths are document-relative; resolve to absolute via the document directory
+  local doc_abs_dir = quarto.project.directory
+  local input_file = quarto.doc.input_file
+  if input_file and input_file ~= '' then
+    local doc_subdir = pandoc.path.directory(input_file)
+    if doc_subdir and doc_subdir ~= '' and doc_subdir ~= '.' then
+      doc_abs_dir = pandoc.path.join({ quarto.project.directory, doc_subdir })
+    end
+  end
+
+  if #page_paths == 1 then
+    local src = pandoc.path.normalize(pandoc.path.join({ doc_abs_dir, page_paths[1] }))
+    local dst = pandoc.path.join({ dir, stem .. mode_suffix .. '.' .. ext })
+    if copy_file(src, dst) then
+      log.log_debug(EXTENSION_NAME, 'Saved image to ' .. dst)
+      result_paths[1] = make_doc_relative(dst)
+    else
+      return nil
+    end
+  else
+    for i, page_path in ipairs(page_paths) do
+      local src = pandoc.path.normalize(pandoc.path.join({ doc_abs_dir, page_path }))
+      local dst = pandoc.path.join({ dir, stem .. mode_suffix .. tostring(i) .. '.' .. ext })
+      if copy_file(src, dst) then
+        log.log_debug(EXTENSION_NAME, 'Saved image to ' .. dst)
+        result_paths[#result_paths + 1] = make_doc_relative(dst)
+      else
+        return nil
+      end
+    end
+  end
+
+  return result_paths
+end
+
 --- Compile Typst source to an image file (or multiple files for multi-page output).
 --- Uses stdin to pass source code, avoiding temporary .typ files.
 --- @param source string Full Typst source code
@@ -849,13 +1032,14 @@ end
 --- @param opts table Resolved options (colours must be plain strings)
 --- @param img_format string Target image format
 --- @return pandoc.Block|nil Result block, or nil on failure
+--- @return table|nil List of selected page paths, or nil on failure
 --- @return string|nil Error message on compilation failure
 local function compile_to_result(code, opts, img_format)
   local full_source = build_typst_source(code, opts)
   local all_pages, compile_err = compile_typst(full_source, opts, img_format)
 
   if not all_pages then
-    return nil, compile_err
+    return nil, nil, compile_err
   end
 
   local selected_pages
@@ -874,10 +1058,10 @@ local function compile_to_result(code, opts, img_format)
   end
 
   if #selected_pages == 0 then
-    return nil, nil
+    return nil, nil, nil
   end
 
-  return wrap_alignment(create_multi_page_element(selected_pages, opts), opts), nil
+  return wrap_alignment(create_multi_page_element(selected_pages, opts), opts), selected_pages, nil
 end
 
 --- Read an external `.typ` file, resolving relative to the project directory.
@@ -947,6 +1131,7 @@ local function get_configuration(meta)
       'format', 'dpi', 'width', 'height', 'margin',
       'cache', 'echo', 'eval', 'include', 'output', 'output-location', 'classes',
       'root', 'package-path', 'pages', 'layout-ncol', 'align',
+      'output-directory',
     }
     for _, k in ipairs(config_keys) do
       local default_val = DEFAULTS[k]
@@ -1226,8 +1411,8 @@ local function process_codeblock(el)
   if dual_mode then
     local light_opts = resolve_opts_colours(opts, 'light')
     local dark_opts = resolve_opts_colours(opts, 'dark')
-    local light_content, light_err = compile_to_result(code, light_opts, img_format)
-    local dark_content, dark_err = compile_to_result(code, dark_opts, img_format)
+    local light_content, light_pages, light_err = compile_to_result(code, light_opts, img_format)
+    local dark_content, dark_pages, dark_err = compile_to_result(code, dark_opts, img_format)
 
     if not light_content and not dark_content then
       log.log_warning(EXTENSION_NAME, 'Compilation failed; returning error block.')
@@ -1237,6 +1422,29 @@ local function process_codeblock(el)
         return pandoc.Blocks({ echo_block, error_block })
       end
       return error_block
+    end
+
+    -- Resolve output path after compilation so block_counter is current
+    local output_path = resolve_output_path(
+      global_config['output-directory'], opts['output-directory'],
+      opts['output-filename'], opts.label,
+      'typst-block-' .. block_counter, img_format
+    )
+
+    -- Save to output directory and rebuild elements using output paths
+    if output_path then
+      if light_pages then
+        local out_pages = save_output_files(light_pages, output_path, '-light', img_format)
+        if out_pages then
+          light_content = wrap_alignment(create_multi_page_element(out_pages, light_opts), light_opts)
+        end
+      end
+      if dark_pages then
+        local out_pages = save_output_files(dark_pages, output_path, '-dark', img_format)
+        if out_pages then
+          dark_content = wrap_alignment(create_multi_page_element(out_pages, dark_opts), dark_opts)
+        end
+      end
     end
 
     local blocks = {}
@@ -1258,7 +1466,7 @@ local function process_codeblock(el)
     local resolved_opts = has_dual_mode_colours(opts)
         and resolve_opts_colours(opts, global_brand_mode)
         or opts
-    local content, compile_err = compile_to_result(code, resolved_opts, img_format)
+    local content, selected_pages, compile_err = compile_to_result(code, resolved_opts, img_format)
 
     if not content then
       if compile_err then
@@ -1272,6 +1480,21 @@ local function process_codeblock(el)
       end
       log.log_warning(EXTENSION_NAME, 'No pages matched the selection; returning empty block.')
       return pandoc.Null()
+    end
+
+    -- Resolve output path after compilation so block_counter is current
+    local output_path = resolve_output_path(
+      global_config['output-directory'], opts['output-directory'],
+      opts['output-filename'], opts.label,
+      'typst-block-' .. block_counter, img_format
+    )
+
+    -- Save to output directory and rebuild element using output paths
+    if output_path and selected_pages then
+      local out_pages = save_output_files(selected_pages, output_path, nil, img_format)
+      if out_pages then
+        content = wrap_alignment(create_multi_page_element(out_pages, resolved_opts), resolved_opts)
+      end
     end
 
     result = cell.wrap_crossref(content, opts, REF_TYPE_NAMES)

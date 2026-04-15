@@ -418,6 +418,43 @@ Render an external `.typ` file instead of inline code:
 //| file: _example.typ
 ```
 
+## Output Directory
+
+By default, compiled images are only stored in the internal cache directory (`.quarto/typst-render/`) with auto-generated filenames.
+Set `output-directory` to also save copies to a predictable location.
+Use `output-filename` to override the auto-generated filename.
+
+Paths follow Quarto conventions: a leading `/` is relative to the project root, otherwise relative to the document directory.
+
+When `output-directory` is set and no `output-filename` is given, the filename is auto-generated from the block label (e.g., `fig-diagram.png`) or block counter (e.g., `typst-block-1.png`).
+
+### Save with Explicit Filename
+
+```{typst}
+//| echo: fenced
+//| output-directory: _output
+//| output-filename: hello-typst.png
+//| format: png
+#set text(size: 14pt)
+#align(center)[Hello from *Typst*, saved to `_output/hello-typst.png`.]
+```
+
+### Auto-Generated Filename from Label
+
+When a label is present, the filename is derived from the label:
+
+```{typst}
+//| echo: fenced
+//| label: fig-auto-saved
+//| cap: "A block saved with an auto-generated filename."
+//| output-directory: _output
+//| format: png
+#set text(size: 14pt)
+#align(center)[
+  #circle(radius: 0.8cm, fill: eastern.lighten(60%))
+]
+```
+
 ::: {.content-hidden when-format="revealjs" when-format="pptx"}
 
 ## Preamble
@@ -581,6 +618,8 @@ extensions:
 | `cache`           | boolean\|string | `true`    | Cache compiled images. Use `"clean"` to also remove stale cache files.            |
 | `input`           | object          | (none)    | Key-value pairs passed as `--input` flags to Typst CLI.                           |
 | `file`            | string          | (none)    | Path to external `.typ` file to render.                                           |
+| `output-directory` | string         | (none)    | Directory for saving compiled images.                                             |
+| `output-filename`  | string         | (none)    | Filename for the saved image. Leading `/` overrides `output-directory`.            |
 | `echo`            | boolean\|string | `false`   | Show Typst source code alongside output (`true`, `false`, `fenced`).              |
 | `eval`            | boolean         | `true`    | Compile Typst code to image.                                                      |
 | `include`         | boolean         | `true`    | Include block in output. Set `false` to suppress entirely.                        |
