@@ -1,5 +1,6 @@
 /.luarc.json
 /.quarto/
+/_output/
 *.html
 *.pdf
 *.docx

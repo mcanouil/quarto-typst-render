@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### New Features
+
+- feat: add `output-directory` and `output-filename` options to save compiled images to user-specified locations.
+
 ## 0.9.3 (2026-04-15)
 
 ### Bug Fixes
