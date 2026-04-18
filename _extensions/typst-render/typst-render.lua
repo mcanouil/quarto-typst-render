@@ -1283,14 +1283,14 @@ local function process_codeblock(el)
   local opts = cell.merge_options(block_opts, global_config, DEFAULTS)
   opts._block_input = block_input_str
 
-  -- Resolve per-block colour values (convert "auto" via brand, hex via css_colour_to_typst)
+  -- Resolve per-block colour overrides only. Values inherited from global_config
+  -- are already resolved (e.g. 'rgb("#FAF6EE")') and must not be re-wrapped.
   for _, colour_key in ipairs({ 'background', 'foreground' }) do
-    local val = opts[colour_key]
-    if val == 'auto' then
-      local resolved = resolve_colour_config('auto', colour_key)
-      opts[colour_key] = resolved or DEFAULTS[colour_key]
-    elseif type(val) == 'string' and val ~= DEFAULTS[colour_key] then
-      opts[colour_key] = css_colour_to_typst(val)
+    local block_val = block_opts[colour_key]
+    if block_val == 'auto' then
+      opts[colour_key] = resolve_colour_config('auto', colour_key) or DEFAULTS[colour_key]
+    elseif type(block_val) == 'string' and block_val ~= DEFAULTS[colour_key] then
+      opts[colour_key] = css_colour_to_typst(block_val)
     end
   end
 
