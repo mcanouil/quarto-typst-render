@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.10.1 (2026-04-18)
+
 ### Bug Fixes
 
 - fix: prevent double-wrapping of resolved brand colours when `background: auto` or `foreground: auto` is set globally with a `_brand.yml`.
