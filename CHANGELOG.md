@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### New Features
+
+- feat: add library fingerprint to cache key so edits to `.typ` source files under the project root invalidate stale rendered images.
+- feat: expose document colours to Typst library theme functions via `sys.inputs` (`typst-render-foreground`, `typst-render-background`), allowing imported files to adapt to the document theme.
+
 ## 0.10.1 (2026-04-18)
 
 ### Bug Fixes
