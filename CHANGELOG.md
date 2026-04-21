@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.11.0 (2026-04-21)
+
 ### New Features
 
 - feat: add library fingerprint to cache key so edits to `.typ` source files under the project root invalidate stale rendered images.
