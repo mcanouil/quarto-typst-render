@@ -135,6 +135,9 @@ local used_cache_files = {}
 --- Set of image format extensions produced during this render (for cleanup)
 local used_cache_formats = {}
 
+--- Cache of file contents read during this render pass (keyed by absolute path)
+local read_file_cache = {}
+
 -- ============================================================================
 -- BRAND / THEME COLOUR RESOLUTION
 -- ============================================================================
@@ -266,6 +269,91 @@ local function read_file(path)
   local content = f:read('*a')
   f:close()
   return content
+end
+
+--- Serialise all merged options as a sorted, deterministic string for cache hashing.
+--- Handles string, number, boolean, and nested table values.
+--- @param opts table Merged options
+--- @return string Serialised string
+local function serialise_opts(opts)
+  local function serialise_value(v)
+    local t = type(v)
+    if t == 'boolean' or t == 'number' then return tostring(v) end
+    if t == 'string' then return v end
+    if t == 'table' then
+      local keys = {}
+      for k in pairs(v) do keys[#keys + 1] = k end
+      table.sort(keys)
+      local parts = {}
+      for _, k in ipairs(keys) do
+        parts[#parts + 1] = tostring(k) .. '=' .. serialise_value(v[k])
+      end
+      return '{' .. table.concat(parts, ',') .. '}'
+    end
+    return ''
+  end
+  local keys = {}
+  for k in pairs(opts) do keys[#keys + 1] = k end
+  table.sort(keys)
+  local parts = {}
+  for _, k in ipairs(keys) do
+    -- Skip internal implementation keys (prefixed with '_'); they are not user-visible
+    -- rendering parameters and change independently (e.g. _source is a code preview,
+    -- _block_input is already captured by input_serial).
+    if opts[k] ~= nil and k:sub(1, 1) ~= '_' then
+      parts[#parts + 1] = tostring(k) .. '=' .. serialise_value(opts[k])
+    end
+  end
+  return table.concat(parts, '|')
+end
+
+--- Extract local file paths referenced by #import and #include statements.
+--- Skips package imports (paths starting with @).
+--- @param source string Typst source to scan
+--- @return table List of unique local file path strings
+local function extract_local_file_refs(source)
+  local refs, seen = {}, {}
+  local function add(path)
+    if path:sub(1, 1) ~= '@' and not seen[path] then
+      seen[path] = true
+      refs[#refs + 1] = path
+    end
+  end
+  for p in source:gmatch('#import%s+"([^"]+)"') do add(p) end
+  for p in source:gmatch("#import%s+'([^']+)'") do add(p) end
+  for p in source:gmatch('#include%s+"([^"]+)"') do add(p) end
+  for p in source:gmatch("#include%s+'([^']+)'") do add(p) end
+  return refs
+end
+
+--- Recursively collect the content of locally imported Typst files for cache hashing.
+--- All paths are resolved relative to root (matching how Typst resolves stdin imports).
+--- Missing files are silently skipped; cycles are prevented via visited table.
+--- @param source string Typst source to scan for imports
+--- @param root string Absolute Typst project root path
+--- @param visited table Set of already-visited absolute paths (prevents cycles)
+--- @return string Concatenated rel_path+content string for all reachable local imports
+local function collect_import_content(source, root, visited)
+  local parts = {}
+  for _, rel_path in ipairs(extract_local_file_refs(source)) do
+    local abs_path = pandoc.path.normalize(pandoc.path.join({ root, rel_path }))
+    if not visited[abs_path] then
+      visited[abs_path] = true
+      local content = read_file_cache[abs_path]
+      if content == nil then
+        content = read_file(abs_path)
+        read_file_cache[abs_path] = content or false
+      elseif content == false then
+        content = nil
+      end
+      if content then
+        parts[#parts + 1] = rel_path .. '\0' .. content
+        local sub = collect_import_content(content, root, visited)
+        if sub ~= '' then parts[#parts + 1] = sub end
+      end
+    end
+  end
+  return table.concat(parts, '\n')
 end
 
 --- Resolve the Typst binary path.
@@ -789,14 +877,24 @@ local function compile_typst(source, opts, img_format)
   end
   dpi = tostring(math.floor(dpi))
 
+  -- Resolve root early: needed for import scanning before cache key is built
+  local resolved_root = global_config.root
+      and paths.resolve_project_path(global_config.root)
+      or quarto.project.directory
+
   -- Merge global and per-block input variables
   local merged_input = merge_inputs(opts.input, opts._block_input)
   local input_serial = serialise_inputs(merged_input)
 
-  -- Include inputs in cache hash material
+  -- Build cache hash material: source + inputs + all merged options + imported file contents
   local hash_source = source
   if input_serial ~= '' then
-    hash_source = source .. '|input:' .. input_serial
+    hash_source = hash_source .. '|input:' .. input_serial
+  end
+  hash_source = hash_source .. '|opts:' .. serialise_opts(opts)
+  local import_content = collect_import_content(source, resolved_root, {})
+  if import_content ~= '' then
+    hash_source = hash_source .. '|imports:' .. import_content
   end
 
   local use_cache = opts.cache ~= false
@@ -838,14 +936,6 @@ local function compile_typst(source, opts, img_format)
         return { rel_output }
       end
     end
-  end
-
-  -- Resolve --root: global config or Quarto project directory
-  local resolved_root
-  if global_config.root then
-    resolved_root = paths.resolve_project_path(global_config.root)
-  else
-    resolved_root = quarto.project.directory
   end
 
   local args = { 'compile', '--format', img_format, '--ppi', dpi, '--root', resolved_root }
