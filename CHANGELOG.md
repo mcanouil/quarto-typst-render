@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Breaking Changes
+
+- refactor: replace `cache: clean` with a dedicated `cache-refresh` boolean option (default `false`). Set `cache-refresh: true` to remove stale cache files after each render.
+- refactor: `cache: false` no longer deletes existing cache files on startup; it now only skips cache lookup and write for the current render.
+
 ## 0.11.0 (2026-04-21)
 
 ### New Features
