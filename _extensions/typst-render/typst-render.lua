@@ -1629,7 +1629,7 @@ end
 --- @param doc pandoc.Pandoc
 --- @return nil
 local function cleanup_cache(doc) -- luacheck: ignore 212
-  if not global_config['cache-refresh'] then
+  if not global_config['cache-refresh'] or not cache_subdir then
     return nil
   end
   local abs_cache = pandoc.path.join({ quarto.project.directory, cache_subdir })
