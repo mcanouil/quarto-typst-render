@@ -573,6 +573,28 @@ local function resolve_opts_colours(opts, mode)
   return resolved
 end
 
+--- Extract a raw hex value from a Typst rgb() expression, e.g. rgb("#F4EDDF") -> "#F4EDDF".
+--- Returns nil for non-hex expressions (oklch, named colours, etc.).
+--- @param typst_expr string|nil Typst colour expression
+--- @return string|nil Hex string or nil
+local function typst_colour_to_hex(typst_expr)
+  if not typst_expr then return nil end
+  return typst_expr:match('^rgb%("(#[%x]+)"%)$')
+end
+
+--- Prepend Typst let-bindings for the render background/foreground variables.
+--- These make document colours available to library code under predictable names.
+--- @param parts table String parts list to append to
+--- @param opts table Options containing background and optional foreground
+local function inject_colour_vars(parts, opts)
+  parts[#parts + 1] = '#let _typst_render_background = ' .. opts.background
+  if opts.foreground then
+    parts[#parts + 1] = '#let _typst_render_foreground = ' .. opts.foreground
+  else
+    parts[#parts + 1] = '#let _typst_render_foreground = none'
+  end
+end
+
 --- Build the `#set page(...)` directive from options (for image compilation).
 --- @param opts table Merged options
 --- @return string Typst page directive
@@ -599,6 +621,7 @@ end
 --- @return string Complete Typst source
 local function build_typst_source(code, opts)
   local parts = {}
+  inject_colour_vars(parts, opts)
   parts[#parts + 1] = build_page_directive(opts)
   if opts.foreground then
     parts[#parts + 1] = '#set text(fill: ' .. opts.foreground .. ')'
@@ -964,6 +987,21 @@ local function compile_typst(source, opts, img_format)
   for _, k in ipairs(sorted_keys) do
     args[#args + 1] = '--input'
     args[#args + 1] = k .. '=' .. merged_input[k]
+  end
+
+  -- Expose document colours to library theme functions via sys.inputs.
+  -- Only hex colours (rgb("#RRGGBB")) can be round-tripped through a CLI flag;
+  -- other expressions (oklch, named colours) are available via the #let bindings
+  -- injected by inject_colour_vars and do not need a separate --input flag.
+  local fg_hex = typst_colour_to_hex(opts.foreground)
+  local bg_hex = typst_colour_to_hex(opts.background)
+  if fg_hex then
+    args[#args + 1] = '--input'
+    args[#args + 1] = 'typst-render-foreground=' .. fg_hex
+  end
+  if bg_hex then
+    args[#args + 1] = '--input'
+    args[#args + 1] = 'typst-render-background=' .. bg_hex
   end
 
   -- Use stdin ('-') instead of a temp file
@@ -1412,6 +1450,7 @@ local function process_codeblock(el)
         or opts
     local preamble = resolve_preamble(typst_opts.preamble)
     local parts = {}
+    inject_colour_vars(parts, typst_opts)
     if typst_opts.foreground then
       parts[#parts + 1] = '#set text(fill: ' .. typst_opts.foreground .. ')'
     end

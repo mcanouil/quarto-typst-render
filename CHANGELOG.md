@@ -6,11 +6,11 @@
 
 - feat: the cache is now invalidated when any global or per-block rendering option changes, including `font-path`, `package-path`, and `root` which previously only affected the Typst CLI invocation and were invisible to the cache key.
 - feat: the cache is now invalidated when any locally-imported Typst file changes; `#import` and `#include` paths are scanned from the compiled source (code and inlined preamble) and their contents are included in the cache hash, recursively.
+- feat: document colours are exposed to Typst library and package code via `sys.inputs` (`typst-render-foreground`, `typst-render-background`) and as `#let` bindings (`_typst_render_foreground`, `_typst_render_background`), allowing imported theme functions to adapt to the document's colour scheme. Only hex colours are exposed via `sys.inputs`; all colour formats are available via the `#let` bindings.
 
 ### Removed
 
 - revert: library fingerprint (scanning `lib.typ` and `src/` under the project root) introduced in 0.11.0 has been replaced by generic import tracking via `#import`/`#include` scanning.
-- revert: colour exposure via `sys.inputs` (`typst-render-foreground`, `typst-render-background`) introduced in 0.11.0 has been removed.
 
 ### Breaking Changes
 
