@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.12.0 (2026-04-22)
+
 ### New Features
 
 - feat: the cache is now invalidated when any global or per-block rendering option changes, including `font-path`, `package-path`, and `root` which previously only affected the Typst CLI invocation and were invisible to the cache key.
