@@ -319,10 +319,10 @@ local function extract_local_file_refs(source)
       refs[#refs + 1] = path
     end
   end
-  for p in source:gmatch('#import%s+"([^"]+)"') do add(p) end
-  for p in source:gmatch("#import%s+'([^']+)'") do add(p) end
-  for p in source:gmatch('#include%s+"([^"]+)"') do add(p) end
-  for p in source:gmatch("#include%s+'([^']+)'") do add(p) end
+  for p in source:gmatch('#import%s*"([^"]+)"') do add(p) end
+  for p in source:gmatch("#import%s*'([^']+)'") do add(p) end
+  for p in source:gmatch('#include%s*"([^"]+)"') do add(p) end
+  for p in source:gmatch("#include%s*'([^']+)'") do add(p) end
   return refs
 end
 
@@ -1198,6 +1198,7 @@ end
 --- @return pandoc.Meta
 local function get_configuration(meta)
   register_custom_crossref_types(meta)
+  read_file_cache = {}
 
   -- Build per-document cache subdirectory from the input file stem
   local doc_stem = 'default'
