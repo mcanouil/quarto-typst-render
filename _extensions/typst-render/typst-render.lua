@@ -1249,6 +1249,14 @@ local function process_codeblock(el)
 
   local block_opts, clean_code, option_lines = cell.parse_options(el.text)
 
+  if block_opts['cache-refresh'] ~= nil then
+    log.log_warning(
+      EXTENSION_NAME,
+      'Per-block "cache-refresh" is not supported; use the global option instead.'
+    )
+    block_opts['cache-refresh'] = nil
+  end
+
   -- Stash per-block input string before merge overwrites it with global table
   local block_input_str = nil
   if type(block_opts.input) == 'string' then
