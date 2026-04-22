@@ -83,7 +83,7 @@ options:
     description: "Cache compiled images to avoid recompilation."
   cache-refresh:
     type: boolean
-    default: true
+    default: false
     description: "Remove stale cache files after each render. Only files matching the current output format are removed."
   echo:
     type: [boolean, string]
