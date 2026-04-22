@@ -134,11 +134,6 @@ local used_cache_files = {}
 --- Set of image format extensions produced during this render (for cleanup)
 local used_cache_formats = {}
 
---- Memoised library-source fingerprint keyed by absolute project root.
---- Populated on first cache-key build, reused for subsequent blocks in the
---- same pandoc pass.
-local library_fingerprint_cache = {}
-
 -- ============================================================================
 -- BRAND / THEME COLOUR RESOLUTION
 -- ============================================================================
@@ -164,15 +159,7 @@ local function get_brand_module()
   return nil
 end
 
---- Extract a raw hex value from a Typst rgb() expression, e.g. rgb("#F4EDDF") -> "#F4EDDF".
---- Returns nil for non-hex expressions (oklch, named colours, etc.).
---- @param typst_expr string|nil Typst colour expression
---- @return string|nil Hex string or nil
-local function typst_colour_to_hex(typst_expr)
-  if not typst_expr then return nil end
-  return typst_expr:match('^rgb%("(#[%x]+)"%)$')
-end
-
+--- Convert a CSS colour string to a Typst colour literal.
 --- Wraps hex values like "#fdfdfd" as rgb("#fdfdfd") for Typst.
 --- Passes through values that are already Typst-native (e.g., "blue", "luma(240)").
 --- @param css_colour string CSS colour string
@@ -278,65 +265,6 @@ local function read_file(path)
   local content = f:read('*a')
   f:close()
   return content
-end
-
---- Compute a stable fingerprint of the Typst library sources that the
---- preamble imports (lib.typ + src/**/*.typ under the project root).
---- The typst-render cache keys user example code, inputs, and document
---- colours, but not the library: edits to defaults.typ / render.typ
---- wouldn't invalidate stale SVGs without this.
---- Result is an 8-char hex digest, memoised per project root.
---- @param root string|nil Absolute path to the Typst project root
---- @return string Fingerprint (8 hex chars, or "none" when root unresolved)
-local function compute_library_fingerprint(root)
-  if not root or root == '' then return 'none' end
-  local cached = library_fingerprint_cache[root]
-  if cached then return cached end
-
-  local files = {}
-  local function walk(dir)
-    local ok, entries = pcall(pandoc.system.list_directory, dir)
-    if not ok or not entries then return end
-    for _, name in ipairs(entries) do
-      if name ~= '.' and name ~= '..' then
-        local full = pandoc.path.join({ dir, name })
-        if name:match('%.typ$') then
-          files[#files + 1] = full
-        else
-          -- Recurse into anything that isn't a .typ; list_directory on a
-          -- file will simply return no entries.
-          walk(full)
-        end
-      end
-    end
-  end
-
-  local lib_path = pandoc.path.join({ root, 'lib.typ' })
-  local lib_bytes = read_file(lib_path)
-  if lib_bytes then files[#files + 1] = lib_path end
-  walk(pandoc.path.join({ root, 'src' }))
-  table.sort(files)
-
-  local lib_cache = lib_bytes and { [lib_path] = lib_bytes } or {}
-  local parts = {}
-  for _, path in ipairs(files) do
-    local bytes = lib_cache[path] or read_file(path) or ''
-    local rel = pandoc.path.make_relative(path, root)
-    parts[#parts + 1] = rel .. '\0' .. bytes
-  end
-  local digest = pandoc.utils.sha1(table.concat(parts, '\n')):sub(1, 8)
-  library_fingerprint_cache[root] = digest
-  return digest
-end
-
---- Resolve the Typst project root the same way compile_typst does when
---- building CLI args: explicit `root:` config, else the Quarto project dir.
---- @return string|nil Absolute project root path
-local function resolve_typst_root()
-  if global_config.root then
-    return paths.resolve_project_path(global_config.root)
-  end
-  return quarto.project.directory
 end
 
 --- Resolve the Typst binary path.
@@ -576,25 +504,12 @@ local function has_custom_block_options(opts)
       or opts.margin ~= DEFAULTS.margin
 end
 
---- Prepend Typst let-bindings for the render background/foreground variables.
---- @param parts table String parts list to append to
---- @param opts table Options containing background and optional foreground
-local function inject_colour_vars(parts, opts)
-  parts[#parts + 1] = '#let _typst_render_background = ' .. opts.background
-  if opts.foreground then
-    parts[#parts + 1] = '#let _typst_render_foreground = ' .. opts.foreground
-  else
-    parts[#parts + 1] = '#let _typst_render_foreground = none'
-  end
-end
-
 --- Build the full Typst source with page template.
 --- @param code string User Typst code
 --- @param opts table Merged options
 --- @return string Complete Typst source
 local function build_typst_source(code, opts)
   local parts = {}
-  inject_colour_vars(parts, opts)
   parts[#parts + 1] = build_page_directive(opts)
   if opts.foreground then
     parts[#parts + 1] = '#set text(fill: ' .. opts.foreground .. ')'
@@ -883,23 +798,6 @@ local function compile_typst(source, opts, img_format)
     hash_source = source .. '|input:' .. input_serial
   end
 
-  -- foreground/background reach Typst via sys.inputs and influence library
-  -- theme defaults, so they must participate in the cache key.
-  local fg_hex = typst_colour_to_hex(opts.foreground)
-  local bg_hex = typst_colour_to_hex(opts.background)
-  if fg_hex or bg_hex then
-    hash_source = hash_source
-        .. '|fg:' .. (fg_hex or '')
-        .. '|bg:' .. (bg_hex or '')
-  end
-
-  local typst_root = resolve_typst_root()
-  -- The preamble imports `/lib.typ` so any edit under the project's .typ
-  -- sources changes the rendered output. Fingerprint them into the cache
-  -- key; otherwise pre-refactor SVGs linger even after the library changes.
-  hash_source = hash_source
-      .. '|lib:' .. compute_library_fingerprint(typst_root)
-
   local use_cache = opts.cache ~= false
   local stem = compute_cache_stem(hash_source, img_format, dpi, opts.label, opts._inline)
   local abs_cache, rel_cache = ensure_cache_dir()
@@ -941,7 +839,15 @@ local function compile_typst(source, opts, img_format)
     end
   end
 
-  local args = { 'compile', '--format', img_format, '--ppi', dpi, '--root', typst_root }
+  -- Resolve --root: global config or Quarto project directory
+  local resolved_root
+  if global_config.root then
+    resolved_root = paths.resolve_project_path(global_config.root)
+  else
+    resolved_root = quarto.project.directory
+  end
+
+  local args = { 'compile', '--format', img_format, '--ppi', dpi, '--root', resolved_root }
 
   -- Add --font-path flags (global-only; always a list after get_configuration)
   local font_paths = global_config['font-path']
@@ -967,18 +873,6 @@ local function compile_typst(source, opts, img_format)
   for _, k in ipairs(sorted_keys) do
     args[#args + 1] = '--input'
     args[#args + 1] = k .. '=' .. merged_input[k]
-  end
-
-  -- Expose document colours to lib.typ theme functions via sys.inputs.
-  -- Theme functions read typst-render-foreground / typst-render-background as
-  -- default ink/paper, so they adapt even when imported inside #include files.
-  if fg_hex then
-    args[#args + 1] = '--input'
-    args[#args + 1] = 'typst-render-foreground=' .. fg_hex
-  end
-  if bg_hex then
-    args[#args + 1] = '--input'
-    args[#args + 1] = 'typst-render-background=' .. bg_hex
   end
 
   -- Use stdin ('-') instead of a temp file
@@ -1455,7 +1349,6 @@ local function process_codeblock(el)
         or opts
     local preamble = resolve_preamble(typst_opts.preamble)
     local parts = {}
-    inject_colour_vars(parts, typst_opts)
     if typst_opts.foreground then
       parts[#parts + 1] = '#set text(fill: ' .. typst_opts.foreground .. ')'
     end
