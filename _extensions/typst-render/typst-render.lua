@@ -41,6 +41,7 @@ local DEFAULTS = {
   foreground = nil,
   preamble = '',
   cache = true,
+  ['cache-refresh'] = true,
   file = nil,
   ['output-directory'] = nil,
   ['output-filename'] = nil,
@@ -1128,7 +1129,7 @@ local function get_configuration(meta)
     -- so we use a separate key list to ensure 'format' etc. are not missed.
     local config_keys = {
       'format', 'dpi', 'width', 'height', 'margin',
-      'cache', 'echo', 'eval', 'include', 'output', 'output-location', 'classes',
+      'cache', 'cache-refresh', 'echo', 'eval', 'include', 'output', 'output-location', 'classes',
       'root', 'package-path', 'pages', 'layout-ncol', 'align',
       'output-directory',
     }
@@ -1136,18 +1137,7 @@ local function get_configuration(meta)
       local default_val = DEFAULTS[k]
       if ext_config[k] ~= nil then
         local val = ext_config[k]
-        if k == 'cache' then
-          if type(val) == 'boolean' then
-            global_config[k] = val
-          else
-            local str = pandoc.utils.stringify(val)
-            if str == 'clean' then
-              global_config[k] = 'clean'
-            else
-              global_config[k] = str == 'true'
-            end
-          end
-        elseif k == 'echo' then
+        if k == 'echo' then
           if type(val) == 'boolean' then
             global_config[k] = val
           else
@@ -1246,20 +1236,6 @@ local function get_configuration(meta)
     end
   end
 
-  -- Clear per-document cache when caching is disabled (cache: false).
-  -- When cache is true or 'clean', existing files are preserved.
-  if global_config.cache == false then
-    local abs_cache = pandoc.path.join({ quarto.project.directory, cache_subdir })
-    local list_ok, entries = pcall(pandoc.system.list_directory, abs_cache)
-    if list_ok then
-      for _, filename in ipairs(entries) do
-        if filename:match('^typst%-') then
-          os.remove(pandoc.path.join({ abs_cache, filename }))
-        end
-      end
-    end
-  end
-
   return meta
 end
 
@@ -1292,18 +1268,6 @@ local function process_codeblock(el)
     elseif type(block_val) == 'string' and block_val ~= DEFAULTS[colour_key] then
       opts[colour_key] = css_colour_to_typst(block_val)
     end
-  end
-
-  -- Per-block "cache: clean" is not supported; warn and treat as true
-  if type(block_opts.cache) == 'string' and block_opts.cache:lower() == 'clean' then
-    log.log_warning(
-      EXTENSION_NAME,
-      'Per-block "cache: clean" is not supported; treating as "cache: true".'
-    )
-    opts.cache = true
-  elseif opts.cache == 'clean' then
-    -- Global 'clean' mode: normalise to true for this block's compilation
-    opts.cache = true
   end
 
   if not cell.should_include(opts) then
@@ -1651,13 +1615,13 @@ local function process_inline_code(el)
 end
 
 --- Remove stale cache files after all blocks have been processed.
---- Only runs when global `cache` is `'clean'`. Only removes files whose
+--- Only runs when `cache-refresh` is `true`. Only removes files whose
 --- extension matches a format produced during the current render, so an HTML
 --- render (producing `.svg`) will not wipe `.png` files from a previous PDF render.
 --- @param doc pandoc.Pandoc
 --- @return nil
 local function cleanup_cache(doc) -- luacheck: ignore 212
-  if global_config.cache ~= 'clean' then
+  if not global_config['cache-refresh'] then
     return nil
   end
   local abs_cache = pandoc.path.join({ quarto.project.directory, cache_subdir })

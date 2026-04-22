@@ -203,12 +203,13 @@ extensions:
       lang: en
 ```
 
-Cache cleanup removes stale files from previous renders:
+Cache cleanup removes stale files from previous renders and is enabled by default.
+To disable it:
 
 ```yaml
 extensions:
   typst-render:
-    cache: clean
+    cache-refresh: false
 ```
 
 ### Output Directory
@@ -321,7 +322,8 @@ Per-block input override using comma-separated syntax:
 | `background`      | string\|object  | `"none"`  | Page fill colour. Accepts a Typst colour, `auto` (from `_brand.yml`), or `{light, dark}` map. |
 | `foreground`      | string\|object  | (none)    | Text fill colour. Accepts a Typst colour, `auto` (from `_brand.yml`), or `{light, dark}` map. |
 | `preamble`        | string          | `""`      | Typst code or path to a `.typ` file prepended before user code.                               |
-| `cache`           | boolean\|string | `true`    | Cache compiled images. Use `"clean"` to also remove stale cache files.                        |
+| `cache`           | boolean         | `true`    | Cache compiled images. Set `false` to skip cache (existing files are preserved).              |
+| `cache-refresh`   | boolean         | `true`    | Remove stale cache files after each render (global only).                                     |
 | `input`           | object          | (none)    | Key-value pairs passed as `--input` flags to Typst CLI.                                       |
 | `file`            | string          | (none)    | Path to external `.typ` file to render.                                                       |
 | `output-directory` | string         | (none)    | Directory for saving compiled images. See [Output Directory](#output-directory).               |
