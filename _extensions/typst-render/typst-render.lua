@@ -3,7 +3,6 @@
 --- @license MIT
 --- @copyright 2026 Mickaël Canouil
 --- @author Mickaël Canouil
---- @version 1.0.0
 --- @brief Compiles {typst} code blocks to images for non-Typst output formats.
 --- @description Intercepts ```{typst} CodeBlock elements and compiles them to
 ---   images (PNG, SVG, or PDF) using the Typst binary bundled with Quarto,
