@@ -774,7 +774,14 @@ local function rewrite_svg_file_size(path, dpi)
     os.remove(tmp_path)
     return
   end
+  -- Windows `os.rename` fails if the destination exists; POSIX atomically
+  -- replaces. Try a direct rename first, then retry after removing on
+  -- failure so behaviour is portable (briefly non-atomic on Windows only).
   local rename_ok, rename_err = os.rename(tmp_path, path)
+  if not rename_ok then
+    os.remove(path)
+    rename_ok, rename_err = os.rename(tmp_path, path)
+  end
   if not rename_ok then
     log.log_warning(EXTENSION_NAME, 'Failed to rewrite SVG size: rename failed for ' .. path .. ': ' .. (rename_err or 'unknown'))
     os.remove(tmp_path)
@@ -1865,7 +1872,8 @@ local function cleanup_cache(doc) -- luacheck: ignore 212
   for _, filename in ipairs(entries) do
     if filename:match('^typst%-') and not used_cache_files[filename] then
       local ext = filename:match('%.(%w+)$')
-      if ext and used_cache_formats[ext] then
+      -- Also sweep orphan `.tmp` files left by an interrupted SVG rewrite.
+      if ext and (used_cache_formats[ext] or ext == 'tmp') then
         local filepath = pandoc.path.join({ abs_cache, filename })
         local rm_ok, rm_err = os.remove(filepath)
         if rm_ok then
