@@ -10,7 +10,7 @@
   This makes SVG and PNG output display at the same on-screen size for the same Typst page and `dpi`.
   Existing SVG users will see images grow at the default `dpi: 144`: a `10cm` wide page previously rendered at ~378 CSS px and now renders at ~567 CSS px.
   Lower `dpi` to shrink; raise it to enlarge.
-  Cached SVG files from prior versions keep the old sizing; set `cache-refresh: true` or clear the cache to rerender them.
+  The SVG cache key now separates HTML from non-HTML consumers, so cache entries from prior versions are bypassed automatically; set `cache-refresh: true` to sweep the stale files.
 
 ## 0.12.0 (2026-04-22)
 

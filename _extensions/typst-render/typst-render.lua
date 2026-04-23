@@ -1007,6 +1007,13 @@ local function compile_typst(source, opts, img_format)
   if import_content ~= '' then
     hash_source = hash_source .. '|imports:' .. import_content
   end
+  -- SVG output is post-processed (pt -> px at dpi) only for HTML output, and the
+  -- rewrite mutates the cached file in place. Without this, a non-HTML render
+  -- producing an SVG at the same stem would populate the cache with pt units,
+  -- and the next HTML render would hit that cache and serve pt-sized SVG.
+  if img_format == 'svg' then
+    hash_source = hash_source .. '|html:' .. (quarto.format.is_html_output() and '1' or '0')
+  end
 
   local use_cache = opts.cache ~= false
   local stem = compute_cache_stem(hash_source, img_format, dpi, opts.label, opts._inline)
@@ -1111,8 +1118,9 @@ local function compile_typst(source, opts, img_format)
     -- For HTML output, SVG pages get a per-file rewrite so root <svg>
     -- width/height are in px rather than pt; keeps SVG and PNG at the same
     -- on-screen size for the same Typst page + dpi. Other formats keep the
-    -- pt units Typst produced, which are correct for print. Cached files
-    -- are already rewritten (dpi is part of the cache key).
+    -- pt units Typst produced, which are correct for print. HTML-vs-not is
+    -- part of the SVG cache key, so cached entries are never served to the
+    -- wrong consumer.
     local on_page = nil
     if img_format == 'svg' and quarto.format.is_html_output() then
       local dpi_num = tonumber(dpi)
