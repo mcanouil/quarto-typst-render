@@ -311,31 +311,31 @@ Per-block input override using comma-separated syntax:
 
 ### Options
 
-| Option            | Type            | Default   | Description                                                                                   |
-| ----------------- | --------------- | --------- | --------------------------------------------------------------------------------------------- |
-| `format`          | string          | (auto)    | Image format: `png`, `svg`, `pdf`.                                                            |
-| `dpi`             | number          | `144`     | Pixels per inch (PNG only).                                                                   |
-| `width`           | string          | `"auto"`  | Page width for image compilation (ignored with `output: asis`).                               |
-| `height`          | string          | `"auto"`  | Page height for image compilation (ignored with `output: asis`).                              |
-| `margin`          | string          | `"0.5em"` | Page margin for image compilation; block `inset` with `output: asis`.                         |
-| `background`      | string\|object  | `"none"`  | Page fill colour. Accepts a Typst colour, `auto` (from `_brand.yml`), or `{light, dark}` map. |
-| `foreground`      | string\|object  | (none)    | Text fill colour. Accepts a Typst colour, `auto` (from `_brand.yml`), or `{light, dark}` map. |
-| `preamble`        | string          | `""`      | Typst code or path to a `.typ` file prepended before user code.                               |
-| `cache`           | boolean         | `true`    | Cache compiled images. Set `false` to skip cache (existing files are preserved).              |
-| `cache-refresh`   | boolean         | `false`   | Remove stale cache files after each render (global only).                                     |
-| `input`           | object          | (none)    | Key-value pairs passed as `--input` flags to Typst CLI.                                       |
-| `file`            | string          | (none)    | Path to external `.typ` file to render.                                                       |
-| `output-directory` | string         | (none)    | Directory for saving compiled images. See [Output Directory](#output-directory).               |
-| `output-filename`  | string         | (none)    | Filename for the saved image. Leading `/` overrides `output-directory`. Auto-generated if omitted. |
-| `echo`            | boolean\|string | `false`   | Show Typst source code alongside output (`true`, `false`, `fenced`).                          |
-| `eval`            | boolean         | `true`    | Compile Typst code to image.                                                                  |
-| `include`         | boolean         | `true`    | Include block in output. Set `false` to suppress entirely.                                    |
-| `output`          | boolean\|string | `true`    | Show rendered output. Use `asis` for native Typst passthrough.                                |
-| `output-location` | string          | (none)    | Output placement in Reveal.js (`fragment`, `slide`, `column`, `column-fragment`).             |
-| `classes`         | string          | (none)    | Space-separated CSS classes on the output image (e.g., `r-stretch`).                          |
-| `pages`           | string          | `"all"`   | Pages to include from multi-page output: `all`, `1`, `1-3`, `2,5`, `3-`.                      |
-| `layout-ncol`     | string          | (none)    | Number of columns for arranging multi-page output. Omit for vertical stack.                   |
-| `align`           | string          | (none)    | Horizontal alignment: `left`, `center`, `right`, `default`.                                   |
+| Option             | Type            | Default   | Description                                                                                        |
+| ------------------ | --------------- | --------- | -------------------------------------------------------------------------------------------------- |
+| `format`           | string          | (auto)    | Image format: `png`, `svg`, `pdf`.                                                                 |
+| `dpi`              | number          | `144`     | Pixels per inch. PNG rasterisation density and CSS pixel size of SVG output in HTML.               |
+| `width`            | string          | `"auto"`  | Page width for image compilation (ignored with `output: asis`).                                    |
+| `height`           | string          | `"auto"`  | Page height for image compilation (ignored with `output: asis`).                                   |
+| `margin`           | string          | `"0.5em"` | Page margin for image compilation; block `inset` with `output: asis`.                              |
+| `background`       | string\|object  | `"none"`  | Page fill colour. Accepts a Typst colour, `auto` (from `_brand.yml`), or `{light, dark}` map.      |
+| `foreground`       | string\|object  | (none)    | Text fill colour. Accepts a Typst colour, `auto` (from `_brand.yml`), or `{light, dark}` map.      |
+| `preamble`         | string          | `""`      | Typst code or path to a `.typ` file prepended before user code.                                    |
+| `cache`            | boolean         | `true`    | Cache compiled images. Set `false` to skip cache (existing files are preserved).                   |
+| `cache-refresh`    | boolean         | `false`   | Remove stale cache files after each render (global only).                                          |
+| `input`            | object          | (none)    | Key-value pairs passed as `--input` flags to Typst CLI.                                            |
+| `file`             | string          | (none)    | Path to external `.typ` file to render.                                                            |
+| `output-directory` | string          | (none)    | Directory for saving compiled images. See [Output Directory](#output-directory).                   |
+| `output-filename`  | string          | (none)    | Filename for the saved image. Leading `/` overrides `output-directory`. Auto-generated if omitted. |
+| `echo`             | boolean\|string | `false`   | Show Typst source code alongside output (`true`, `false`, `fenced`).                               |
+| `eval`             | boolean         | `true`    | Compile Typst code to image.                                                                       |
+| `include`          | boolean         | `true`    | Include block in output. Set `false` to suppress entirely.                                         |
+| `output`           | boolean\|string | `true`    | Show rendered output. Use `asis` for native Typst passthrough.                                     |
+| `output-location`  | string          | (none)    | Output placement in Reveal.js (`fragment`, `slide`, `column`, `column-fragment`).                  |
+| `classes`          | string          | (none)    | Space-separated CSS classes on the output image (e.g., `r-stretch`).                               |
+| `pages`            | string          | `"all"`   | Pages to include from multi-page output: `all`, `1`, `1-3`, `2,5`, `3-`.                           |
+| `layout-ncol`      | string          | (none)    | Number of columns for arranging multi-page output. Omit for vertical stack.                        |
+| `align`            | string          | (none)    | Horizontal alignment: `left`, `center`, `right`, `default`.                                        |
 
 Any unknown option with a string value is forwarded as an HTML attribute on the output image element (e.g., `//| style: "max-height: 300px;"`).
 Values that look like booleans (`true`/`false`) must be quoted to be forwarded (e.g., `//| data-lazy: "true"`).
@@ -369,6 +369,10 @@ These options can only be set in the document YAML and cannot be overridden per 
 | Typst           | `png`                |
 | DOCX / PPTX     | `png`                |
 | Other           | `png`                |
+
+For HTML output, SVG images are rewritten so that the root `<svg>` element's `width`/`height` (emitted by Typst in `pt`) are converted to `px` at the configured `dpi`.
+This keeps SVG and PNG output at the same on-screen size for the same Typst page and `dpi`.
+`viewBox` is not modified, so aspect ratio is preserved.
 
 ### Echo/Eval Behaviour
 

@@ -12,7 +12,7 @@ options:
   dpi:
     type: number
     default: 144
-    description: "Pixels per inch for PNG output."
+    description: "Pixels per inch. Controls PNG rasterisation density and the CSS pixel size of SVG output (the root <svg> width/height emitted by Typst in pt are rewritten to px at this dpi so SVG and PNG display at the same size in HTML)."
   width:
     type: string
     default: "auto"
@@ -137,7 +137,7 @@ attributes:
       description: "Image output format for this block."
     dpi:
       type: number
-      description: "Pixels per inch for PNG output."
+      description: "Pixels per inch. Controls PNG rasterisation density and the CSS pixel size of SVG output in HTML."
     width:
       type: string
       description: "Page width for image compilation (ignored with output: asis)."

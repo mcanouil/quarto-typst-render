@@ -680,8 +680,9 @@ end
 --- @param rel_cache string Relative path to cache directory
 --- @param stem string File stem (without extension)
 --- @param ext string File extension (e.g., "png", "svg")
+--- @param on_page function|nil Optional callback invoked as on_page(abs_page_path) for each discovered file, before it is recorded
 --- @return table List of relative paths to discovered page files
-local function discover_page_files(abs_cache, rel_cache, stem, ext)
+local function discover_page_files(abs_cache, rel_cache, stem, ext, on_page)
   local pages = {}
   local i = 1
   while true do
@@ -692,11 +693,79 @@ local function discover_page_files(abs_cache, rel_cache, stem, ext)
       break
     end
     f:close()
+    if on_page then
+      on_page(page_path)
+    end
     used_cache_files[page_name] = true
     pages[#pages + 1] = pandoc.path.join({ rel_cache, page_name })
     i = i + 1
   end
   return pages
+end
+
+local function format_svg_px(value)
+  if value == math.floor(value) then
+    return string.format('%d', value)
+  end
+  return string.format('%.2f', value)
+end
+
+--- Patterns for Typst-emitted root `<svg>` width/height in pt. Each capture
+--- is: (1) attribute name and `=`, (2) opening quote (kept consistent via `%2`
+--- back-reference on the closing quote), (3) the numeric value.
+local SVG_ROOT_PT_PATTERNS = {
+  '(%swidth=)(["\'])(%-?%d*%.?%d+)pt%2',
+  '(%sheight=)(["\'])(%-?%d*%.?%d+)pt%2',
+}
+
+--- Rewrite `width`/`height` on a root <svg> tag from pt to px at the given
+--- dpi. Typst's SVG writer always emits pt on the root (even when the Typst
+--- page is auto-sized); browsers treat <svg width="Npt"> as physical points
+--- (1/72 in), which renders smaller than a PNG rasterised at the same dpi.
+--- Converting to px at our dpi makes SVG and PNG display at the same size.
+--- `viewBox` is untouched so aspect ratio and inner coordinates are preserved.
+--- @param svg_tag string Opening `<svg ... >` tag, including angle brackets
+--- @param dpi number Target resolution in pixels per inch
+--- @return string Rewritten tag (unchanged if no pt values found)
+local function rewrite_svg_root_tag(svg_tag, dpi)
+  local scale = dpi / 72
+  for _, pattern in ipairs(SVG_ROOT_PT_PATTERNS) do
+    svg_tag = svg_tag:gsub(pattern, function(prefix, quote, num)
+      return prefix .. quote .. format_svg_px(tonumber(num) * scale) .. 'px' .. quote
+    end)
+  end
+  return svg_tag
+end
+
+--- Rewrite a single Typst-produced SVG file in place so the root <svg>
+--- width/height are expressed in px at the given dpi. No-op if the tag is
+--- missing or already contains no pt values.
+--- @param path string Absolute path to the SVG file
+--- @param dpi number Target resolution in pixels per inch
+local function rewrite_svg_file_size(path, dpi)
+  local f_in = io.open(path, 'rb')
+  if not f_in then
+    return
+  end
+  local data = f_in:read('*a')
+  f_in:close()
+  local start_pos, end_pos = data:find('<svg[^>]*>')
+  if not start_pos then
+    return
+  end
+  local old_tag = data:sub(start_pos, end_pos)
+  local new_tag = rewrite_svg_root_tag(old_tag, dpi)
+  if new_tag == old_tag then
+    return
+  end
+  local new_data = data:sub(1, start_pos - 1) .. new_tag .. data:sub(end_pos + 1)
+  local f_out = io.open(path, 'wb')
+  if not f_out then
+    log.log_warning(EXTENSION_NAME, 'Failed to rewrite SVG size: could not open for write: ' .. path)
+    return
+  end
+  f_out:write(new_data)
+  f_out:close()
 end
 
 --- Copy a file in binary mode.
@@ -1019,7 +1088,18 @@ local function compile_typst(source, opts, img_format)
 
   if is_paged then
     -- PNG/SVG: Typst CLI generates {stem}1.{ext}, {stem}2.{ext}, ...
-    local pages = discover_page_files(abs_cache, rel_cache, stem, img_format)
+    -- SVG pages get a per-file rewrite so root <svg> width/height are in px
+    -- rather than pt; keeps SVG and PNG at the same on-screen size for the
+    -- same Typst page + dpi. (Cached files are already rewritten: dpi is
+    -- part of the cache key.)
+    local on_page = nil
+    if img_format == 'svg' then
+      local dpi_num = tonumber(dpi)
+      on_page = function(path)
+        rewrite_svg_file_size(path, dpi_num)
+      end
+    end
+    local pages = discover_page_files(abs_cache, rel_cache, stem, img_format, on_page)
     if #pages > 0 then
       return pages
     end
