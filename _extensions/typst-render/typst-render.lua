@@ -739,7 +739,9 @@ end
 
 --- Rewrite a single Typst-produced SVG file in place so the root <svg>
 --- width/height are expressed in px at the given dpi. No-op if the tag is
---- missing or already contains no pt values.
+--- missing or already contains no pt values. Writes atomically via a
+--- temp file + rename so a mid-write failure (e.g. disk full) cannot
+--- poison the cache with a truncated SVG.
 --- @param path string Absolute path to the SVG file
 --- @param dpi number Target resolution in pixels per inch
 local function rewrite_svg_file_size(path, dpi)
@@ -759,13 +761,24 @@ local function rewrite_svg_file_size(path, dpi)
     return
   end
   local new_data = data:sub(1, start_pos - 1) .. new_tag .. data:sub(end_pos + 1)
-  local f_out = io.open(path, 'wb')
+  local tmp_path = path .. '.tmp'
+  local f_out, open_err = io.open(tmp_path, 'wb')
   if not f_out then
-    log.log_warning(EXTENSION_NAME, 'Failed to rewrite SVG size: could not open for write: ' .. path)
+    log.log_warning(EXTENSION_NAME, 'Failed to rewrite SVG size: cannot open ' .. tmp_path .. ': ' .. (open_err or 'unknown'))
     return
   end
-  f_out:write(new_data)
-  f_out:close()
+  local write_ok, write_err = f_out:write(new_data)
+  local close_ok, close_err = f_out:close()
+  if not write_ok or not close_ok then
+    log.log_warning(EXTENSION_NAME, 'Failed to rewrite SVG size: write/close failed on ' .. tmp_path .. ': ' .. (write_err or close_err or 'unknown'))
+    os.remove(tmp_path)
+    return
+  end
+  local rename_ok, rename_err = os.rename(tmp_path, path)
+  if not rename_ok then
+    log.log_warning(EXTENSION_NAME, 'Failed to rewrite SVG size: rename failed for ' .. path .. ': ' .. (rename_err or 'unknown'))
+    os.remove(tmp_path)
+  end
 end
 
 --- Copy a file in binary mode.
@@ -1088,12 +1101,13 @@ local function compile_typst(source, opts, img_format)
 
   if is_paged then
     -- PNG/SVG: Typst CLI generates {stem}1.{ext}, {stem}2.{ext}, ...
-    -- SVG pages get a per-file rewrite so root <svg> width/height are in px
-    -- rather than pt; keeps SVG and PNG at the same on-screen size for the
-    -- same Typst page + dpi. (Cached files are already rewritten: dpi is
-    -- part of the cache key.)
+    -- For HTML output, SVG pages get a per-file rewrite so root <svg>
+    -- width/height are in px rather than pt; keeps SVG and PNG at the same
+    -- on-screen size for the same Typst page + dpi. Other formats keep the
+    -- pt units Typst produced, which are correct for print. Cached files
+    -- are already rewritten (dpi is part of the cache key).
     local on_page = nil
-    if img_format == 'svg' then
+    if img_format == 'svg' and quarto.format.is_html_output() then
       local dpi_num = tonumber(dpi)
       on_page = function(path)
         rewrite_svg_file_size(path, dpi_num)
