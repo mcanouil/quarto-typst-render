@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.12.1 (2026-05-07)
+
 ### Bug Fixes
 
 - fix: strip the surrounding braces from the echoed code block class so `echo: true` produces a `typst` class (instead of `{typst}`) and `echo: fenced` produces a `` ```{typst} `` wrapper (instead of `` ```{{typst}} ``), restoring syntax highlighting on the echoed source.
