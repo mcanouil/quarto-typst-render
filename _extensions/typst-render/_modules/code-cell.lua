@@ -143,8 +143,9 @@ function M.new(config)
       '^%s*' .. escaped_prefix .. '%s*include:%s*',
       '^%s*' .. escaped_prefix .. '%s*output:%s*',
     }
+    local class_name = language:match('^{(.-)}$') or language
     if fenced then
-      local lines = { '```{' .. language .. '}' }
+      local lines = { '```{' .. class_name .. '}' }
       if option_lines then
         for _, line in ipairs(option_lines) do
           local is_meta = false
@@ -163,7 +164,7 @@ function M.new(config)
       lines[#lines + 1] = '```'
       return pandoc.CodeBlock(table.concat(lines, '\n'), pandoc.Attr('', { 'markdown' }, {}))
     end
-    return pandoc.CodeBlock(code, pandoc.Attr('', { language }, {}))
+    return pandoc.CodeBlock(code, pandoc.Attr('', { class_name }, {}))
   end
 
   --- Resolve and validate the output-location option.
