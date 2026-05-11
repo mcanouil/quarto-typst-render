@@ -3,7 +3,7 @@
 --- @license MIT
 --- @copyright 2026 Mickaël Canouil
 --- @author Mickaël Canouil
---- @version 1.0.0
+--- @version 1.0.1
 --- @brief Parses comment-pipe options, handles echo/eval/include/output logic,
 ---   manages output-location, and provides cross-referencing and prefix-aware
 ---   option resolution for custom executable code blocks.
@@ -32,6 +32,9 @@ function M.new(config)
   local language = config.language
   local comment_prefix = config.comment_prefix
   local escaped_prefix = str.escape_lua_pattern(comment_prefix)
+  --- Bare language identifier with any single outer `{...}` wrapper stripped
+  --- (e.g. `{typst}` -> `typst`). Equals `language` when already brace-free.
+  local class_name = language:match('^{(.-)}$') or language
 
   local cell = {}
 
@@ -52,7 +55,7 @@ function M.new(config)
     if el.classes:includes(language) or el.classes:includes('{' .. language .. '}') then
       return true
     end
-    return el.text:match('^{' .. str.escape_lua_pattern(language) .. '}%s') ~= nil
+    return el.text:match('^{' .. str.escape_lua_pattern(class_name) .. '}%s') ~= nil
   end
 
   --- Extract inline code text, stripping the `{lang} ` prefix if present.
@@ -62,7 +65,7 @@ function M.new(config)
     if el.classes:includes(language) or el.classes:includes('{' .. language .. '}') then
       return el.text
     end
-    return el.text:match('^{' .. str.escape_lua_pattern(language) .. '}%s+(.+)$') or el.text
+    return el.text:match('^{' .. str.escape_lua_pattern(class_name) .. '}%s+(.+)$') or el.text
   end
 
   --- Parse comment-pipe options from code block text.
@@ -143,7 +146,6 @@ function M.new(config)
       '^%s*' .. escaped_prefix .. '%s*include:%s*',
       '^%s*' .. escaped_prefix .. '%s*output:%s*',
     }
-    local class_name = language:match('^{(.-)}$') or language
     if fenced then
       local lines = { '```{' .. class_name .. '}' }
       if option_lines then
