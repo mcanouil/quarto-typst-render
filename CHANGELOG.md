@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.12.2 (2026-05-11)
+
 ### Bug Fixes
 
 - fix: inline Typst expressions written with the backtick text-prefix syntax (`` `{typst} ...` ``) were not compiled to images; the matcher looked for a literal `{{typst}}` prefix instead of `{typst}`, so the expression was always emitted verbatim.
