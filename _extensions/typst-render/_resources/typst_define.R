@@ -1,3 +1,17 @@
+#' Register a passthrough knitr engine for `{typst}` code blocks.
+#'
+#' Without this, knitr emits "Unknown language engine 'typst'" warnings and
+#' wraps the block in a cell-output div with a `typst` (singular) class. The
+#' engine simply re-emits the chunk source as a `` ```{typst} `` fenced block
+#' so pandoc sees the literal `{typst}` class that the typst-render filter
+#' expects.
+if (requireNamespace("knitr", quietly = TRUE)) {
+  knitr::knit_engines$set(typst = function(options) {
+    code <- paste(options[["code"]], collapse = "\n")
+    knitr::asis_output(paste0("\n```{typst}\n", code, "\n```\n"))
+  })
+}
+
 #' Pass R values into Typst code cells of the document.
 #'
 #' Emits a `<script type="typst-define">` payload that the typst-render Lua
