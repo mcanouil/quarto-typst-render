@@ -226,9 +226,14 @@ local function to_typst_literal(v)
       if #parts == 1 then return '(' .. parts[1] .. ',)' end
       return '(' .. table.concat(parts, ', ') .. ')'
     end
-    local parts = {}
+    local entries = {}
     for k, x in pairs(v) do
-      parts[#parts + 1] = '"' .. str.escape_typst_string(tostring(k)) .. '": ' .. to_typst_literal(x)
+      entries[#entries + 1] = { key = tostring(k), value = x }
+    end
+    table.sort(entries, function(a, b) return a.key < b.key end)
+    local parts = {}
+    for _, e in ipairs(entries) do
+      parts[#parts + 1] = '"' .. str.escape_typst_string(e.key) .. '": ' .. to_typst_literal(e.value)
     end
     if #parts == 0 then return '(:)' end
     return '(' .. table.concat(parts, ', ') .. ')'
@@ -1913,6 +1918,11 @@ local function cleanup_cache(doc) -- luacheck: ignore 212
       'Cache cleanup: removed ' .. removed .. ' stale file(s).'
     )
   end
+
+  -- Reset typst_define state in case the Lua VM is reused for another document
+  -- (e.g. batch render). Each document's payloads must not leak into the next.
+  typst_define_dict = {}
+  typst_define_order = {}
 
   return nil
 end
