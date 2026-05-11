@@ -385,13 +385,27 @@ R (knitr engine):
 
 ````markdown
 ```{r}
-#| echo: false
+#| include: false
 source("_extensions/typst-render/_resources/typst_define.R")
-typst_define(mtcars = head(mtcars), n = 42L)
+```
+
+```{r}
+#| echo: false
+typst_define(mtcars = head(mtcars)[, c("mpg", "cyl", "hp")], n = 42L)
 ```
 
 ```{typst}
-First mpg: #typst_define.mtcars.mpg.at(0), n = #typst_define.n
+n = #typst_define.n
+
+#let df = typst_define.mtcars
+#let cols = df.keys()
+#table(
+  columns: cols.len(),
+  table.header(..cols.map(c => [*#c*])),
+  ..for i in range(df.at(cols.at(0)).len()) {
+    cols.map(c => [#df.at(c).at(i)])
+  }
+)
 ```
 ````
 
@@ -399,16 +413,30 @@ Python (jupyter engine):
 
 ````markdown
 ```{python}
-#| echo: false
+#| include: false
 import sys
 sys.path.insert(0, "_extensions/typst-render/_resources")
 from typst_define import typst_define
+```
+
+```{python}
+#| echo: false
 import pandas as pd
-typst_define(df = pd.DataFrame({"x": [1, 2, 3]}), label = "hello")
+typst_define(df = pd.DataFrame({"x": [1, 2, 3], "y": [4, 5, 6]}), label = "hello")
 ```
 
 ```{typst}
-#typst_define.df.x.at(0), #typst_define.label
+#typst_define.label
+
+#let df = typst_define.df
+#let cols = df.keys()
+#table(
+  columns: cols.len(),
+  table.header(..cols.map(c => [*#c*])),
+  ..for i in range(df.at(cols.at(0)).len()) {
+    cols.map(c => [#df.at(c).at(i)])
+  }
+)
 ```
 ````
 
