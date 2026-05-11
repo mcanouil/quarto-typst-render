@@ -169,6 +169,52 @@ Select specific pages with `pages`:
 R, Python, or Julia cells with `output: asis` can output ` ```{typst} ` blocks.
 The filter processes these after engine execution.
 
+### Passing Data from R/Python
+
+Use `typst_define()` to push named values from a knitr or jupyter session into every `{typst}` cell of the document.
+Defined values are exposed as a single dict named `typst_define`; access them as `#typst_define.<name>`.
+Supported value types: scalars, strings, booleans, arrays, nested objects, R data frames (column-wise), pandas/polars DataFrames (column-wise), and numpy arrays.
+
+The helpers ship with the extension under `_extensions/typst-render/_resources/`.
+Either `source()`/`import` them, or copy-paste the body into a setup chunk.
+
+R example (in a knitr chunk):
+
+````markdown
+```{r}
+#| echo: false
+source("_extensions/typst-render/_resources/typst_define.R")
+typst_define(mtcars = head(mtcars), n = 42L)
+```
+
+```{typst}
+First mpg: #typst_define.mtcars.mpg.at(0), n = #typst_define.n
+```
+````
+
+Python example (in a jupyter chunk):
+
+```python
+import sys
+sys.path.insert(0, "_extensions/typst-render/_resources")
+from typst_define import typst_define
+import pandas as pd
+typst_define(df = pd.DataFrame({"x": [1, 2, 3]}), label = "hello")
+```
+
+```typst
+#typst_define.df.x.at(0), #typst_define.label
+```
+
+Caveats:
+
+- Define-before-use ordering: a `{typst}` cell that runs *before* any `typst_define()` call has no `typst_define` binding and will fail to compile if it references the name.
+- Identifier-named keys for dot access (`typst_define.x`).
+  Use `typst_define.at("f(x)")` for keys that are not valid Typst identifiers.
+- Quarto `freeze: true` interaction: changing data in a frozen chunk does not invalidate the freeze cache.
+  Re-render with `--no-cache` or remove `_freeze/` after edits.
+- Cache invalidation: any change to defined data invalidates every `{typst}` cell's render cache, even cells that do not reference the changed name.
+
 ## Configuration
 
 Configure the filter globally in your document YAML.

@@ -137,6 +137,118 @@ local used_cache_formats = {}
 --- Cache of file contents read during this render pass (keyed by absolute path)
 local read_file_cache = {}
 
+--- Document-wide `typst_define()` payload, accumulated by the collect pass.
+--- Maps name -> raw value (Lua representation of the JSON-decoded payload).
+local typst_define_dict = {}
+
+--- Declaration order of names in `typst_define_dict`, preserved across calls.
+local typst_define_order = {}
+
+-- ============================================================================
+-- TYPST DEFINE — INGEST FROM <script type="typst-define"> PAYLOADS
+-- ============================================================================
+
+--- Lua pattern matching the script tag wrapper.
+--- `.-` is lazy and `.` matches newlines, so multi-line JSON payloads work.
+local TYPST_DEFINE_SCRIPT_PAT = '<script%s+type="typst%-define"%s*>(.-)</script>'
+
+--- Extract the JSON payload from a raw HTML string, if present.
+--- @param text string Raw HTML text
+--- @return string|nil JSON payload or nil
+local function extract_typst_define(text)
+  if not text then return nil end
+  return text:match(TYPST_DEFINE_SCRIPT_PAT)
+end
+
+--- Detect whether a Pandoc Raw* element format is HTML.
+--- Accepts "html" and "html5" / similar variants.
+--- @param fmt string|nil
+--- @return boolean
+local function is_html_format(fmt)
+  if fmt == nil then return false end
+  return fmt == 'html' or (type(fmt) == 'string' and fmt:match('^html'))
+end
+
+--- Decode a JSON payload and merge its `contents` into the document-wide dict.
+--- Last-write-wins on duplicate names; first-seen index in declaration order.
+--- @param json_str string JSON payload from a typst-define script tag
+local function ingest_define_payload(json_str)
+  local ok, parsed = pcall(pandoc.json.decode, json_str)
+  if not ok or type(parsed) ~= 'table' or type(parsed.contents) ~= 'table' then
+    log.log_warning(EXTENSION_NAME, 'Failed to decode typst-define payload; ignoring.')
+    return
+  end
+  for _, entry in ipairs(parsed.contents) do
+    if type(entry) == 'table' and entry.name then
+      if typst_define_dict[entry.name] == nil then
+        typst_define_order[#typst_define_order + 1] = entry.name
+      end
+      typst_define_dict[entry.name] = entry.value
+    end
+  end
+end
+
+-- ============================================================================
+-- TYPST DEFINE — JSON → TYPST LITERAL CONVERSION
+-- ============================================================================
+
+--- Format a Lua number for Typst output.
+--- Integers print without a decimal point; doubles use `%.17g` for lossless
+--- round-trip of the original IEEE-754 value.
+--- @param n number
+--- @return string
+local function format_number(n)
+  if math.type(n) == 'integer' then return tostring(n) end
+  return string.format('%.17g', n)
+end
+
+--- Detect whether a value is a `pandoc.List` (used for JSON arrays).
+--- @param v any
+--- @return boolean
+local function is_pandoc_list(v)
+  return pandoc.utils.type(v) == 'List'
+end
+
+--- Convert a JSON-decoded Lua value to a Typst literal source fragment.
+--- @param v any Decoded value (nil/boolean/number/string/table/pandoc.List/pandoc.json.null)
+--- @return string Typst source
+local function to_typst_literal(v)
+  if v == nil or v == pandoc.json.null then return 'none' end
+  local t = type(v)
+  if t == 'boolean' then return tostring(v) end
+  if t == 'number' then return format_number(v) end
+  if t == 'string' then return '"' .. str.escape_typst_string(v) .. '"' end
+  if t == 'table' then
+    if is_pandoc_list(v) then
+      local parts = {}
+      for _, x in ipairs(v) do parts[#parts + 1] = to_typst_literal(x) end
+      if #parts == 0 then return '()' end
+      if #parts == 1 then return '(' .. parts[1] .. ',)' end
+      return '(' .. table.concat(parts, ', ') .. ')'
+    end
+    local parts = {}
+    for k, x in pairs(v) do
+      parts[#parts + 1] = '"' .. str.escape_typst_string(tostring(k)) .. '": ' .. to_typst_literal(x)
+    end
+    if #parts == 0 then return '(:)' end
+    return '(' .. table.concat(parts, ', ') .. ')'
+  end
+  return 'none'
+end
+
+--- Build the `#let typst_define = (...)` preamble line from accumulated payloads.
+--- Returns nil when no `typst_define()` call has been ingested.
+--- @return string|nil
+local function build_define_preamble()
+  if #typst_define_order == 0 then return nil end
+  local parts = {}
+  for _, name in ipairs(typst_define_order) do
+    parts[#parts + 1] = '"' .. str.escape_typst_string(name) .. '": '
+        .. to_typst_literal(typst_define_dict[name])
+  end
+  return '#let typst_define = (' .. table.concat(parts, ', ') .. ')'
+end
+
 -- ============================================================================
 -- BRAND / THEME COLOUR RESOLUTION
 -- ============================================================================
@@ -621,6 +733,10 @@ end
 local function build_typst_source(code, opts)
   local parts = {}
   inject_colour_vars(parts, opts)
+  local define_preamble = build_define_preamble()
+  if define_preamble then
+    parts[#parts + 1] = define_preamble
+  end
   parts[#parts + 1] = build_page_directive(opts)
   if opts.foreground then
     parts[#parts + 1] = '#set text(fill: ' .. opts.foreground .. ')'
@@ -1450,6 +1566,10 @@ local function process_codeblock(el)
     local preamble = resolve_preamble(typst_opts.preamble)
     local parts = {}
     inject_colour_vars(parts, typst_opts)
+    local define_preamble = build_define_preamble()
+    if define_preamble then
+      parts[#parts + 1] = define_preamble
+    end
     if typst_opts.foreground then
       parts[#parts + 1] = '#set text(fill: ' .. typst_opts.foreground .. ')'
     end
@@ -1801,7 +1921,32 @@ end
 -- FILTER EXPORT
 -- ============================================================================
 
+--- First-pass filter: ingest <script type="typst-define"> payloads emitted by
+--- engine-side `typst_define()` helpers and strip them from the AST so they do
+--- not leak into the rendered output.
+local typst_define_collect = {
+  RawBlock = function(el)
+    if is_html_format(el.format) then
+      local payload = extract_typst_define(el.text)
+      if payload then
+        ingest_define_payload(payload)
+        return {}
+      end
+    end
+  end,
+  RawInline = function(el)
+    if is_html_format(el.format) then
+      local payload = extract_typst_define(el.text)
+      if payload then
+        ingest_define_payload(payload)
+        return {}
+      end
+    end
+  end,
+}
+
 return {
+  typst_define_collect,
   { Meta = get_configuration },
   { CodeBlock = process_codeblock, Code = process_inline_code },
   { Pandoc = cleanup_cache },
