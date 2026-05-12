@@ -144,23 +144,26 @@ local typst_define_dict = {}
 --- Declaration order of names in `typst_define_dict`, preserved across calls.
 local typst_define_order = {}
 
+--- Cached preamble line; built once per Meta pass after ingestion completes,
+--- then reused for every {typst} block in this render.
+local typst_define_preamble_cache = nil
+
 -- ============================================================================
 -- TYPST DEFINE — INGEST FROM `typst_define:` METADATA BLOCK
 -- ============================================================================
 
 --- Decode a hex-encoded UTF-8 string back to its raw bytes.
---- The R/Python helpers hex-encode the JSON payload so pandoc's smart-quote
---- transforms cannot corrupt JSON quotes or string-content `--`/`...`.
+--- WHY: pandoc's smart-quote, dash, and ellipsis transforms would corrupt the
+--- JSON payload during YAML metadata block parsing. Hex is transform-free.
 --- @param hex string Hex string (lowercase or uppercase, no separators)
 --- @return string|nil Decoded string, or nil on malformed input
 local function hex_decode(hex)
   if type(hex) ~= 'string' then return nil end
   if #hex % 2 ~= 0 then return nil end
-  local out, ok = hex:gsub('(%x%x)', function(byte)
+  if hex:match('[^%x]') then return nil end
+  return (hex:gsub('(%x%x)', function(byte)
     return string.char(tonumber(byte, 16))
-  end)
-  if ok ~= #hex / 2 then return nil end
-  return out
+  end))
 end
 
 --- Decode a JSON payload and merge its `contents` into the document-wide dict.
@@ -235,17 +238,21 @@ local function to_typst_literal(v)
   return 'none'
 end
 
---- Build the `#let typst_define = (...)` preamble line from accumulated payloads.
---- Returns nil when no `typst_define()` call has been ingested.
+--- Build the `#let typst_define = (...)` preamble line from accumulated
+--- payloads, memoised across all blocks in a single render.
 --- @return string|nil
 local function build_define_preamble()
+  if typst_define_preamble_cache ~= nil then
+    return typst_define_preamble_cache
+  end
   if #typst_define_order == 0 then return nil end
   local parts = {}
   for _, name in ipairs(typst_define_order) do
     parts[#parts + 1] = '"' .. str.escape_typst_string(name) .. '": '
         .. to_typst_literal(typst_define_dict[name])
   end
-  return '#let typst_define = (' .. table.concat(parts, ', ') .. ')'
+  typst_define_preamble_cache = '#let typst_define = (' .. table.concat(parts, ', ') .. ')'
+  return typst_define_preamble_cache
 end
 
 -- ============================================================================
@@ -1933,6 +1940,7 @@ local function cleanup_cache(doc) -- luacheck: ignore 212
   -- (e.g. batch render). Each document's payloads must not leak into the next.
   typst_define_dict = {}
   typst_define_order = {}
+  typst_define_preamble_cache = nil
 
   return nil
 end

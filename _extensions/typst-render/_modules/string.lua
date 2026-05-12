@@ -106,7 +106,6 @@ function M.escape_typst(text)
 end
 
 --- Escape characters for Typst string literals (inside `"..."`).
---- Escapes backslash, double quote, newline, carriage return, and tab.
 --- @param text string The text to escape
 --- @return string The escaped text safe for Typst string literals
 function M.escape_typst_string(text)

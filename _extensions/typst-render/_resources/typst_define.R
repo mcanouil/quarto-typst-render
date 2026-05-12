@@ -34,23 +34,17 @@ if (requireNamespace("knitr", quietly = TRUE)) {
 #' @return A `knitr::asis_output` object; visible only as a side effect when
 #'   placed in a knitr chunk.
 typst_define <- function(...) {
-  quos <- rlang::enquos(...)
-  vars <- rlang::list2(...)
-  passed_names <- names(vars)
-  if (is.null(passed_names)) passed_names <- rep("", length(vars))
-  inferred <- vapply(quos, rlang::as_label, character(1))
-  nm <- ifelse(nzchar(passed_names), passed_names, inferred)
-  for (i in seq_along(vars)) {
-    .typst_define_state[["entries"]][[nm[i]]] <- vars[[i]]
+  named_vars <- rlang::list2(...)
+  names(named_vars) <- names(rlang::quos_auto_name(rlang::enquos(...)))
+  for (name in names(named_vars)) {
+    .typst_define_state[["entries"]][[name]] <- named_vars[[name]]
   }
   entries <- .typst_define_state[["entries"]]
-  entry_names <- names(entries)
   contents <- jsonlite::toJSON(
-    list(contents = mapply(
+    list(contents = unname(Map(
       function(name, value) list(name = name, value = value),
-      entry_names, entries,
-      SIMPLIFY = FALSE, USE.NAMES = FALSE
-    )),
+      names(entries), entries
+    ))),
     dataframe = "columns",
     null = "null",
     na = "null",
@@ -60,8 +54,8 @@ typst_define <- function(...) {
   # Hex-encode the JSON. Pandoc's smart-quote / dash / ellipsis transforms
   # would otherwise corrupt JSON quotes (`"` -> `“`/`”`) and any `--`/`...`
   # sequences inside string values during metadata block parsing.
-  hex <- paste(as.character(charToRaw(enc2utf8(contents))), collapse = "")
+  encoded <- paste(charToRaw(enc2utf8(contents)), collapse = "")
   knitr::asis_output(paste0(
-    "\n---\ntypst_define: ", hex, "\n---\n"
+    "\n---\ntypst_define: ", encoded, "\n---\n"
   ))
 }
