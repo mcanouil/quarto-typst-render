@@ -145,33 +145,27 @@ local typst_define_dict = {}
 local typst_define_order = {}
 
 -- ============================================================================
--- TYPST DEFINE — INGEST FROM <script type="typst-define"> PAYLOADS
+-- TYPST DEFINE — INGEST FROM `typst_define:` METADATA BLOCK
 -- ============================================================================
 
---- Lua pattern matching the script tag wrapper.
---- `.-` is lazy and `.` matches newlines, so multi-line JSON payloads work.
-local TYPST_DEFINE_SCRIPT_PAT = '<script%s+type="typst%-define"%s*>(.-)</script>'
-
---- Extract the JSON payload from a raw HTML string, if present.
---- @param text string Raw HTML text
---- @return string|nil JSON payload or nil
-local function extract_typst_define(text)
-  if not text then return nil end
-  return text:match(TYPST_DEFINE_SCRIPT_PAT)
-end
-
---- Detect whether a Pandoc Raw* element format is HTML.
---- Accepts "html" and "html5" / similar variants.
---- @param fmt string|nil
---- @return boolean
-local function is_html_format(fmt)
-  if fmt == nil then return false end
-  return fmt == 'html' or (type(fmt) == 'string' and fmt:match('^html'))
+--- Decode a hex-encoded UTF-8 string back to its raw bytes.
+--- The R/Python helpers hex-encode the JSON payload so pandoc's smart-quote
+--- transforms cannot corrupt JSON quotes or string-content `--`/`...`.
+--- @param hex string Hex string (lowercase or uppercase, no separators)
+--- @return string|nil Decoded string, or nil on malformed input
+local function hex_decode(hex)
+  if type(hex) ~= 'string' then return nil end
+  if #hex % 2 ~= 0 then return nil end
+  local out, ok = hex:gsub('(%x%x)', function(byte)
+    return string.char(tonumber(byte, 16))
+  end)
+  if ok ~= #hex / 2 then return nil end
+  return out
 end
 
 --- Decode a JSON payload and merge its `contents` into the document-wide dict.
 --- Last-write-wins on duplicate names; first-seen index in declaration order.
---- @param json_str string JSON payload from a typst-define script tag
+--- @param json_str string JSON payload carried by the metadata block
 local function ingest_define_payload(json_str)
   local ok, parsed = pcall(pandoc.json.decode, json_str)
   if not ok or type(parsed) ~= 'table' or type(parsed.contents) ~= 'table' then
@@ -1485,6 +1479,22 @@ local function get_configuration(meta)
     end
   end
 
+  -- Ingest any `typst_define:` payload emitted by the R/Python helpers.
+  -- The helpers write a YAML metadata block whose value is a hex-encoded
+  -- JSON payload; we hex-decode, JSON-decode, and strip the key so it does
+  -- not leak to downstream filters.
+  local define_meta = meta['typst_define']
+  if define_meta then
+    local hex = pandoc.utils.stringify(define_meta)
+    local json_str = hex and hex_decode(hex)
+    if json_str and json_str ~= '' then
+      ingest_define_payload(json_str)
+    elseif hex and hex ~= '' then
+      log.log_warning(EXTENSION_NAME, 'typst_define metadata payload is not valid hex; ignoring.')
+    end
+    meta['typst_define'] = nil
+  end
+
   return meta
 end
 
@@ -1931,32 +1941,7 @@ end
 -- FILTER EXPORT
 -- ============================================================================
 
---- First-pass filter: ingest <script type="typst-define"> payloads emitted by
---- engine-side `typst_define()` helpers and strip them from the AST so they do
---- not leak into the rendered output.
-local typst_define_collect = {
-  RawBlock = function(el)
-    if is_html_format(el.format) then
-      local payload = extract_typst_define(el.text)
-      if payload then
-        ingest_define_payload(payload)
-        return {}
-      end
-    end
-  end,
-  RawInline = function(el)
-    if is_html_format(el.format) then
-      local payload = extract_typst_define(el.text)
-      if payload then
-        ingest_define_payload(payload)
-        return {}
-      end
-    end
-  end,
-}
-
 return {
-  typst_define_collect,
   { Meta = get_configuration },
   { CodeBlock = process_codeblock, Code = process_inline_code },
   { Pandoc = cleanup_cache },
