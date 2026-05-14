@@ -169,6 +169,83 @@ Select specific pages with `pages`:
 R, Python, or Julia cells with `output: asis` can output ` ```{typst} ` blocks.
 The filter processes these after engine execution.
 
+### Passing Data from R/Python
+
+Use `typst_define()` to push named values from a knitr or jupyter session into every `{typst}` cell of the document.
+Defined values are exposed as a single dict named `typst_define`; access them as `#typst_define.<name>`.
+Supported value types: scalars, strings, booleans, arrays, nested objects, R data frames (column-wise), pandas/polars DataFrames (column-wise), and numpy arrays.
+
+The helpers ship with the extension under `_extensions/mcanouil/typst-render/_resources/` (once installed).
+Either `source()`/`import` them, or copy-paste the body into a setup chunk.
+
+R example (in a knitr chunk):
+
+````markdown
+```{r}
+#| include: false
+source("_extensions/mcanouil/typst-render/_resources/typst_define.R")
+```
+
+```{r}
+#| output: asis
+typst_define(mtcars = head(mtcars)[, c("mpg", "cyl", "hp")], n = 42L)
+```
+
+```{typst}
+n = #typst_define.n
+
+#let df = typst_define.mtcars
+#let cols = df.keys()
+#table(
+  columns: cols.len(),
+  table.header(..cols.map(c => [*#c*])),
+  ..for i in range(df.at(cols.at(0)).len()) {
+    cols.map(c => [#df.at(c).at(i)])
+  }
+)
+```
+````
+
+Python example (in a jupyter chunk):
+
+````markdown
+```{python}
+#| include: false
+import sys
+sys.path.insert(0, "_extensions/mcanouil/typst-render/_resources")
+from typst_define import typst_define
+```
+
+```{python}
+#| output: asis
+import pandas as pd
+typst_define(df = pd.DataFrame({"x": [1, 2, 3], "y": [4, 5, 6]}), label = "hello")
+```
+
+```{typst}
+#typst_define.label
+
+#let df = typst_define.df
+#let cols = df.keys()
+#table(
+  columns: cols.len(),
+  table.header(..cols.map(c => [*#c*])),
+  ..for i in range(df.at(cols.at(0)).len()) {
+    cols.map(c => [#df.at(c).at(i)])
+  }
+)
+```
+````
+
+Caveats:
+
+- Define-before-use ordering: a `{typst}` cell that runs *before* any `typst_define()` call has no `typst_define` binding and will fail to compile if it references the name.
+- Identifier-named keys for dot access (`typst_define.x`).
+  Use `typst_define.at("f(x)")` for keys that are not valid Typst identifiers.
+- Quarto `freeze: true` interaction: changing data in a frozen chunk does not invalidate the freeze cache.
+  Re-render with `--no-cache` or remove `_freeze/` after edits.
+- Cache invalidation: any change to defined data invalidates every `{typst}` cell's render cache, even cells that do not reference the changed name.
+
 ## Configuration
 
 Configure the filter globally in your document YAML.

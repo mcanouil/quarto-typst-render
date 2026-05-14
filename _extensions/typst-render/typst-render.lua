@@ -137,6 +137,124 @@ local used_cache_formats = {}
 --- Cache of file contents read during this render pass (keyed by absolute path)
 local read_file_cache = {}
 
+--- Document-wide `typst_define()` payload, accumulated by the collect pass.
+--- Maps name -> raw value (Lua representation of the JSON-decoded payload).
+local typst_define_dict = {}
+
+--- Declaration order of names in `typst_define_dict`, preserved across calls.
+local typst_define_order = {}
+
+--- Cached preamble line; built once per Meta pass after ingestion completes,
+--- then reused for every {typst} block in this render.
+local typst_define_preamble_cache = nil
+
+-- ============================================================================
+-- TYPST DEFINE — INGEST FROM `typst_define:` METADATA BLOCK
+-- ============================================================================
+
+--- Decode a hex-encoded UTF-8 string back to its raw bytes.
+--- WHY: pandoc's smart-quote, dash, and ellipsis transforms would corrupt the
+--- JSON payload during YAML metadata block parsing. Hex is transform-free.
+--- @param hex string Hex string (lowercase or uppercase, no separators)
+--- @return string|nil Decoded string, or nil on malformed input
+local function hex_decode(hex)
+  if type(hex) ~= 'string' then return nil end
+  if #hex % 2 ~= 0 then return nil end
+  if hex:match('[^%x]') then return nil end
+  return (hex:gsub('(%x%x)', function(byte)
+    return string.char(tonumber(byte, 16))
+  end))
+end
+
+--- Decode a JSON payload and merge its `contents` into the document-wide dict.
+--- Last-write-wins on duplicate names; first-seen index in declaration order.
+--- @param json_str string JSON payload carried by the metadata block
+local function ingest_define_payload(json_str)
+  local ok, parsed = pcall(pandoc.json.decode, json_str)
+  if not ok or type(parsed) ~= 'table' or type(parsed.contents) ~= 'table' then
+    log.log_warning(EXTENSION_NAME, 'Failed to decode typst-define payload; ignoring.')
+    return
+  end
+  for _, entry in ipairs(parsed.contents) do
+    if type(entry) == 'table' and entry.name then
+      if typst_define_dict[entry.name] == nil then
+        typst_define_order[#typst_define_order + 1] = entry.name
+      end
+      typst_define_dict[entry.name] = entry.value
+    end
+  end
+end
+
+-- ============================================================================
+-- TYPST DEFINE — JSON → TYPST LITERAL CONVERSION
+-- ============================================================================
+
+--- Format a Lua number for Typst output.
+--- Integers print without a decimal point; doubles use `%.17g` for lossless
+--- round-trip of the original IEEE-754 value.
+--- @param n number
+--- @return string
+local function format_number(n)
+  if math.type(n) == 'integer' then return tostring(n) end
+  return string.format('%.17g', n)
+end
+
+--- Detect whether a value is a `pandoc.List` (used for JSON arrays).
+--- @param v any
+--- @return boolean
+local function is_pandoc_list(v)
+  return pandoc.utils.type(v) == 'List'
+end
+
+--- Convert a JSON-decoded Lua value to a Typst literal source fragment.
+--- @param v any Decoded value (nil/boolean/number/string/table/pandoc.List/pandoc.json.null)
+--- @return string Typst source
+local function to_typst_literal(v)
+  if v == nil or v == pandoc.json.null then return 'none' end
+  local t = type(v)
+  if t == 'boolean' then return tostring(v) end
+  if t == 'number' then return format_number(v) end
+  if t == 'string' then return '"' .. str.escape_typst_string(v) .. '"' end
+  if t == 'table' then
+    if is_pandoc_list(v) then
+      local parts = {}
+      for _, x in ipairs(v) do parts[#parts + 1] = to_typst_literal(x) end
+      if #parts == 0 then return '()' end
+      if #parts == 1 then return '(' .. parts[1] .. ',)' end
+      return '(' .. table.concat(parts, ', ') .. ')'
+    end
+    local entries = {}
+    for k, x in pairs(v) do
+      entries[#entries + 1] = { key = tostring(k), value = x }
+    end
+    table.sort(entries, function(a, b) return a.key < b.key end)
+    local parts = {}
+    for _, e in ipairs(entries) do
+      parts[#parts + 1] = '"' .. str.escape_typst_string(e.key) .. '": ' .. to_typst_literal(e.value)
+    end
+    if #parts == 0 then return '(:)' end
+    return '(' .. table.concat(parts, ', ') .. ')'
+  end
+  return 'none'
+end
+
+--- Build the `#let typst_define = (...)` preamble line from accumulated
+--- payloads, memoised across all blocks in a single render.
+--- @return string|nil
+local function build_define_preamble()
+  if typst_define_preamble_cache ~= nil then
+    return typst_define_preamble_cache
+  end
+  if #typst_define_order == 0 then return nil end
+  local parts = {}
+  for _, name in ipairs(typst_define_order) do
+    parts[#parts + 1] = '"' .. str.escape_typst_string(name) .. '": '
+        .. to_typst_literal(typst_define_dict[name])
+  end
+  typst_define_preamble_cache = '#let typst_define = (' .. table.concat(parts, ', ') .. ')'
+  return typst_define_preamble_cache
+end
+
 -- ============================================================================
 -- BRAND / THEME COLOUR RESOLUTION
 -- ============================================================================
@@ -621,6 +739,10 @@ end
 local function build_typst_source(code, opts)
   local parts = {}
   inject_colour_vars(parts, opts)
+  local define_preamble = build_define_preamble()
+  if define_preamble then
+    parts[#parts + 1] = define_preamble
+  end
   parts[#parts + 1] = build_page_directive(opts)
   if opts.foreground then
     parts[#parts + 1] = '#set text(fill: ' .. opts.foreground .. ')'
@@ -1364,6 +1486,22 @@ local function get_configuration(meta)
     end
   end
 
+  -- Ingest any `typst_define:` payload emitted by the R/Python helpers.
+  -- The helpers write a YAML metadata block whose value is a hex-encoded
+  -- JSON payload; we hex-decode, JSON-decode, and strip the key so it does
+  -- not leak to downstream filters.
+  local define_meta = meta['typst_define']
+  if define_meta then
+    local hex = pandoc.utils.stringify(define_meta)
+    local json_str = hex and hex_decode(hex)
+    if json_str and json_str ~= '' then
+      ingest_define_payload(json_str)
+    elseif hex and hex ~= '' then
+      log.log_warning(EXTENSION_NAME, 'typst_define metadata payload is not valid hex; ignoring.')
+    end
+    meta['typst_define'] = nil
+  end
+
   return meta
 end
 
@@ -1450,6 +1588,10 @@ local function process_codeblock(el)
     local preamble = resolve_preamble(typst_opts.preamble)
     local parts = {}
     inject_colour_vars(parts, typst_opts)
+    local define_preamble = build_define_preamble()
+    if define_preamble then
+      parts[#parts + 1] = define_preamble
+    end
     if typst_opts.foreground then
       parts[#parts + 1] = '#set text(fill: ' .. typst_opts.foreground .. ')'
     end
@@ -1793,6 +1935,12 @@ local function cleanup_cache(doc) -- luacheck: ignore 212
       'Cache cleanup: removed ' .. removed .. ' stale file(s).'
     )
   end
+
+  -- Reset typst_define state in case the Lua VM is reused for another document
+  -- (e.g. batch render). Each document's payloads must not leak into the next.
+  typst_define_dict = {}
+  typst_define_order = {}
+  typst_define_preamble_cache = nil
 
   return nil
 end
