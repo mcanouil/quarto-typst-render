@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.13.1 (2026-05-14)
+
 - no user-facing changes.
 
 ## 0.13.0 (2026-05-14)
