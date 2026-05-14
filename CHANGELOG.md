@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.13.0 (2026-05-14)
+
 ### New Features
 
 - feat: add `typst_define()` helpers (R and Python) that push named values from a knitr or jupyter session into every `{typst}` cell of the document. Defined values are exposed as a single dict named `typst_define` accessible as `#typst_define.<name>`. Supports scalars, strings, booleans, arrays, nested objects, R data frames (column-wise), pandas/polars DataFrames (column-wise), and numpy arrays. Helpers ship under `_extensions/typst-render/_resources/`. The data chunk that calls `typst_define()` must use the chunk option `output: asis` so the emitted metadata block is not wrapped in a cell-output `<div>`.
