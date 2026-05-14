@@ -149,7 +149,7 @@ local typst_define_order = {}
 local typst_define_preamble_cache = nil
 
 -- ============================================================================
--- TYPST DEFINE — INGEST FROM `typst_define:` METADATA BLOCK
+-- TYPST DEFINE — INGEST FROM `typst-define:` METADATA BLOCK
 -- ============================================================================
 
 --- Decode a hex-encoded UTF-8 string back to its raw bytes.
@@ -1486,20 +1486,20 @@ local function get_configuration(meta)
     end
   end
 
-  -- Ingest any `typst_define:` payload emitted by the R/Python helpers.
+  -- Ingest any `typst-define:` payload emitted by the R/Python helpers.
   -- The helpers write a YAML metadata block whose value is a hex-encoded
   -- JSON payload; we hex-decode, JSON-decode, and strip the key so it does
   -- not leak to downstream filters.
-  local define_meta = meta['typst_define']
+  local define_meta = meta['typst-define']
   if define_meta then
     local hex = pandoc.utils.stringify(define_meta)
     local json_str = hex and hex_decode(hex)
     if json_str and json_str ~= '' then
       ingest_define_payload(json_str)
     elseif hex and hex ~= '' then
-      log.log_warning(EXTENSION_NAME, 'typst_define metadata payload is not valid hex; ignoring.')
+      log.log_warning(EXTENSION_NAME, 'typst-define metadata payload is not valid hex; ignoring.')
     end
-    meta['typst_define'] = nil
+    meta['typst-define'] = nil
   end
 
   return meta

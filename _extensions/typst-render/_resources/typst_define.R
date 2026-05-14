@@ -56,6 +56,6 @@ typst_define <- function(...) {
   # sequences inside string values during metadata block parsing.
   encoded <- paste(charToRaw(enc2utf8(contents)), collapse = "")
   knitr::asis_output(paste0(
-    "\n---\ntypst_define: ", encoded, "\n---\n"
+    "\n---\ntypst-define: ", encoded, "\n---\n"
   ))
 }
