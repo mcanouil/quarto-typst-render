@@ -10,4 +10,4 @@ repository-code: "https://github.com/mcanouil/quarto-typst-render"
 url: "http://m.canouil.dev/quarto-typst-render/"
 license: "MIT"
 date-released: "2026-05-14"
-version: 0.13.0
+version: 0.13.1
