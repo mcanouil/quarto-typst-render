@@ -43,4 +43,4 @@ def typst_define(**kwargs):
         ]
     }
     encoded = json.dumps(payload).encode("utf-8").hex()
-    display(Markdown(f"\n---\ntypst_define: {encoded}\n---\n"))
+    display(Markdown(f"\n---\ntypst-define: {encoded}\n---\n"))
