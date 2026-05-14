@@ -372,21 +372,19 @@ Global inputs are set in YAML; per-block inputs override them using comma-separa
 
 ## Passing Data from R/Python
 
-::: {.content-hidden when-format="typst"}
-
 Use `typst_define()` to push named values from a knitr or jupyter session into every `{typst}` cell.
 Defined values are exposed as `#typst_define.<name>`.
 Supports scalars, strings, booleans, arrays, nested objects, R data frames (column-wise), pandas/polars DataFrames, and numpy arrays.
 
 This document uses the markdown engine; the snippets below are illustrative.
-For an executable demo, switch the document `engine` to `knitr` (R) or `jupyter` (Python) and copy the helper from `_extensions/typst-render/_resources/typst_define.R` or `typst_define.py`.
+For an executable demo, switch the document `engine` to `knitr` (R) or `jupyter` (Python) and copy the helper from `_extensions/mcanouil/typst-render/_resources/` (once installed): `typst_define.R` or `typst_define.py`.
 
 R (knitr engine):
 
 ````markdown
 ```{r}
 #| include: false
-source("_extensions/typst-render/_resources/typst_define.R")
+source("_extensions/mcanouil/typst-render/_resources/typst_define.R")
 ```
 
 ```{r}
@@ -415,7 +413,7 @@ Python (jupyter engine):
 ```{python}
 #| include: false
 import sys
-sys.path.insert(0, "_extensions/typst-render/_resources")
+sys.path.insert(0, "_extensions/mcanouil/typst-render/_resources")
 from typst_define import typst_define
 ```
 
@@ -439,8 +437,6 @@ typst_define(df = pd.DataFrame({"x": [1, 2, 3], "y": [4, 5, 6]}), label = "hello
 )
 ```
 ````
-
-:::
 
 ## Multi-Page Output
 

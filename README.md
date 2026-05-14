@@ -175,7 +175,7 @@ Use `typst_define()` to push named values from a knitr or jupyter session into e
 Defined values are exposed as a single dict named `typst_define`; access them as `#typst_define.<name>`.
 Supported value types: scalars, strings, booleans, arrays, nested objects, R data frames (column-wise), pandas/polars DataFrames (column-wise), and numpy arrays.
 
-The helpers ship with the extension under `_extensions/typst-render/_resources/`.
+The helpers ship with the extension under `_extensions/mcanouil/typst-render/_resources/` (once installed).
 Either `source()`/`import` them, or copy-paste the body into a setup chunk.
 
 R example (in a knitr chunk):
@@ -183,7 +183,7 @@ R example (in a knitr chunk):
 ````markdown
 ```{r}
 #| include: false
-source("_extensions/typst-render/_resources/typst_define.R")
+source("_extensions/mcanouil/typst-render/_resources/typst_define.R")
 ```
 
 ```{r}
@@ -212,7 +212,7 @@ Python example (in a jupyter chunk):
 ```{python}
 #| include: false
 import sys
-sys.path.insert(0, "_extensions/typst-render/_resources")
+sys.path.insert(0, "_extensions/mcanouil/typst-render/_resources")
 from typst_define import typst_define
 ```
 
