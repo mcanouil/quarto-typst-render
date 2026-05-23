@@ -1,5 +1,5 @@
 --- Typst Render - Filter
---- @module typst-render
+--- @module "typst-render"
 --- @license MIT
 --- @copyright 2026 Mickaël Canouil
 --- @author Mickaël Canouil
@@ -1552,10 +1552,7 @@ local function process_codeblock(el)
     end
   end
 
-  if not cell.should_include(opts) then
-    return pandoc.Null()
-  end
-
+  local do_include = cell.should_include(opts)
   local do_eval = opts.eval ~= false
   local do_echo = opts.echo == true or opts.echo == 'fenced'
   local is_fenced = opts.echo == 'fenced'
@@ -1577,12 +1574,15 @@ local function process_codeblock(el)
 
   -- Echo-only: show source listing without compilation
   if not do_eval then
+    if not do_include then
+      return pandoc.Null()
+    end
     return cell.create_echo_block(code, is_fenced, option_lines)
   end
 
   -- Output suppressed: skip compilation, show echo block only
   if output_mode == 'false' then
-    if do_echo then
+    if do_echo and do_include then
       return cell.create_echo_block(code, is_fenced, option_lines)
     end
     return pandoc.Null()
@@ -1590,6 +1590,9 @@ local function process_codeblock(el)
 
   -- Native Typst output: pass through as scoped RawBlock, wrapped in crossref if needed
   if quarto.format.is_typst_output() and output_mode == 'asis' then
+    if not do_include then
+      return pandoc.Null()
+    end
     local typst_opts = has_dual_mode_colours(opts)
         and resolve_opts_colours(opts, global_brand_mode)
         or opts
@@ -1671,6 +1674,9 @@ local function process_codeblock(el)
 
     if not light_content and not dark_content then
       log.log_warning(EXTENSION_NAME, 'Compilation failed; returning error block.')
+      if not do_include then
+        return pandoc.Null()
+      end
       local error_block = create_error_block(light_err or dark_err)
       if do_echo then
         local echo_block = cell.create_echo_block(code, is_fenced, option_lines)
@@ -1725,6 +1731,9 @@ local function process_codeblock(el)
     if not content then
       if compile_err then
         log.log_warning(EXTENSION_NAME, 'Compilation failed; returning error block.')
+        if not do_include then
+          return pandoc.Null()
+        end
         local error_block = create_error_block(compile_err)
         if do_echo then
           local echo_block = cell.create_echo_block(code, is_fenced, option_lines)
@@ -1751,6 +1760,11 @@ local function process_codeblock(el)
     end
 
     result = cell.wrap_crossref(content, opts, REF_TYPE_NAMES)
+  end
+
+  -- Compilation and file-save side effects have run; suppress embedding if include is false.
+  if not do_include then
+    return pandoc.Null()
   end
 
   local output_location = cell.resolve_output_location(opts, EXTENSION_NAME)
