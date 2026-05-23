@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### New Features
+
+- feat: compilation failure warnings and error blocks now name the failing unit, using its `label` when set, otherwise an auto identifier (`typst-block-N` for blocks, `typst-inline-N` for inline expressions) where `N` is stable per unit.
+  The warning also includes the Typst compiler error, so the failing unit can be located without rendering the document.
+
 ## 0.13.4 (2026-05-23)
 
 - fix: the default Typst compilation `root` is now the document's own directory instead of the Quarto project directory, so document-relative paths such as `csv("data/energy_cleaned.csv")` resolve against the document.

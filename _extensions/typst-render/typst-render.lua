@@ -768,10 +768,8 @@ local function compute_cache_stem(source, fmt, dpi, label, inline)
     return 'typst-' .. label .. '-' .. hash
   end
   if inline then
-    inline_counter = inline_counter + 1
     return 'typst-inline-' .. inline_counter .. '-' .. hash
   end
-  block_counter = block_counter + 1
   return 'typst-block-' .. block_counter .. '-' .. hash
 end
 
@@ -1267,12 +1265,20 @@ local function wrap_alignment(block, opts)
   )
 end
 
+--- Build a message identifying the failing unit by its identifier.
+--- @param id string Unit identifier (e.g. fig-foo, typst-block-3, typst-inline-2)
+--- @return string Headline message
+local function compilation_failed_message(id)
+  return "Compilation failed for '" .. id .. "'."
+end
+
 --- Create an error block for failed Typst compilation.
 --- @param err string|nil Error message from the compiler
+--- @param id string Block identifier (e.g. fig-foo, typst-block-3)
 --- @return pandoc.Div Error block
-local function create_error_block(err)
+local function create_error_block(err, id)
   local error_inlines = {
-    pandoc.Strong({ pandoc.Str('[typst-render] Compilation failed for this block.') }),
+    pandoc.Strong({ pandoc.Str('[typst-render] ' .. compilation_failed_message(id)) }),
   }
   if err then
     error_inlines[#error_inlines + 1] = pandoc.LineBreak()
@@ -1521,6 +1527,8 @@ local function process_codeblock(el)
     return nil
   end
 
+  block_counter = block_counter + 1
+
   local block_opts, clean_code, option_lines = cell.parse_options(el.text)
 
   if block_opts['cache-refresh'] ~= nil then
@@ -1540,6 +1548,10 @@ local function process_codeblock(el)
 
   local opts = cell.merge_options(block_opts, global_config, DEFAULTS)
   opts._block_input = block_input_str
+
+  local block_id = (type(opts.label) == 'string' and opts.label ~= '')
+      and opts.label
+      or ('typst-block-' .. block_counter)
 
   -- Resolve per-block colour overrides only. Values inherited from global_config
   -- are already resolved (e.g. 'rgb("#FAF6EE")') and must not be re-wrapped.
@@ -1662,11 +1674,6 @@ local function process_codeblock(el)
   -- Dual-mode rendering for HTML/Reveal.js when both light and dark colours are present
   local dual_mode = quarto.format.is_html_output() and has_dual_mode_colours(opts)
 
-  -- Capture the next block counter value before compilations increment it.
-  -- In dual-mode, compile_to_result is called twice, each incrementing block_counter,
-  -- but we want the first value for the auto-generated output filename.
-  local next_block_counter = block_counter + 1
-
   local result
   if dual_mode then
     local light_opts = resolve_opts_colours(opts, 'light')
@@ -1675,11 +1682,13 @@ local function process_codeblock(el)
     local dark_content, dark_pages, dark_err = compile_to_result(code, dark_opts, img_format)
 
     if not light_content and not dark_content then
-      log.log_warning(EXTENSION_NAME, 'Compilation failed; returning error block.')
+      local err = light_err or dark_err
+      local message = compilation_failed_message(block_id)
+      log.log_warning(EXTENSION_NAME, err and (message .. '\n' .. err) or message)
       if not do_include then
         return pandoc.Null()
       end
-      local error_block = create_error_block(light_err or dark_err)
+      local error_block = create_error_block(err, block_id)
       if do_echo then
         local echo_block = cell.create_echo_block(code, is_fenced, option_lines)
         return pandoc.Blocks({ echo_block, error_block })
@@ -1690,7 +1699,7 @@ local function process_codeblock(el)
     local output_path = resolve_output_path(
       global_config['output-directory'], opts['output-directory'],
       opts['output-filename'], opts.label,
-      'typst-block-' .. next_block_counter, img_format
+      'typst-block-' .. block_counter, img_format
     )
 
     -- Save to output directory and rebuild elements using output paths
@@ -1732,11 +1741,12 @@ local function process_codeblock(el)
 
     if not content then
       if compile_err then
-        log.log_warning(EXTENSION_NAME, 'Compilation failed; returning error block.')
+        local message = compilation_failed_message(block_id)
+        log.log_warning(EXTENSION_NAME, message .. '\n' .. compile_err)
         if not do_include then
           return pandoc.Null()
         end
-        local error_block = create_error_block(compile_err)
+        local error_block = create_error_block(compile_err, block_id)
         if do_echo then
           local echo_block = cell.create_echo_block(code, is_fenced, option_lines)
           return pandoc.Blocks({ echo_block, error_block })
@@ -1750,7 +1760,7 @@ local function process_codeblock(el)
     local output_path = resolve_output_path(
       global_config['output-directory'], opts['output-directory'],
       opts['output-filename'], opts.label,
-      'typst-block-' .. next_block_counter, img_format
+      'typst-block-' .. block_counter, img_format
     )
 
     -- Save to output directory and rebuild element using output paths
@@ -1852,6 +1862,9 @@ local function process_inline_code(el)
     return nil
   end
 
+  inline_counter = inline_counter + 1
+  local inline_id = 'typst-inline-' .. inline_counter
+
   if quarto.format.is_powerpoint_output() then
     if not pptx_inline_warned then
       pptx_inline_warned = true
@@ -1909,8 +1922,8 @@ local function process_inline_code(el)
   local pages, compile_err = compile_typst(full_source, opts, img_format)
 
   if not pages or #pages == 0 then
-    local detail = compile_err and (': ' .. compile_err) or '.'
-    log.log_warning(EXTENSION_NAME, 'Inline Typst compilation failed' .. detail)
+    local message = compilation_failed_message(inline_id)
+    log.log_warning(EXTENSION_NAME, compile_err and (message .. '\n' .. compile_err) or message)
     return el
   end
 
