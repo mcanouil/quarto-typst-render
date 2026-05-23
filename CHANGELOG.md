@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.13.3 (2026-05-23)
+
 - fix: `include: false` now compiles the block and writes output files (matching Quarto semantics) while embedding nothing in the document, instead of skipping compilation entirely. Use `eval: false` to skip computation.
 
 ## 0.13.2 (2026-05-23)
