@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- change: the default Typst compilation `root` is now the document's own directory instead of the Quarto project directory, so document-relative paths such as `csv("data/energy_cleaned.csv")` resolve against the document. A relative `root` resolves against the document directory; a leading `/` still means the project root.
+- fix: the default Typst compilation `root` is now the document's own directory instead of the Quarto project directory, so document-relative paths such as `csv("data/energy_cleaned.csv")` resolve against the document. A relative `root` resolves against the document directory; a leading `/` still means the project root.
 
 ## 0.13.3 (2026-05-23)
 
