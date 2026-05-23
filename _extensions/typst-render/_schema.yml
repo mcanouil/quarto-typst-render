@@ -57,7 +57,7 @@ options:
       extensions: [.typ]
   root:
     type: string
-    description: "Global only. Root directory for Typst compilation. Defaults to the Quarto project directory."
+    description: "Global only. Root directory for Typst compilation. Relative paths resolve against the document directory; a leading '/' means the project root. Defaults to the document directory."
     completion:
       type: directory
   font-path:

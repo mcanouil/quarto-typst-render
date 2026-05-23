@@ -423,7 +423,7 @@ These options can only be set in the document YAML and cannot be overridden per 
 
 | Option         | Type          | Default             | Description                                                           |
 | -------------- | ------------- | ------------------- | --------------------------------------------------------------------- |
-| `root`         | string        | (project directory) | Root directory for Typst compilation.                                 |
+| `root`         | string        | (document directory) | Root directory for Typst compilation. Relative paths resolve against the document directory; a leading `/` means the project root. |
 | `font-path`    | string\|array | (none)              | Path or list of paths to directories containing additional fonts.     |
 | `package-path` | string        | (none)              | Path to a directory containing Typst packages (offline/reproducible). |
 
