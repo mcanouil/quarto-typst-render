@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.13.2 (2026-05-23)
+
 ### Bug Fixes
 
 - fix: the `alt` (and `<prefix>-alt`) cell option was not propagated to the rendered image when the block carried a cross-reference label. The alt text lived only in the image caption inlines, which Quarto's figure pipeline discards once the image is wrapped in a `FloatRefTarget`. The alt text is now also emitted as a `fig-alt` attribute on the image, so it reaches the `<img alt>` (HTML), `\includegraphics[alt=...]` (LaTeX), and `image(alt: ...)` (Typst) outputs.
