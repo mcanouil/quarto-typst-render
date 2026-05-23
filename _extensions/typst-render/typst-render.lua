@@ -1195,6 +1195,14 @@ local function create_image_element(img_path, opts)
     end
   end
 
+  -- Carry the alt text as `fig-alt` so Quarto's figure pipeline copies it onto
+  -- the rendered `<img alt>` (and LaTeX/Typst equivalents). When the image is
+  -- wrapped in a FloatRefTarget, its caption inlines are consumed as the
+  -- caption, so the attribute is the only path that reaches the image alt.
+  if alt_text ~= '' then
+    kvpairs[#kvpairs + 1] = { 'fig-alt', alt_text }
+  end
+
   local img = pandoc.Image(
     { pandoc.Str(alt_text) },
     img_path,
