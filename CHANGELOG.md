@@ -2,15 +2,21 @@
 
 ## Unreleased
 
+- fix: the default Typst compilation `root` is now the document's own directory instead of the Quarto project directory, so document-relative paths such as `csv("data/energy_cleaned.csv")` resolve against the document.
+  A relative `root` resolves against the document directory; a leading `/` still means the project root.
+
 ## 0.13.3 (2026-05-23)
 
-- fix: `include: false` now compiles the block and writes output files (matching Quarto semantics) while embedding nothing in the document, instead of skipping compilation entirely. Use `eval: false` to skip computation.
+- fix: `include: false` now compiles the block and writes output files (matching Quarto semantics) while embedding nothing in the document, instead of skipping compilation entirely.
+  Use `eval: false` to skip computation.
 
 ## 0.13.2 (2026-05-23)
 
 ### Bug Fixes
 
-- fix: the `alt` (and `<prefix>-alt`) cell option was not propagated to the rendered image when the block carried a cross-reference label. The alt text lived only in the image caption inlines, which Quarto's figure pipeline discards once the image is wrapped in a `FloatRefTarget`. The alt text is now also emitted as a `fig-alt` attribute on the image, so it reaches the `<img alt>` (HTML), `\includegraphics[alt=...]` (LaTeX), and `image(alt: ...)` (Typst) outputs.
+- fix: the `alt` (and `<prefix>-alt`) cell option was not propagated to the rendered image when the block carried a cross-reference label.
+  The alt text lived only in the image caption inlines, which Quarto's figure pipeline discards once the image is wrapped in a `FloatRefTarget`.
+  The alt text is now also emitted as a `fig-alt` attribute on the image, so it reaches the `<img alt>` (HTML), `\includegraphics[alt=...]` (LaTeX), and `image(alt: ...)` (Typst) outputs.
 
 ## 0.13.1 (2026-05-14)
 
@@ -20,7 +26,11 @@
 
 ### New Features
 
-- feat: add `typst_define()` helpers (R and Python) that push named values from a knitr or jupyter session into every `{typst}` cell of the document. Defined values are exposed as a single dict named `typst_define` accessible as `#typst_define.<name>`. Supports scalars, strings, booleans, arrays, nested objects, R data frames (column-wise), pandas/polars DataFrames (column-wise), and numpy arrays. Helpers ship under `_extensions/typst-render/_resources/`. The data chunk that calls `typst_define()` must use the chunk option `output: asis` so the emitted metadata block is not wrapped in a cell-output `<div>`.
+- feat: add `typst_define()` helpers (R and Python) that push named values from a knitr or jupyter session into every `{typst}` cell of the document.
+  Defined values are exposed as a single dict named `typst_define` accessible as `#typst_define.<name>`.
+  Supports scalars, strings, booleans, arrays, nested objects, R data frames (column-wise), pandas/polars DataFrames (column-wise), and numpy arrays.
+  Helpers ship under `_extensions/typst-render/_resources/`.
+  The data chunk that calls `typst_define()` must use the chunk option `output: asis` so the emitted metadata block is not wrapped in a cell-output `<div>`.
 - feat: the R helper registers a passthrough knitr engine for `typst` on source so `` ```{typst} `` chunks in knitr documents no longer emit "Unknown language engine" warnings and pass through cleanly to the typst-render filter.
 
 ## 0.12.2 (2026-05-11)
@@ -41,7 +51,8 @@
 
 - feat: the cache is now invalidated when any global or per-block rendering option changes, including `font-path`, `package-path`, and `root` which previously only affected the Typst CLI invocation and were invisible to the cache key.
 - feat: the cache is now invalidated when any locally-imported Typst file changes; `#import` and `#include` paths are scanned from the compiled source (code and inlined preamble) and their contents are included in the cache hash, recursively.
-- feat: document colours are exposed to Typst library and package code via `sys.inputs` (`typst-render-foreground`, `typst-render-background`) and as `#let` bindings (`_typst_render_foreground`, `_typst_render_background`), allowing imported theme functions to adapt to the document's colour scheme. Only hex colours are exposed via `sys.inputs`; all colour formats are available via the `#let` bindings.
+- feat: document colours are exposed to Typst library and package code via `sys.inputs` (`typst-render-foreground`, `typst-render-background`) and as `#let` bindings (`_typst_render_foreground`, `_typst_render_background`), allowing imported theme functions to adapt to the document's colour scheme.
+  Only hex colours are exposed via `sys.inputs`; all colour formats are available via the `#let` bindings.
 
 ### Removed
 
@@ -49,7 +60,8 @@
 
 ### Breaking Changes
 
-- refactor: replace `cache: clean` with a dedicated `cache-refresh` boolean option (default `false`). Set `cache-refresh: true` to remove stale cache files after each render.
+- refactor: replace `cache: clean` with a dedicated `cache-refresh` boolean option (default `false`).
+  Set `cache-refresh: true` to remove stale cache files after each render.
 - refactor: `cache: false` no longer deletes existing cache files on startup; it now only skips cache lookup and write for the current render.
 
 ## 0.11.0 (2026-04-21)

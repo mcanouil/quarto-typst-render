@@ -1021,10 +1021,10 @@ local function compile_typst(source, opts, img_format)
   end
   dpi = tostring(math.floor(dpi))
 
-  -- Resolve root early: needed for import scanning before cache key is built
-  local resolved_root = global_config.root
-      and paths.resolve_project_path(global_config.root)
-      or quarto.project.directory
+  -- Resolve root early: needed for import scanning before cache key is built.
+  -- Defaults to the document's directory; a relative root resolves against it,
+  -- a leading '/' means the project root (see resolve_to_absolute).
+  local resolved_root = pandoc.path.normalize(resolve_to_absolute(global_config.root or '.'))
 
   -- Merge global and per-block input variables
   local merged_input = merge_inputs(opts.input, opts._block_input)
