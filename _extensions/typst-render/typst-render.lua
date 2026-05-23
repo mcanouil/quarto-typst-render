@@ -1567,7 +1567,9 @@ local function process_codeblock(el)
   local code = clean_code
   if opts.file then
     code = read_external_file(opts.file)
-    if not code then return el end
+    if not code then
+      return do_include and el or pandoc.Null()
+    end
   end
 
   opts._source = code:sub(1, 200)
