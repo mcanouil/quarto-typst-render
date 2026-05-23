@@ -1003,6 +1003,7 @@ end
 --- @param opts table Merged options
 --- @param img_format string Target image format
 --- @return table|nil List of paths to compiled images, or nil on failure
+--- @return boolean|nil true when compilation failed (Typst prints its own diagnostic)
 local function compile_typst(source, opts, img_format)
   local bin = resolve_typst_bin()
   if not bin then
@@ -1127,14 +1128,9 @@ local function compile_typst(source, opts, img_format)
   args[#args + 1] = '-'
   args[#args + 1] = abs_output
 
-  local ok, result = pcall(pandoc.pipe, bin, args, source)
+  local ok = pcall(pandoc.pipe, bin, args, source)
   if not ok then
-    local err_msg = tostring(result)
-    log.log_error(
-      EXTENSION_NAME,
-      'Typst compilation failed:\n' .. err_msg
-    )
-    return nil, err_msg
+    return nil, true
   end
 
   if is_paged then
@@ -1273,19 +1269,15 @@ local function compilation_failed_message(id)
 end
 
 --- Create an error block for failed Typst compilation.
---- @param err string|nil Error message from the compiler
 --- @param id string Block identifier (e.g. fig-foo, typst-block-3)
 --- @return pandoc.Div Error block
-local function create_error_block(err, id)
-  local error_inlines = {
-    pandoc.Strong({ pandoc.Str('[typst-render] ' .. compilation_failed_message(id)) }),
-  }
-  if err then
-    error_inlines[#error_inlines + 1] = pandoc.LineBreak()
-    error_inlines[#error_inlines + 1] = pandoc.Code(err)
-  end
+local function create_error_block(id)
   return pandoc.Div(
-    pandoc.Blocks({ pandoc.Para(error_inlines) }),
+    pandoc.Blocks({
+      pandoc.Para({
+        pandoc.Strong({ pandoc.Str('[typst-render] ' .. compilation_failed_message(id)) }),
+      }),
+    }),
     pandoc.Attr('', { 'typst-render-error' }, {})
   )
 end
@@ -1296,7 +1288,7 @@ end
 --- @param img_format string Target image format
 --- @return pandoc.Block|nil Result block, or nil on failure
 --- @return table|nil List of selected page paths, or nil on failure
---- @return string|nil Error message on compilation failure
+--- @return boolean|nil true when compilation failed
 local function compile_to_result(code, opts, img_format)
   local full_source = build_typst_source(code, opts)
   local all_pages, compile_err = compile_typst(full_source, opts, img_format)
@@ -1678,17 +1670,15 @@ local function process_codeblock(el)
   if dual_mode then
     local light_opts = resolve_opts_colours(opts, 'light')
     local dark_opts = resolve_opts_colours(opts, 'dark')
-    local light_content, light_pages, light_err = compile_to_result(code, light_opts, img_format)
-    local dark_content, dark_pages, dark_err = compile_to_result(code, dark_opts, img_format)
+    local light_content, light_pages = compile_to_result(code, light_opts, img_format)
+    local dark_content, dark_pages = compile_to_result(code, dark_opts, img_format)
 
     if not light_content and not dark_content then
-      local err = light_err or dark_err
-      local message = compilation_failed_message(block_id)
-      log.log_warning(EXTENSION_NAME, err and (message .. '\n' .. err) or message)
+      log.log_warning(EXTENSION_NAME, compilation_failed_message(block_id))
       if not do_include then
         return pandoc.Null()
       end
-      local error_block = create_error_block(err, block_id)
+      local error_block = create_error_block(block_id)
       if do_echo then
         local echo_block = cell.create_echo_block(code, is_fenced, option_lines)
         return pandoc.Blocks({ echo_block, error_block })
@@ -1741,12 +1731,11 @@ local function process_codeblock(el)
 
     if not content then
       if compile_err then
-        local message = compilation_failed_message(block_id)
-        log.log_warning(EXTENSION_NAME, message .. '\n' .. compile_err)
+        log.log_warning(EXTENSION_NAME, compilation_failed_message(block_id))
         if not do_include then
           return pandoc.Null()
         end
-        local error_block = create_error_block(compile_err, block_id)
+        local error_block = create_error_block(block_id)
         if do_echo then
           local echo_block = cell.create_echo_block(code, is_fenced, option_lines)
           return pandoc.Blocks({ echo_block, error_block })
@@ -1919,11 +1908,10 @@ local function process_inline_code(el)
   end
 
   local full_source = build_typst_source(code, opts)
-  local pages, compile_err = compile_typst(full_source, opts, img_format)
+  local pages = compile_typst(full_source, opts, img_format)
 
   if not pages or #pages == 0 then
-    local message = compilation_failed_message(inline_id)
-    log.log_warning(EXTENSION_NAME, compile_err and (message .. '\n' .. compile_err) or message)
+    log.log_warning(EXTENSION_NAME, compilation_failed_message(inline_id))
     return el
   end
 
