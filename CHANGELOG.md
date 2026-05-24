@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.14.0 (2026-05-24)
+
 ### New Features
 
 - feat: compilation failure warnings and error blocks now name the failing unit, using its `label` when set, otherwise an auto identifier (`typst-block-N` for blocks, `typst-inline-N` for inline expressions) where `N` is stable per unit.
