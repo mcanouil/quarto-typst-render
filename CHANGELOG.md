@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.15.0 (2026-05-25)
+
 ### New Features
 
 - feat: add `code-fold` and `code-summary` options for echoed Typst source.
