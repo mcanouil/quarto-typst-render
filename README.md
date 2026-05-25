@@ -125,6 +125,21 @@ This code is shown but not compiled.
 Use `echo: fenced` to display source code wrapped in fenced code block markers (` ```{typst} `), including any comment+pipe options (except `echo` itself).
 This mirrors Quarto's native `echo: fenced` behaviour for computational cells.
 
+For HTML-based output, collapse the echoed source in a `<details>` block with `code-fold`, and set the disclosure text with `code-summary`:
+
+````markdown
+```{typst}
+//| echo: true
+//| code-fold: true
+//| code-summary: "Show the code"
+$ E = m c^2 $
+```
+````
+
+`code-fold` wraps only the echoed source, not the rendered output, and is ignored for non-HTML formats.
+Use `code-fold: show` to render the block expanded by default.
+The summary defaults to `Code` when `code-summary` is unset, and `code-summary` is rendered as Markdown.
+
 ### External File Rendering
 
 Render an external `.typ` file instead of inline code:
@@ -405,6 +420,8 @@ Per-block input override using comma-separated syntax:
 | `output-directory` | string         | (none)    | Directory for saving compiled images. See [Output Directory](#output-directory).               |
 | `output-filename`  | string         | (none)    | Filename for the saved image. Leading `/` overrides `output-directory`. Auto-generated if omitted. |
 | `echo`            | boolean\|string | `false`   | Show Typst source code alongside output (`true`, `false`, `fenced`).                          |
+| `code-fold`       | boolean\|string | `false`   | Collapse the echoed source in a `<details>` block (HTML only). Use `show` to render expanded.  |
+| `code-summary`    | string          | `"Code"`  | Summary text for the `code-fold` `<details>` block (HTML only).                               |
 | `eval`            | boolean         | `true`    | Compile Typst code to image.                                                                  |
 | `include`         | boolean         | `true`    | Include block in output. Set `false` to suppress entirely.                                    |
 | `output`          | boolean\|string | `true`    | Show rendered output. Use `asis` for native Typst passthrough.                                |
