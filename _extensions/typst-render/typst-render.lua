@@ -1441,13 +1441,17 @@ local function get_configuration(meta)
         elseif k == 'code-summary' then
           -- Preserve Markdown markup; stringify would flatten it. Per-block
           -- summaries keep their raw string, so global ones must match.
+          -- Only inline metadata round-trips through the Markdown writer;
+          -- other shapes (bool, list, map, blocks) fall back to stringify.
           if type(val) == 'string' then
             global_config[k] = val
-          else
+          elseif pandoc.utils.type(val) == 'Inlines' then
             global_config[k] = pandoc.write(
               pandoc.Pandoc(pandoc.Blocks({ pandoc.Plain(val) })),
               'markdown'
             ):gsub('%s+$', '')
+          else
+            global_config[k] = pandoc.utils.stringify(val)
           end
         elseif type(default_val) == 'number' then
           local n = tonumber(pandoc.utils.stringify(val))
