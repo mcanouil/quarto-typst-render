@@ -244,6 +244,19 @@ This mirrors Quarto's native `echo: fenced` behaviour for computational cells.
 $ integral_0^infinity e^(-x) d x = 1 $
 ```
 
+### Code Fold: Collapsible Source
+
+For HTML-based output, `code-fold: true` collapses the echoed source in a `<details>` block, and `code-summary` sets the disclosure text.
+The rendered output stays outside the fold, and the options are ignored for non-HTML formats.
+
+```{typst}
+//| echo: true
+//| code-fold: true
+//| code-summary: "Show the code"
+#set text(size: 14pt)
+$ e^(i pi) + 1 = 0 $
+```
+
 ### Eval: Source Only (No Compilation)
 
 Display the source code without compiling with `eval: false`:
@@ -689,6 +702,8 @@ extensions:
 | `output-directory` | string         | (none)    | Directory for saving compiled images.                                             |
 | `output-filename`  | string         | (none)    | Filename for the saved image. Leading `/` overrides `output-directory`.            |
 | `echo`            | boolean\|string | `false`   | Show Typst source code alongside output (`true`, `false`, `fenced`).              |
+| `code-fold`       | boolean\|string | `false`   | Collapse echoed source in a `<details>` block (HTML only). Use `show` to expand.  |
+| `code-summary`    | string          | `"Code"`  | Summary text for the `code-fold` `<details>` block (HTML only).                   |
 | `eval`            | boolean         | `true`    | Compile Typst code to image.                                                      |
 | `include`         | boolean         | `true`    | Include block in output. Set `false` to suppress entirely.                        |
 | `output`          | boolean\|string | `true`    | Show rendered output. Use `asis` for native Typst passthrough.                    |

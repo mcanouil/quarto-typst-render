@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### New Features
+
+- feat: add `code-fold` and `code-summary` options for echoed Typst source.
+  For HTML-based output, `code-fold: true` (or `show` to render expanded) collapses only the echoed code in a `<details>` block, with `code-summary` setting the disclosure text (defaults to `Code`, rendered as Markdown).
+  The rendered output stays outside the fold, and the options are ignored for non-HTML formats.
+
 ## 0.14.0 (2026-05-24)
 
 ### New Features

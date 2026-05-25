@@ -46,6 +46,8 @@ local DEFAULTS = {
   ['output-filename'] = nil,
   input = nil,
   echo = false,
+  ['code-fold'] = false,
+  ['code-summary'] = nil,
   eval = true,
   include = true,
   output = true,
@@ -63,6 +65,7 @@ local DEFAULTS = {
 local KNOWN_KEYS = {
   cap = true,
   alt = true,
+  ['code-summary'] = true,
   _block_input = true,
   _inline = true,
   _alt = true,
@@ -1385,7 +1388,8 @@ local function get_configuration(meta)
     -- so we use a separate key list to ensure 'format' etc. are not missed.
     local config_keys = {
       'format', 'dpi', 'width', 'height', 'margin',
-      'cache', 'cache-refresh', 'echo', 'eval', 'include', 'output', 'output-location', 'classes',
+      'cache', 'cache-refresh', 'echo', 'code-fold', 'code-summary',
+      'eval', 'include', 'output', 'output-location', 'classes',
       'root', 'package-path', 'pages', 'layout-ncol', 'align',
       'output-directory',
     }
@@ -1402,6 +1406,25 @@ local function get_configuration(meta)
               global_config[k] = 'fenced'
             else
               global_config[k] = str == 'true'
+            end
+          end
+        elseif k == 'code-fold' then
+          if type(val) == 'boolean' then
+            global_config[k] = val
+          else
+            local str = pandoc.utils.stringify(val)
+            if str == 'show' then
+              global_config[k] = 'show'
+            elseif str == 'true' then
+              global_config[k] = true
+            elseif str == 'false' then
+              global_config[k] = false
+            else
+              log.log_warning(
+                EXTENSION_NAME,
+                'Invalid code-fold value "' .. str .. '"; expected true, false, or show. Disabling code-fold.'
+              )
+              global_config[k] = false
             end
           end
         elseif k == 'output' then
@@ -1562,6 +1585,20 @@ local function process_codeblock(el)
   local is_fenced = opts.echo == 'fenced'
   local output_mode = cell.resolve_output_mode(opts)
 
+  -- Code-fold wraps only the echoed source in a collapsible <details>, HTML output only.
+  local cf = opts['code-fold']
+  if cf ~= nil and cf ~= false and cf ~= true and cf ~= 'show' then
+    log.log_warning(
+      EXTENSION_NAME,
+      'Invalid code-fold value "' .. tostring(cf) .. '"; expected true, false, or show. Disabling code-fold.'
+    )
+    cf = false
+  end
+  local fold = nil
+  if quarto.format.is_html_output() and (cf == true or cf == 'show') then
+    fold = { open = cf == 'show', summary = opts['code-summary'] }
+  end
+
   -- Handle eval/echo matrix: both false means hidden block
   if not do_eval and not do_echo then
     return pandoc.Null()
@@ -1583,13 +1620,13 @@ local function process_codeblock(el)
     if not do_include then
       return pandoc.Null()
     end
-    return cell.create_echo_block(code, is_fenced, option_lines)
+    return cell.create_echo_block(code, is_fenced, option_lines, fold)
   end
 
   -- Output suppressed: skip compilation, show echo block only
   if output_mode == 'false' then
     if do_echo and do_include then
-      return cell.create_echo_block(code, is_fenced, option_lines)
+      return cell.create_echo_block(code, is_fenced, option_lines, fold)
     end
     return pandoc.Null()
   end
@@ -1635,8 +1672,9 @@ local function process_codeblock(el)
     end
     local result = cell.wrap_crossref(pandoc.RawBlock('typst', scoped_code), opts, REF_TYPE_NAMES)
     if do_echo then
-      local echo_block = cell.create_echo_block(code, is_fenced, option_lines)
-      return pandoc.Blocks({ echo_block, result })
+      local echo_block = cell.create_echo_block(code, is_fenced, option_lines, fold)
+      echo_block:insert(result)
+      return echo_block
     end
     return result
   end
@@ -1680,8 +1718,9 @@ local function process_codeblock(el)
       end
       local error_block = create_error_block(block_id)
       if do_echo then
-        local echo_block = cell.create_echo_block(code, is_fenced, option_lines)
-        return pandoc.Blocks({ echo_block, error_block })
+        local echo_block = cell.create_echo_block(code, is_fenced, option_lines, fold)
+        echo_block:insert(error_block)
+        return echo_block
       end
       return error_block
     end
@@ -1737,8 +1776,9 @@ local function process_codeblock(el)
         end
         local error_block = create_error_block(block_id)
         if do_echo then
-          local echo_block = cell.create_echo_block(code, is_fenced, option_lines)
-          return pandoc.Blocks({ echo_block, error_block })
+          local echo_block = cell.create_echo_block(code, is_fenced, option_lines, fold)
+          echo_block:insert(error_block)
+          return echo_block
         end
         return error_block
       end
@@ -1770,13 +1810,14 @@ local function process_codeblock(el)
 
   local output_location = cell.resolve_output_location(opts, EXTENSION_NAME)
   if output_location then
-    local echo_block = do_echo and cell.create_echo_block(code, is_fenced, option_lines) or nil
+    local echo_block = do_echo and cell.create_echo_block(code, is_fenced, option_lines, fold) or nil
     return cell.apply_output_location(echo_block, result, output_location)
   end
 
   if do_echo then
-    local echo_block = cell.create_echo_block(code, is_fenced, option_lines)
-    return pandoc.Blocks({ echo_block, result })
+    local echo_block = cell.create_echo_block(code, is_fenced, option_lines, fold)
+    echo_block:insert(result)
+    return echo_block
   end
 
   return result
