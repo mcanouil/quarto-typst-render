@@ -32,6 +32,13 @@ function M.new(config)
   local language = config.language
   local comment_prefix = config.comment_prefix
   local escaped_prefix = str.escape_lua_pattern(comment_prefix)
+  --- Line-comment characters used by code annotation markers (`<chars> <N>`).
+  --- Distinct from `comment_prefix` (the comment-pipe prefix, e.g. `//|`).
+  --- Defaults to `comment_prefix` with a trailing `|` removed (e.g. `//`).
+  local comment_chars = config.comment_chars or (comment_prefix:gsub('|$', ''))
+  local escaped_comment_chars = str.escape_lua_pattern(comment_chars)
+  --- Anchored pattern matching a trailing annotation marker, e.g. ` // <1>`.
+  local annotation_pattern = escaped_comment_chars .. '%s*<%d+>%s*$'
   --- Bare language identifier with any single outer `{...}` wrapper stripped
   --- (e.g. `{typst}` -> `typst`). Equals `language` when already brace-free.
   local class_name = language:match('^{(.-)}$') or language
@@ -133,50 +140,59 @@ function M.new(config)
     return merged
   end
 
-  --- Wrap a source listing block in a collapsible `<details>` for HTML output.
-  --- Mimics Quarto's native `code-fold` presentation, reusing its CSS.
-  --- The summary is rendered as Markdown to match Quarto's `code-summary` behaviour.
-  --- Precondition: emits raw HTML, so callers must only invoke this for HTML output.
-  --- @param block pandoc.Block The source listing block to wrap
-  --- @param fold table `{ open = boolean, summary = string|nil }`
-  --- @return pandoc.Blocks The `<details>` open tag, the block, and the close tag
-  function cell.wrap_code_fold(block, fold)
-    local summary = fold.summary
-    if type(summary) ~= 'string' or str.trim(summary) == '' then
-      summary = 'Code'
+  --- Check whether the source carries any code annotation markers.
+  --- A marker is a trailing line comment of the form `<comment_chars> <N>`,
+  --- matching the convention used by Quarto's code-annotations feature.
+  --- @param code string The source code
+  --- @return boolean true if at least one line ends with an annotation marker
+  function cell.has_annotations(code)
+    for line in code:gmatch('[^\r\n]*') do
+      if line:match(annotation_pattern) then
+        return true
+      end
     end
-    -- Render the summary as Markdown inlines (no <p> wrapper via Plain).
-    local summary_html = pandoc.write(
-      pandoc.Pandoc(pandoc.Blocks({ pandoc.Plain(quarto.utils.string_to_inlines(summary)) })),
-      'html'
-    ):gsub('%s+$', '')
-    local open_tag = pandoc.RawBlock(
-      'html',
-      '<details' .. (fold.open and ' open' or '') .. ' class="code-fold">\n'
-        .. '<summary>' .. summary_html .. '</summary>'
-    )
-    local close_tag = pandoc.RawBlock('html', '</details>')
-    return pandoc.Blocks({ open_tag, block, close_tag })
+    return false
+  end
+
+  --- Remove trailing code annotation markers from every line of the source.
+  --- Strips in place so line terminators (including CRLF) are preserved.
+  --- @param code string The source code
+  --- @return string The source with `<comment_chars> <N>` markers stripped
+  function cell.strip_annotations(code)
+    return (code:gsub('[^\r\n]+', function(line)
+      return (line:gsub('%s*' .. annotation_pattern, ''))
+    end))
   end
 
   --- Create a source code listing block.
   --- When fenced is true, wraps the code with fenced code block markers and
   --- comment-pipe options to mimic Quarto's `echo: fenced` presentation.
-  --- When fold is given, wraps the listing in a collapsible `<details>`.
+  --- When fold or annotate is set, emits Quarto's native executable-cell shape
+  --- (a `cell` Div wrapping a `cell-code` CodeBlock, with the rendered result as
+  --- a sibling inside the cell) so that code-fold and code-annotations are handled
+  --- by Quarto's own downstream passes. Otherwise emits a bare CodeBlock followed
+  --- by the result. Annotation markers are stripped unless `annotate` is true.
   --- @param code string The source code
   --- @param fenced boolean Whether to show fenced code block markers
   --- @param option_lines table|nil Raw comment-pipe lines to include in fenced output
   --- @param fold table|nil `{ open = boolean, summary = string|nil }` for code-fold
-  --- @return pandoc.Blocks The listing block, optionally wrapped in a `<details>`
-  function cell.create_echo_block(code, fenced, option_lines, fold)
-    local meta_patterns = {
-      '^%s*' .. escaped_prefix .. '%s*echo:%s*',
-      '^%s*' .. escaped_prefix .. '%s*include:%s*',
-      '^%s*' .. escaped_prefix .. '%s*output:%s*',
-      '^%s*' .. escaped_prefix .. '%s*code%-fold:%s*',
-      '^%s*' .. escaped_prefix .. '%s*code%-summary:%s*',
-    }
+  --- @param result pandoc.Block|nil Rendered output to place after/within the source
+  --- @param annotate boolean|nil Keep annotation markers for Quarto to process
+  --- @return pandoc.Blocks The source listing, optionally wrapped in a `cell` Div
+  function cell.create_echo_block(code, fenced, option_lines, fold, result, annotate)
+    if not annotate then
+      code = cell.strip_annotations(code)
+    end
+
+    local text, classes
     if fenced then
+      local meta_patterns = {
+        '^%s*' .. escaped_prefix .. '%s*echo:%s*',
+        '^%s*' .. escaped_prefix .. '%s*include:%s*',
+        '^%s*' .. escaped_prefix .. '%s*output:%s*',
+        '^%s*' .. escaped_prefix .. '%s*code%-fold:%s*',
+        '^%s*' .. escaped_prefix .. '%s*code%-summary:%s*',
+      }
       local lines = { '```{' .. class_name .. '}' }
       if option_lines then
         for _, line in ipairs(option_lines) do
@@ -194,17 +210,38 @@ function M.new(config)
       end
       lines[#lines + 1] = code
       lines[#lines + 1] = '```'
-      local fenced_block = pandoc.CodeBlock(table.concat(lines, '\n'), pandoc.Attr('', { 'markdown' }, {}))
+      text = table.concat(lines, '\n')
+      classes = { 'markdown' }
+    else
+      text = code
+      classes = { class_name }
+    end
+
+    -- The native cell shape is required for code-fold (attribute-driven, gated
+    -- to HTML by Quarto) and for code-annotations (markers linked downstream).
+    if fold or annotate then
+      classes[#classes + 1] = 'cell-code'
+      local attrs = {}
       if fold then
-        return cell.wrap_code_fold(fenced_block, fold)
+        attrs['code-fold'] = fold.open and 'show' or 'true'
+        local summary = fold.summary
+        if type(summary) == 'string' and str.trim(summary) ~= '' then
+          attrs['code-summary'] = summary
+        end
       end
-      return pandoc.Blocks({ fenced_block })
+      local inner = pandoc.CodeBlock(text, pandoc.Attr('', classes, attrs))
+      local children = pandoc.Blocks({ inner })
+      if result then
+        children:insert(result)
+      end
+      return pandoc.Blocks({ pandoc.Div(children, pandoc.Attr('', { 'cell' }, {})) })
     end
-    local plain_block = pandoc.CodeBlock(code, pandoc.Attr('', { class_name }, {}))
-    if fold then
-      return cell.wrap_code_fold(plain_block, fold)
+
+    local blocks = pandoc.Blocks({ pandoc.CodeBlock(text, pandoc.Attr('', classes, {})) })
+    if result then
+      blocks:insert(result)
     end
-    return pandoc.Blocks({ plain_block })
+    return blocks
   end
 
   --- Resolve and validate the output-location option.
