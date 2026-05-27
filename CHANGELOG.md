@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.16.0 (2026-05-27)
+
 ### New Features
 
 - feat: support Quarto code annotations on echoed Typst source.
