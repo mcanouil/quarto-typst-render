@@ -17,7 +17,7 @@ local log = require(quarto.utils.resolve_path('_modules/logging.lua'):gsub('%.lu
 local paths = require(quarto.utils.resolve_path('_modules/paths.lua'):gsub('%.lua$', ''))
 local meta_mod = require(quarto.utils.resolve_path('_modules/metadata.lua'):gsub('%.lua$', ''))
 local code_cell = require(quarto.utils.resolve_path('_modules/code-cell.lua'):gsub('%.lua$', ''))
-local cell = code_cell.new({ language = '{typst}', comment_prefix = '//|' })
+local cell = code_cell.new({ language = '{typst}', comment_prefix = '//|', comment_chars = '//' })
 
 -- ============================================================================
 -- CONSTANTS
@@ -115,6 +115,11 @@ local global_config = {}
 
 --- Detected brand mode ("light" or "dark")
 local global_brand_mode = 'light'
+
+--- Whether the document disables Quarto code-annotations (set during Meta pass).
+--- When true, annotation markers must be stripped from echoed source because
+--- Quarto's own pass leaves them literal instead of removing them.
+local code_annotations_disabled = false
 
 --- Resolved Typst binary path (cached)
 local typst_bin = nil
@@ -1381,6 +1386,14 @@ local function get_configuration(meta)
   global_brand_mode = (meta['brand-mode'] and pandoc.utils.stringify(meta['brand-mode']) == 'dark')
       and 'dark' or 'light'
 
+  -- Detect whether code-annotations are disabled document-wide. When set to
+  -- false, Quarto's annotation pass is a no-op and leaves `// <N>` markers
+  -- literal, so the filter must strip them from echoed source itself. Set
+  -- unconditionally so the flag never carries over from a previous document.
+  local code_annotations_meta = meta['code-annotations']
+  code_annotations_disabled = code_annotations_meta ~= nil
+    and pandoc.utils.stringify(code_annotations_meta) == 'false'
+
   local ext_config = meta_mod.get_extension_config(meta, EXTENSION_NAME) or meta['typst-render']
 
   if ext_config then
@@ -1600,7 +1613,8 @@ local function process_codeblock(el)
   local is_fenced = opts.echo == 'fenced'
   local output_mode = cell.resolve_output_mode(opts)
 
-  -- Code-fold wraps only the echoed source in a collapsible <details>, HTML output only.
+  -- Code-fold collapses only the echoed source via Quarto's native attribute-driven
+  -- fold (rendered as a <details> for HTML output only).
   local cf = opts['code-fold']
   if cf ~= nil and cf ~= false and cf ~= true and cf ~= 'show' then
     log.log_warning(
@@ -1628,20 +1642,27 @@ local function process_codeblock(el)
     end
   end
 
-  opts._source = code:sub(1, 200)
+  -- _source is the fallback for alt text; annotation markers never belong there.
+  opts._source = cell.strip_annotations(code):sub(1, 200)
+
+  -- Code annotations are honoured only for `echo: true` and when not disabled
+  -- document-wide. Other echo modes strip the markers in create_echo_block.
+  local annotate = opts.echo == true
+    and not code_annotations_disabled
+    and cell.has_annotations(code)
 
   -- Echo-only: show source listing without compilation
   if not do_eval then
     if not do_include then
       return pandoc.Null()
     end
-    return cell.create_echo_block(code, is_fenced, option_lines, fold)
+    return cell.create_echo_block(code, is_fenced, option_lines, fold, nil, annotate)
   end
 
   -- Output suppressed: skip compilation, show echo block only
   if output_mode == 'false' then
     if do_echo and do_include then
-      return cell.create_echo_block(code, is_fenced, option_lines, fold)
+      return cell.create_echo_block(code, is_fenced, option_lines, fold, nil, annotate)
     end
     return pandoc.Null()
   end
@@ -1687,9 +1708,8 @@ local function process_codeblock(el)
     end
     local result = cell.wrap_crossref(pandoc.RawBlock('typst', scoped_code), opts, REF_TYPE_NAMES)
     if do_echo then
-      local echo_block = cell.create_echo_block(code, is_fenced, option_lines, fold)
-      echo_block:insert(result)
-      return echo_block
+      -- Native Typst pass-through does not support annotations; strip markers.
+      return cell.create_echo_block(code, is_fenced, option_lines, fold, result, false)
     end
     return result
   end
@@ -1733,9 +1753,7 @@ local function process_codeblock(el)
       end
       local error_block = create_error_block(block_id)
       if do_echo then
-        local echo_block = cell.create_echo_block(code, is_fenced, option_lines, fold)
-        echo_block:insert(error_block)
-        return echo_block
+        return cell.create_echo_block(code, is_fenced, option_lines, fold, error_block, annotate)
       end
       return error_block
     end
@@ -1791,9 +1809,7 @@ local function process_codeblock(el)
         end
         local error_block = create_error_block(block_id)
         if do_echo then
-          local echo_block = cell.create_echo_block(code, is_fenced, option_lines, fold)
-          echo_block:insert(error_block)
-          return echo_block
+          return cell.create_echo_block(code, is_fenced, option_lines, fold, error_block, annotate)
         end
         return error_block
       end
@@ -1825,14 +1841,15 @@ local function process_codeblock(el)
 
   local output_location = cell.resolve_output_location(opts, EXTENSION_NAME)
   if output_location then
-    local echo_block = do_echo and cell.create_echo_block(code, is_fenced, option_lines, fold) or nil
+    -- Reveal.js output-location layout does not support annotations; strip markers.
+    local echo_block = do_echo
+      and cell.create_echo_block(code, is_fenced, option_lines, fold, nil, false)
+      or nil
     return cell.apply_output_location(echo_block, result, output_location)
   end
 
   if do_echo then
-    local echo_block = cell.create_echo_block(code, is_fenced, option_lines, fold)
-    echo_block:insert(result)
-    return echo_block
+    return cell.create_echo_block(code, is_fenced, option_lines, fold, result, annotate)
   end
 
   return result

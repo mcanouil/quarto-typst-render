@@ -140,6 +140,23 @@ $ E = m c^2 $
 Use `code-fold: show` to render the block expanded by default.
 The summary defaults to `Code` when `code-summary` is unset, and `code-summary` is rendered as Markdown.
 
+With `echo: true`, Quarto [code annotations](https://quarto.org/docs/authoring/code-annotation.html) work on the Typst source.
+Add `// <N>` markers to the relevant lines, then a numbered list immediately after the block:
+
+````markdown
+```{typst}
+//| echo: true
+#set text(size: 14pt)        // <1>
+$ E = m c^2 $                // <2>
+```
+
+1. Set the text size.
+2. Mass-energy equivalence.
+````
+
+Code annotations are honoured only for `echo: true`; with `echo: false` or `echo: fenced` the `// <N>` markers are stripped and annotations are ignored.
+Annotations compose with `code-fold`.
+
 ### External File Rendering
 
 Render an external `.typ` file instead of inline code:
@@ -419,7 +436,7 @@ Per-block input override using comma-separated syntax:
 | `file`            | string          | (none)    | Path to external `.typ` file to render.                                                       |
 | `output-directory` | string         | (none)    | Directory for saving compiled images. See [Output Directory](#output-directory).               |
 | `output-filename`  | string         | (none)    | Filename for the saved image. Leading `/` overrides `output-directory`. Auto-generated if omitted. |
-| `echo`            | boolean\|string | `false`   | Show Typst source code alongside output (`true`, `false`, `fenced`).                          |
+| `echo`            | boolean\|string | `false`   | Show Typst source code alongside output (`true`, `false`, `fenced`). `true` honours code annotations on the source. |
 | `code-fold`       | boolean\|string | `false`   | Collapse the echoed source in a `<details>` block (HTML only). Use `show` to render expanded.  |
 | `code-summary`    | string          | `"Code"`  | Summary text for the `code-fold` `<details>` block (HTML only).                               |
 | `eval`            | boolean         | `true`    | Compile Typst code to image.                                                                  |

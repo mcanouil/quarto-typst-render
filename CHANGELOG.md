@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### New Features
+
+- feat: support Quarto code annotations on echoed Typst source.
+  With `echo: true`, `// <N>` markers on Typst source lines plus a following numbered list render as linked code annotations, composing with `code-fold`.
+  Other `echo` values (`false`, `fenced`) strip the markers and ignore annotations.
+
 ## 0.15.0 (2026-05-25)
 
 ### New Features

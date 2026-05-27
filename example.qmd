@@ -257,6 +257,34 @@ The rendered output stays outside the fold, and the options are ignored for non-
 $ e^(i pi) + 1 = 0 $
 ```
 
+### Code Annotations
+
+With `echo: true`, Quarto code annotations work on the Typst source.
+Add `// <N>` markers to the lines you want to annotate, then a numbered list immediately after the block.
+Other `echo` values (`false`, `fenced`) strip the markers and ignore annotations.
+
+```{typst}
+//| echo: true
+#set text(size: 14pt)        // <1>
+$ sum_(k=1)^n k = (n(n+1))/2 $ // <2>
+```
+
+1. Set the text size.
+2. The sum of the first `n` integers.
+
+Code annotations compose with `code-fold` for HTML-based output.
+
+```{typst}
+//| echo: true
+//| code-fold: true
+//| code-summary: "Annotated source"
+#set page(width: 8cm)        // <1>
+#lorem(10)                   // <2>
+```
+
+1. Fix the page width.
+2. Insert placeholder text.
+
 ### Eval: Source Only (No Compilation)
 
 Display the source code without compiling with `eval: false`:

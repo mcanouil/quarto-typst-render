@@ -89,7 +89,7 @@ options:
     type: [boolean, string]
     enum: [true, false, fenced]
     default: false
-    description: "Show Typst source code alongside rendered output. Use 'fenced' to include code block markers."
+    description: "Show Typst source code alongside rendered output. Use 'fenced' to include code block markers. With 'true', Quarto code annotations on the source (// <N> markers plus a following numbered list) are honoured; other values strip the markers."
   code-fold:
     type: [boolean, string]
     enum: [true, false, show]
@@ -194,7 +194,7 @@ attributes:
     echo:
       type: [boolean, string]
       enum: [true, false, fenced]
-      description: "Show source code alongside rendered output. Use 'fenced' to include code block markers."
+      description: "Show source code alongside rendered output. Use 'fenced' to include code block markers. With 'true', Quarto code annotations on the source (// <N> markers plus a following numbered list) are honoured; other values strip the markers."
     code-fold:
       type: [boolean, string]
       enum: [true, false, show]
