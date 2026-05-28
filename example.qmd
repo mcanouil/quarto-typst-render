@@ -564,6 +564,24 @@ When a label is present, the filename is derived from the label:
 ]
 ```
 
+### Persist Compiled Source Alongside the Image
+
+Set `output-source: true` to also write the compiled Typst source (preamble plus colour bindings plus user code) next to the saved image, using the same stem with a `.typ` extension.
+This is useful for reproducibility: every persisted image has a recompilable source next to it.
+
+```{typst}
+//| echo: fenced
+//| label: fig-with-source
+//| cap: "Image saved with `.typ` source alongside."
+//| output-directory: _output
+//| output-source: true
+//| format: png
+#set text(size: 14pt)
+#align(center)[
+  Image and source are persisted together.
+]
+```
+
 ::: {.content-hidden when-format="revealjs" when-format="pptx"}
 
 ## Preamble
@@ -729,6 +747,7 @@ extensions:
 | `file`            | string          | (none)    | Path to external `.typ` file to render.                                           |
 | `output-directory` | string         | (none)    | Directory for saving compiled images.                                             |
 | `output-filename`  | string         | (none)    | Filename for the saved image. Leading `/` overrides `output-directory`.            |
+| `output-source`    | boolean        | `false`   | Also write compiled Typst source next to each saved image (same stem, `.typ` extension). |
 | `echo`            | boolean\|string | `false`   | Show Typst source code alongside output (`true`, `false`, `fenced`).              |
 | `code-fold`       | boolean\|string | `false`   | Collapse echoed source in a `<details>` block (HTML only). Use `show` to expand.  |
 | `code-summary`    | string          | `"Code"`  | Summary text for the `code-fold` `<details>` block (HTML only).                   |
