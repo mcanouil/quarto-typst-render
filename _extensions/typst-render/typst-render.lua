@@ -305,12 +305,8 @@ local function css_colour_to_typst(css_colour)
   end
   -- Distinguish bare CSS form (`rgb(255, 0, 0)`) from Typst form (`rgb("...")`).
   -- A Typst-form argument list contains a quote; a bare CSS one never does.
-  local rgb_args = css_colour:match('^rgb%((.+)%)$')
-  if rgb_args and not rgb_args:find('"') and not rgb_args:find("'") then
-    return 'rgb("' .. css_colour .. '")'
-  end
-  local hsl_args = css_colour:match('^hsl%((.+)%)$')
-  if hsl_args and not hsl_args:find('"') and not hsl_args:find("'") then
+  local args = css_colour:match('^rgb%((.+)%)$') or css_colour:match('^hsl%((.+)%)$')
+  if args and not args:find('[\'"]') then
     return 'rgb("' .. css_colour .. '")'
   end
   return css_colour
