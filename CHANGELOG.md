@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.17.0 (2026-05-31)
+
 ### New Features
 
 - feat: add `output-source` option that writes the compiled Typst source (preamble plus colour bindings plus user code) next to each saved image, using the same stem with a `.typ` extension.
