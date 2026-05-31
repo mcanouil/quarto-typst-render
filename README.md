@@ -271,7 +271,7 @@ typst_define(df = pd.DataFrame({"x": [1, 2, 3], "y": [4, 5, 6]}), label = "hello
 
 Caveats:
 
-- Define-before-use ordering: a `{typst}` cell that runs *before* any `typst_define()` call has no `typst_define` binding and will fail to compile if it references the name.
+- Define-before-use ordering: a `{typst}` cell that runs _before_ any `typst_define()` call has no `typst_define` binding and will fail to compile if it references the name.
 - Identifier-named keys for dot access (`typst_define.x`).
   Use `typst_define.at("f(x)")` for keys that are not valid Typst identifiers.
 - Quarto `freeze: true` interaction: changing data in a frozen chunk does not invalidate the freeze cache.
@@ -430,34 +430,34 @@ Per-block input override using comma-separated syntax:
 
 ### Options
 
-| Option            | Type            | Default   | Description                                                                                   |
-| ----------------- | --------------- | --------- | --------------------------------------------------------------------------------------------- |
-| `format`          | string          | (auto)    | Image format: `png`, `svg`, `pdf`.                                                            |
-| `dpi`             | number          | `144`     | Pixels per inch (PNG only).                                                                   |
-| `width`           | string          | `"auto"`  | Page width for image compilation (ignored with `output: asis`).                               |
-| `height`          | string          | `"auto"`  | Page height for image compilation (ignored with `output: asis`).                              |
-| `margin`          | string          | `"0.5em"` | Page margin for image compilation; block `inset` with `output: asis`.                         |
-| `background`      | string\|object  | `"none"`  | Page fill colour. Accepts a Typst colour, `auto` (from `_brand.yml`), or `{light, dark}` map. |
-| `foreground`      | string\|object  | (none)    | Text fill colour. Accepts a Typst colour, `auto` (from `_brand.yml`), or `{light, dark}` map. |
-| `preamble`        | string          | `""`      | Typst code or path to a `.typ` file prepended before user code.                               |
-| `cache`           | boolean         | `true`    | Cache compiled images. Set `false` to skip cache (existing files are preserved).              |
-| `cache-refresh`   | boolean         | `false`   | Remove stale cache files after each render (global only).                                     |
-| `input`           | object          | (none)    | Key-value pairs passed as `--input` flags to Typst CLI.                                       |
-| `file`            | string          | (none)    | Path to external `.typ` file to render.                                                       |
-| `output-directory` | string         | (none)    | Directory for saving compiled images. See [Output Directory](#output-directory).               |
-| `output-filename`  | string         | (none)    | Filename for the saved image. Leading `/` overrides `output-directory`. Auto-generated if omitted. |
-| `output-source`    | boolean        | `false`   | Also write the compiled Typst source next to each saved image. Requires `output-directory` or `output-filename`. |
-| `echo`            | boolean\|string | `false`   | Show Typst source code alongside output (`true`, `false`, `fenced`). `true` honours code annotations on the source. |
-| `code-fold`       | boolean\|string | `false`   | Collapse the echoed source in a `<details>` block (HTML only). Use `show` to render expanded.  |
-| `code-summary`    | string          | `"Code"`  | Summary text for the `code-fold` `<details>` block (HTML only).                               |
-| `eval`            | boolean         | `true`    | Compile Typst code to image.                                                                  |
-| `include`         | boolean         | `true`    | Include block in output. Set `false` to suppress entirely.                                    |
-| `output`          | boolean\|string | `true`    | Show rendered output. Use `asis` for native Typst passthrough.                                |
-| `output-location` | string          | (none)    | Output placement in Reveal.js (`fragment`, `slide`, `column`, `column-fragment`).             |
-| `classes`         | string          | (none)    | Space-separated CSS classes on the output image (e.g., `r-stretch`).                          |
-| `pages`           | string          | `"all"`   | Pages to include from multi-page output: `all`, `1`, `1-3`, `2,5`, `3-`.                      |
-| `layout-ncol`     | string          | (none)    | Number of columns for arranging multi-page output. Omit for vertical stack.                   |
-| `align`           | string          | (none)    | Horizontal alignment: `left`, `center`, `right`, `default`.                                   |
+| Option             | Type            | Default   | Description                                                                                                         |
+| ------------------ | --------------- | --------- | ------------------------------------------------------------------------------------------------------------------- |
+| `format`           | string          | (auto)    | Image format: `png`, `svg`, `pdf`.                                                                                  |
+| `dpi`              | number          | `144`     | Pixels per inch (PNG only).                                                                                         |
+| `width`            | string          | `"auto"`  | Page width for image compilation (ignored with `output: asis`).                                                     |
+| `height`           | string          | `"auto"`  | Page height for image compilation (ignored with `output: asis`).                                                    |
+| `margin`           | string          | `"0.5em"` | Page margin for image compilation; block `inset` with `output: asis`.                                               |
+| `background`       | string\|object  | `"none"`  | Page fill colour. Accepts a Typst colour, `auto` (from `_brand.yml`), or `{light, dark}` map.                       |
+| `foreground`       | string\|object  | (none)    | Text fill colour. Accepts a Typst colour, `auto` (from `_brand.yml`), or `{light, dark}` map.                       |
+| `preamble`         | string          | `""`      | Typst code or path to a `.typ` file prepended before user code.                                                     |
+| `cache`            | boolean         | `true`    | Cache compiled images. Set `false` to skip cache (existing files are preserved).                                    |
+| `cache-refresh`    | boolean         | `false`   | Remove stale cache files after each render (global only).                                                           |
+| `input`            | object          | (none)    | Key-value pairs passed as `--input` flags to Typst CLI.                                                             |
+| `file`             | string          | (none)    | Path to external `.typ` file to render.                                                                             |
+| `output-directory` | string          | (none)    | Directory for saving compiled images. See [Output Directory](#output-directory).                                    |
+| `output-filename`  | string          | (none)    | Filename for the saved image. Leading `/` overrides `output-directory`. Auto-generated if omitted.                  |
+| `output-source`    | boolean         | `false`   | Also write the compiled Typst source next to each saved image. Requires `output-directory` or `output-filename`.    |
+| `echo`             | boolean\|string | `false`   | Show Typst source code alongside output (`true`, `false`, `fenced`). `true` honours code annotations on the source. |
+| `code-fold`        | boolean\|string | `false`   | Collapse the echoed source in a `<details>` block (HTML only). Use `show` to render expanded.                       |
+| `code-summary`     | string          | `"Code"`  | Summary text for the `code-fold` `<details>` block (HTML only).                                                     |
+| `eval`             | boolean         | `true`    | Compile Typst code to image.                                                                                        |
+| `include`          | boolean         | `true`    | Include block in output. Set `false` to suppress entirely.                                                          |
+| `output`           | boolean\|string | `true`    | Show rendered output. Use `asis` for native Typst passthrough.                                                      |
+| `output-location`  | string          | (none)    | Output placement in Reveal.js (`fragment`, `slide`, `column`, `column-fragment`).                                   |
+| `classes`          | string          | (none)    | Space-separated CSS classes on the output image (e.g., `r-stretch`).                                                |
+| `pages`            | string          | `"all"`   | Pages to include from multi-page output: `all`, `1`, `1-3`, `2,5`, `3-`.                                            |
+| `layout-ncol`      | string          | (none)    | Number of columns for arranging multi-page output. Omit for vertical stack.                                         |
+| `align`            | string          | (none)    | Horizontal alignment: `left`, `center`, `right`, `default`.                                                         |
 
 Any unknown option with a string value is forwarded as an HTML attribute on the output image element (e.g., `//| style: "max-height: 300px;"`).
 Values that look like booleans (`true`/`false`) must be quoted to be forwarded (e.g., `//| data-lazy: "true"`).
@@ -466,11 +466,11 @@ Values that look like booleans (`true`/`false`) must be quoted to be forwarded (
 
 These options can only be set in the document YAML and cannot be overridden per block.
 
-| Option         | Type          | Default             | Description                                                           |
-| -------------- | ------------- | ------------------- | --------------------------------------------------------------------- |
+| Option         | Type          | Default              | Description                                                                                                                        |
+| -------------- | ------------- | -------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
 | `root`         | string        | (document directory) | Root directory for Typst compilation. Relative paths resolve against the document directory; a leading `/` means the project root. |
-| `font-path`    | string\|array | (none)              | Path or list of paths to directories containing additional fonts.     |
-| `package-path` | string        | (none)              | Path to a directory containing Typst packages (offline/reproducible). |
+| `font-path`    | string\|array | (none)               | Path or list of paths to directories containing additional fonts.                                                                  |
+| `package-path` | string        | (none)               | Path to a directory containing Typst packages (offline/reproducible).                                                              |
 
 ### Per-Block Cross-Referencing Options
 
