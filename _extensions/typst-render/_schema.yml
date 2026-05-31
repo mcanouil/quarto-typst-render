@@ -2,7 +2,7 @@
 # Provides configuration validation and IDE support for options
 # and per-block comment+pipe attributes on typst code blocks.
 
-$schema: https://m.canouil.dev/quarto-wizard/assets/schema/v1/extension-schema.json
+$schema: https://m.canouil.dev/quarto-wizard/assets/schema/v2/extension-schema.json
 
 options:
   format:
@@ -10,8 +10,9 @@ options:
     enum: [png, svg, pdf]
     description: "Image output format. Auto-detected from output format if not set."
   dpi:
-    type: number
+    type: integer
     default: 144
+    exclusiveMinimum: 0
     description: "Pixels per inch for PNG output."
   width:
     type: string
@@ -135,6 +136,10 @@ options:
     description: "Default output directory for saving compiled images. Per-block output-filename paths are resolved relative to this directory."
     completion:
       type: directory
+  output-source:
+    type: boolean
+    default: false
+    description: "Also write the compiled Typst source (preamble + colour bindings + user code) next to each saved image, using the same stem with a .typ extension. Requires output-directory or output-filename to take effect."
 
 # Per-block comment+pipe attributes (//| key: value).
 # These are parsed from the code block text, not from element attributes.
@@ -145,7 +150,8 @@ attributes:
       enum: [png, svg, pdf]
       description: "Image output format for this block."
     dpi:
-      type: number
+      type: integer
+      exclusiveMinimum: 0
       description: "Pixels per inch for PNG output."
     width:
       type: string
@@ -191,6 +197,9 @@ attributes:
       completion:
         type: file
         extensions: [.png, .svg, .pdf]
+    output-source:
+      type: boolean
+      description: "Also write the compiled Typst source for this block next to its saved image. Requires output-directory or output-filename to take effect."
     echo:
       type: [boolean, string]
       enum: [true, false, fenced]

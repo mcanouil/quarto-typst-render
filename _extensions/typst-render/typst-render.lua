@@ -44,6 +44,7 @@ local DEFAULTS = {
   file = nil,
   ['output-directory'] = nil,
   ['output-filename'] = nil,
+  ['output-source'] = false,
   input = nil,
   echo = false,
   ['code-fold'] = false,
@@ -78,6 +79,7 @@ local KNOWN_KEYS = {
   file = true,
   ['output-directory'] = true,
   ['output-filename'] = true,
+  ['output-source'] = true,
   input = true,
   ['output-location'] = true,
   classes = true,
@@ -290,14 +292,21 @@ end
 
 --- Convert a CSS colour string to a Typst colour literal.
 --- Wraps hex values like "#fdfdfd" as rgb("#fdfdfd") for Typst.
---- Passes through values that are already Typst-native (e.g., "blue", "luma(240)").
+--- Wraps bare CSS functional notation (`rgb(255, 0, 0)`, `hsl(...)`) so Typst's
+--- string-form `rgb()` constructor can parse it.
+--- Passes through values that are already Typst-native, including Typst
+--- colour constructors that take a quoted string (`rgb("#fff")`, `hsl("...")`)
+--- or non-functional names (`"blue"`, `"luma(240)"`, `"oklch(...)"`).
 --- @param css_colour string CSS colour string
 --- @return string Typst-compatible colour string
 local function css_colour_to_typst(css_colour)
   if css_colour:match('^#') then
     return 'rgb("' .. css_colour .. '")'
   end
-  if css_colour:match('^rgb%(') or css_colour:match('^hsl%(') then
+  -- Distinguish bare CSS form (`rgb(255, 0, 0)`) from Typst form (`rgb("...")`).
+  -- A Typst-form argument list contains a quote; a bare CSS one never does.
+  local args = css_colour:match('^rgb%((.+)%)$') or css_colour:match('^hsl%((.+)%)$')
+  if args and not args:find('[\'"]') then
     return 'rgb("' .. css_colour .. '")'
   end
   return css_colour
@@ -1005,6 +1014,39 @@ local function save_output_files(page_paths, output_path, mode_suffix, img_forma
   return result_paths
 end
 
+--- Write the full compiled Typst source next to a saved output image for
+--- traceability and reproducibility. Uses the image's stem and directory,
+--- replacing the extension with `.typ` (and adding the mode suffix when set).
+--- @param source string Full Typst source actually compiled
+--- @param output_path string Resolved absolute image output path
+--- @param mode_suffix string|nil Optional suffix for dual-mode ("-light", "-dark")
+--- @return boolean True on success
+local function save_source_file(source, output_path, mode_suffix)
+  if not source or source == '' or not output_path then
+    return false
+  end
+  local dir = pandoc.path.directory(output_path)
+  local filename = pandoc.path.filename(output_path)
+  local stem = filename:match('^(.+)%.[^.]+$') or filename
+  if dir and dir ~= '' and dir ~= '.' then
+    local ok, err = pcall(pandoc.system.make_directory, dir, true)
+    if not ok then
+      log.log_warning(EXTENSION_NAME, 'output-source: could not create directory: ' .. tostring(err))
+      return false
+    end
+  end
+  local dst = pandoc.path.join({ dir or '.', stem .. (mode_suffix or '') .. '.typ' })
+  local f, ferr = io.open(dst, 'wb')
+  if not f then
+    log.log_warning(EXTENSION_NAME, 'output-source: could not write to ' .. dst .. ': ' .. tostring(ferr))
+    return false
+  end
+  f:write(source)
+  f:close()
+  log.log_debug(EXTENSION_NAME, 'Saved Typst source to ' .. dst)
+  return true
+end
+
 --- Compile Typst source to an image file (or multiple files for multi-page output).
 --- Uses stdin to pass source code, avoiding temporary .typ files.
 --- @param source string Full Typst source code
@@ -1297,12 +1339,13 @@ end
 --- @return pandoc.Block|nil Result block, or nil on failure
 --- @return table|nil List of selected page paths, or nil on failure
 --- @return boolean|nil true when compilation failed
+--- @return string|nil Full Typst source actually compiled (preamble + colour vars + code)
 local function compile_to_result(code, opts, img_format)
   local full_source = build_typst_source(code, opts)
   local all_pages, compile_err = compile_typst(full_source, opts, img_format)
 
   if not all_pages then
-    return nil, nil, compile_err
+    return nil, nil, compile_err, full_source
   end
 
   local selected_pages
@@ -1321,10 +1364,13 @@ local function compile_to_result(code, opts, img_format)
   end
 
   if #selected_pages == 0 then
-    return nil, nil, nil
+    return nil, nil, nil, full_source
   end
 
-  return wrap_alignment(create_multi_page_element(selected_pages, opts), opts), selected_pages, nil
+  return wrap_alignment(create_multi_page_element(selected_pages, opts), opts),
+    selected_pages,
+    nil,
+    full_source
 end
 
 --- Read an external `.typ` file, resolving relative to the project directory.
@@ -1404,7 +1450,7 @@ local function get_configuration(meta)
       'cache', 'cache-refresh', 'echo', 'code-fold', 'code-summary',
       'eval', 'include', 'output', 'output-location', 'classes',
       'root', 'package-path', 'pages', 'layout-ncol', 'align',
-      'output-directory',
+      'output-directory', 'output-source',
     }
     for _, k in ipairs(config_keys) do
       local default_val = DEFAULTS[k]
@@ -1743,8 +1789,8 @@ local function process_codeblock(el)
   if dual_mode then
     local light_opts = resolve_opts_colours(opts, 'light')
     local dark_opts = resolve_opts_colours(opts, 'dark')
-    local light_content, light_pages = compile_to_result(code, light_opts, img_format)
-    local dark_content, dark_pages = compile_to_result(code, dark_opts, img_format)
+    local light_content, light_pages, _, light_source = compile_to_result(code, light_opts, img_format)
+    local dark_content, dark_pages, _, dark_source = compile_to_result(code, dark_opts, img_format)
 
     if not light_content and not dark_content then
       log.log_warning(EXTENSION_NAME, compilation_failed_message(block_id))
@@ -1766,16 +1812,23 @@ local function process_codeblock(el)
 
     -- Save to output directory and rebuild elements using output paths
     if output_path then
+      local save_source = opts['output-source'] == true
       if light_pages then
         local out_pages = save_output_files(light_pages, output_path, '-light', img_format)
         if out_pages then
           light_content = wrap_alignment(create_multi_page_element(out_pages, light_opts), light_opts)
+        end
+        if save_source then
+          save_source_file(light_source, output_path, '-light')
         end
       end
       if dark_pages then
         local out_pages = save_output_files(dark_pages, output_path, '-dark', img_format)
         if out_pages then
           dark_content = wrap_alignment(create_multi_page_element(out_pages, dark_opts), dark_opts)
+        end
+        if save_source then
+          save_source_file(dark_source, output_path, '-dark')
         end
       end
     end
@@ -1799,7 +1852,7 @@ local function process_codeblock(el)
     local resolved_opts = has_dual_mode_colours(opts)
         and resolve_opts_colours(opts, global_brand_mode)
         or opts
-    local content, selected_pages, compile_err = compile_to_result(code, resolved_opts, img_format)
+    local content, selected_pages, compile_err, full_source = compile_to_result(code, resolved_opts, img_format)
 
     if not content then
       if compile_err then
@@ -1828,6 +1881,9 @@ local function process_codeblock(el)
       local out_pages = save_output_files(selected_pages, output_path, nil, img_format)
       if out_pages then
         content = wrap_alignment(create_multi_page_element(out_pages, resolved_opts), resolved_opts)
+      end
+      if opts['output-source'] == true then
+        save_source_file(full_source, output_path, nil)
       end
     end
 
@@ -1933,7 +1989,10 @@ local function process_inline_code(el)
       log.log_warning(
         EXTENSION_NAME,
         'Inline Typst is not supported for PowerPoint output; '
-        .. 'inline code will be kept as-is.'
+        .. 'inline code will be kept as-is. '
+        .. 'Pandoc cannot embed images inside text runs in PPTX slides, '
+        .. 'so block-level `{typst}` code blocks work normally but '
+        .. 'inline `{typst}` expressions cannot be rendered.'
       )
     end
     return nil

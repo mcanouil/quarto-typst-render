@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+### New Features
+
+- feat: add `output-source` option that writes the compiled Typst source (preamble plus colour bindings plus user code) next to each saved image, using the same stem with a `.typ` extension.
+  Set globally or per block; requires `output-directory` or `output-filename` to take effect.
+  Dual-mode renders write `-light.typ` and `-dark.typ` next to the image variants.
+
+### Bug Fixes
+
+- fix: prevent colour double-wrap when a per-block `background` or `foreground` value is already a Typst-native constructor such as `rgb("#fff")` or `hsl("...")`.
+  The previous logic wrapped any string starting with `rgb(` or `hsl(`, producing invalid `rgb("rgb("#fff")")` literals.
+  CSS functional notation (`rgb(255, 0, 0)`, `hsl(120, 50%, 50%)`) without quoted arguments is still wrapped so Typst's string-form `rgb()` constructor can parse it.
+
+### Documentation
+
+- docs: explain in the PPTX-inline warning why inline Typst is unsupported (Pandoc cannot embed images inside text runs in PPTX slides) while block-level `{typst}` blocks continue to work.
+
 ## 0.16.0 (2026-05-27)
 
 ### New Features

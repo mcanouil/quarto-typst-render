@@ -362,6 +362,16 @@ A per-block `output-filename` starting with `/` overrides the global directory e
 For multi-page output, page numbers are appended before the extension (e.g., `diagram1.png`, `diagram2.png`).
 For dual-mode (light/dark) rendering, `-light` and `-dark` suffixes are appended (e.g., `diagram-light.svg`, `diagram-dark.svg`).
 
+Set `output-source: true` to also persist the compiled Typst source (preamble plus colour bindings plus user code) next to each saved image, using the same stem with a `.typ` extension.
+This makes every persisted image reproducible by recompiling the saved source.
+
+```yaml
+extensions:
+  typst-render:
+    output-directory: /images/typst/
+    output-source: true
+```
+
 ### Foreground and Background Colours
 
 Set text and page fill colours for rendered images.
@@ -436,6 +446,7 @@ Per-block input override using comma-separated syntax:
 | `file`            | string          | (none)    | Path to external `.typ` file to render.                                                       |
 | `output-directory` | string         | (none)    | Directory for saving compiled images. See [Output Directory](#output-directory).               |
 | `output-filename`  | string         | (none)    | Filename for the saved image. Leading `/` overrides `output-directory`. Auto-generated if omitted. |
+| `output-source`    | boolean        | `false`   | Also write the compiled Typst source next to each saved image. Requires `output-directory` or `output-filename`. |
 | `echo`            | boolean\|string | `false`   | Show Typst source code alongside output (`true`, `false`, `fenced`). `true` honours code annotations on the source. |
 | `code-fold`       | boolean\|string | `false`   | Collapse the echoed source in a `<details>` block (HTML only). Use `show` to render expanded.  |
 | `code-summary`    | string          | `"Code"`  | Summary text for the `code-fold` `<details>` block (HTML only).                               |
