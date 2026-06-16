@@ -6,3 +6,5 @@ contributes:
   filters:
     - at: pre-quarto
       path: typst-render.lua
+    - at: post-quarto
+      path: typst-math.lua
