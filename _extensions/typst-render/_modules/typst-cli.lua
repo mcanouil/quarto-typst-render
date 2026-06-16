@@ -117,7 +117,7 @@ function M.read_file(path)
 end
 
 --- Inject the MathML/layout CSS that Typst HTML export emits in its document
---- head, at most once per filter pass (this module is loaded per Lua state).
+--- head, at most once per document.
 --- @param html string Full Typst HTML document
 local head_injected = false
 function M.inject_head_style_once(html)
@@ -129,6 +129,13 @@ function M.inject_head_style_once(html)
     quarto.doc.include_text('in-header', '<style>\n' .. style .. '\n</style>')
     head_injected = true
   end
+end
+
+--- Clear the head-injection guard. Quarto may reuse a single Lua state across
+--- documents in a batch render, so each document's Meta pass must reset this
+--- before its first block/equation injects the head CSS.
+function M.reset_head_injection()
+  head_injected = false
 end
 
 --- Per-document cache subdirectory derived from the input file stem.

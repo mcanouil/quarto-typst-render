@@ -185,6 +185,16 @@ end
 --- @param meta pandoc.Meta
 --- @return pandoc.Meta
 local function configure(meta)
+  -- Reset per-document state: Quarto may reuse the Lua state across documents in
+  -- a batch render, so a document that does not opt in must not inherit a prior
+  -- document's mode, fonts, or cached equations.
+  html_mode = false
+  typst_mode = false
+  font_paths = nil
+  package_path = nil
+  css_injected = false
+  html_cache = {}
+  typst_cli.reset_head_injection()
   cache_subdir = typst_cli.doc_cache_subdir()
 
   local ext_config = meta_mod.get_extension_config(meta, EXTENSION_NAME) or meta['typst-render']

@@ -1539,6 +1539,9 @@ end
 local function get_configuration(meta)
   register_custom_crossref_types(meta)
   read_file_cache = {}
+  -- Quarto may reuse the Lua state across documents; re-inject the Typst head
+  -- CSS for each document that produces native HTML output.
+  typst_cli.reset_head_injection()
 
   -- Build per-document cache subdirectory from the input file stem
   cache_subdir = typst_cli.doc_cache_subdir()
@@ -2221,7 +2224,11 @@ local function cleanup_cache(doc) -- luacheck: ignore 212
 
   local removed = 0
   for _, filename in ipairs(entries) do
-    if filename:match('^typst%-') and not used_cache_files[filename] then
+    -- Skip `typst-math-*` files: they are owned by the typst-math filter and not
+    -- tracked here, so this cleanup must not treat them as stale.
+    if filename:match('^typst%-')
+        and not filename:match('^typst%-math%-')
+        and not used_cache_files[filename] then
       local ext = filename:match('%.(%w+)$')
       if ext and used_cache_formats[ext] then
         local filepath = pandoc.path.join({ abs_cache, filename })
