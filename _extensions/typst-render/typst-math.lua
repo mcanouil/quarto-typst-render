@@ -15,6 +15,7 @@ local EXTENSION_NAME = 'typst-render'
 
 local log = require(quarto.utils.resolve_path('_modules/logging.lua'):gsub('%.lua$', ''))
 local meta_mod = require(quarto.utils.resolve_path('_modules/metadata.lua'):gsub('%.lua$', ''))
+local paths = require(quarto.utils.resolve_path('_modules/paths.lua'):gsub('%.lua$', ''))
 local typst_cli = require(quarto.utils.resolve_path('_modules/typst-cli.lua'):gsub('%.lua$', ''))
 
 --- Module state
@@ -22,6 +23,11 @@ local cache_subdir = nil
 local html_mode = false
 local typst_mode = false
 local css_injected = false
+
+--- Font and package directories, read from global config so equations compile
+--- with the same resources as `format: html` blocks.
+local font_paths = nil
+local package_path = nil
 
 --- In-render cache of compiled math bodies, keyed by Typst source.
 local html_cache = {}
@@ -94,7 +100,19 @@ local function compile_math_html(source)
   local html = typst_cli.read_file(abs_output)
   if not html then
     local root = quarto.project.directory or '.'
-    local args = { 'compile', '--format', 'html', '--features', 'html', '--root', root, '-', abs_output }
+    local args = { 'compile', '--format', 'html', '--features', 'html', '--root', root }
+    if font_paths then
+      for _, p in ipairs(font_paths) do
+        args[#args + 1] = '--font-path'
+        args[#args + 1] = paths.resolve_project_path(p)
+      end
+    end
+    if package_path then
+      args[#args + 1] = '--package-path'
+      args[#args + 1] = paths.resolve_project_path(package_path)
+    end
+    args[#args + 1] = '-'
+    args[#args + 1] = abs_output
     local ok = pcall(pandoc.pipe, bin, args, source)
     if not ok then
       return nil
@@ -125,6 +143,9 @@ local function render_html_math(m)
 
   -- Display math: strip the equation number Quarto appended. The form depends on
   -- the html-math-method: \tag{N} for mathjax/katex, \qquad(N) for mathml/plain.
+  -- All numbers are stripped so none leak into the Typst source; a single-number
+  -- span is rendered (a multi-line aligned block with several numbers shows only
+  -- the first, which the single-equation common case never hits).
   local number = m.text:match('\\tag%{(%d+)%}') or m.text:match('\\qquad%((%d+)%)')
   local cleaned = m.text:gsub('\\tag%{%d+%}', ''):gsub('\\qquad%((%d+)%)', '')
   local body = compile_math_html('$ ' .. cleaned .. ' $')
@@ -170,6 +191,24 @@ local function configure(meta)
   local math_opt = ext_config and ext_config['math'] and pandoc.utils.stringify(ext_config['math'])
   if math_opt ~= 'typst' then
     return meta
+  end
+
+  -- Resolve the same font/package directories the render filter uses, so equations
+  -- compiled here match `format: html` blocks. (root and input are not applied:
+  -- self-contained equations do not reference files or sys.inputs.)
+  if ext_config['font-path'] ~= nil then
+    local raw = ext_config['font-path']
+    if pandoc.utils.type(raw) == 'List' then
+      font_paths = {}
+      for _, v in ipairs(raw) do
+        font_paths[#font_paths + 1] = pandoc.utils.stringify(v)
+      end
+    else
+      font_paths = { pandoc.utils.stringify(raw) }
+    end
+  end
+  if ext_config['package-path'] ~= nil then
+    package_path = pandoc.utils.stringify(ext_config['package-path'])
   end
 
   -- Only HTML output that can run Typst HTML export gets the MathML takeover;

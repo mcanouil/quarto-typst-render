@@ -392,17 +392,10 @@ end
 -- ============================================================================
 
 --- Read the entire contents of a file.
+--- Read a file's full contents (shared with the math filter).
 --- @param path string The file path to read
 --- @return string|nil File contents, or nil if the file cannot be opened
-local function read_file(path)
-  local f = io.open(path, 'r')
-  if not f then
-    return nil
-  end
-  local content = f:read('*a')
-  f:close()
-  return content
-end
+local read_file = typst_cli.read_file
 
 --- Serialise all merged options as a sorted, deterministic string for cache hashing.
 --- Handles string, number, boolean, and nested table values.
@@ -821,7 +814,11 @@ end
 local function compute_cache_stem(source, fmt, dpi, label, inline)
   local hash = pandoc.utils.sha1(source .. '|' .. fmt .. '|' .. dpi):sub(1, 8)
   if type(label) == 'string' and label ~= '' then
-    return 'typst-' .. label .. '-' .. hash
+    -- Sanitise the label before using it as a filename component so an unusual
+    -- label cannot escape the cache directory; valid cross-ref labels are
+    -- unaffected (only [%w-_] survive).
+    local safe_label = label:gsub('[^%w%-_]', '_')
+    return 'typst-' .. safe_label .. '-' .. hash
   end
   if inline then
     return 'typst-inline-' .. inline_counter .. '-' .. hash
