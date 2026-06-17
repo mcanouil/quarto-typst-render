@@ -206,6 +206,18 @@ It applies to HTML and Typst output only, so the equations below use conditional
 
 ::: {.content-visible when-format="html" when-format="revealjs" when-format="typst"}
 
+### Math as Typst
+
+```typ
+Inline $f(x) = sum_(i=0)^n x_i$ sits in the text, and a numbered display equation follows:
+
+$$
+e^(i pi) + 1 = 0
+$$ {#eq-euler}
+
+See @eq-euler for Euler's identity.
+```
+
 Inline $f(x) = sum_(i=0)^n x_i$ sits in the text, and a numbered display equation follows:
 
 $$
@@ -292,6 +304,10 @@ $ sum_(k=1)^n k = (n(n+1))/2 $ // <2>
 
 1. Set the text size.
 2. The sum of the first `n` integers.
+
+::: {.content-visible when-format="revealjs"}
+### Code Annotations
+:::
 
 Code annotations compose with `code-fold` for HTML-based output.
 
@@ -441,6 +457,10 @@ Supports scalars, strings, booleans, arrays, nested objects, R data frames (colu
 This document uses the markdown engine; the snippets below are illustrative.
 For an executable demo, switch the document `engine` to `knitr` (R) or `jupyter` (Python) and copy the helper from `_extensions/mcanouil/typst-render/_resources/` (once installed): `typst_define.R` or `typst_define.py`.
 
+::: {.content-visible when-format="revealjs"}
+## Passing Data from R/Python
+:::
+
 R (knitr engine):
 
 ````markdown
@@ -468,6 +488,10 @@ n = #typst_define.n
 )
 ```
 ````
+
+::: {.content-visible when-format="revealjs"}
+## Passing Data from R/Python
+:::
 
 Python (jupyter engine):
 
