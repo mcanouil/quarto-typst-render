@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.18.0 (2026-06-17)
+
 ### New Features
 
 - feat: add a `html` value for `format` that renders `{typst}` blocks and inline expressions as native HTML for HTML-based output, using Typst 0.15 HTML export.
