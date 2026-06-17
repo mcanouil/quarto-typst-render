@@ -65,11 +65,11 @@ format-links:
   - pptx
 engine: markdown
 filters:
-  - path: typst-render
-    at: pre-quarto
+  - typst-render
 extensions:
   typst-render:
     margin: "0.5em"
+    math: typst
 ---
 
 ::: {.content-hidden when-format="revealjs" when-format="pptx"}
@@ -99,13 +99,7 @@ filters:
   - typst-render
 ```
 
-For cross-referencing support, use timing control:
-
-```yaml
-filters:
-  - path: typst-render
-    at: pre-quarto
-```
+The extension registers its filters at the pipeline stages it needs (cross-referencing and the `math: typst` equation takeover both depend on this), so reference it by name and do not pin it to a single stage with `at:`.
 
 Then write Typst code blocks in your document:
 
@@ -195,6 +189,45 @@ Control horizontal alignment of the rendered image block.
 A centred block.
 ```
 
+## Native HTML Output
+
+For HTML-based output, `format: html` renders a block to native HTML (semantic markup with MathML maths) instead of an image, using Typst's HTML export.
+It requires a Typst >= 0.15 binary via `QUARTO_TYPST`; otherwise, and for non-HTML output, it falls back to an image.
+
+```{typst}
+//| echo: fenced
+//| format: html
+#set text(size: 14pt)
+A *Typst* paragraph with maths $f(x) = sum_(i=0)^n x_i$ rendered as MathML.
+```
+
+This document also enables the global `math: typst` option, which takes over every document equation (`$...$` and `$$...$$`), treating its contents as Typst math syntax: native MathML for HTML output and unchanged passthrough for Typst output, with Quarto numbering and `@eq-` cross-references preserved.
+It applies to HTML and Typst output only, so the equations below use conditional content (`when-format`) to stay out of the LaTeX, DOCX, and PPTX renders, where Typst syntax would be misread as LaTeX.
+
+::: {.content-visible when-format="html" when-format="revealjs" when-format="typst"}
+
+### Math as Typst
+
+```typ
+Inline $f(x) = sum_(i=0)^n x_i$ sits in the text, and a numbered display equation follows:
+
+$$
+e^(i pi) + 1 = 0
+$$ {#eq-euler}
+
+See @eq-euler for Euler's identity.
+```
+
+Inline $f(x) = sum_(i=0)^n x_i$ sits in the text, and a numbered display equation follows:
+
+$$
+e^(i pi) + 1 = 0
+$$ {#eq-euler}
+
+See @eq-euler for Euler's identity.
+
+:::
+
 ## Cross-Referencing
 
 Use `//| label:` and `//| cap:` for Quarto cross-references.
@@ -271,6 +304,10 @@ $ sum_(k=1)^n k = (n(n+1))/2 $ // <2>
 
 1. Set the text size.
 2. The sum of the first `n` integers.
+
+::: {.content-visible when-format="revealjs"}
+### Code Annotations
+:::
 
 Code annotations compose with `code-fold` for HTML-based output.
 
@@ -420,6 +457,10 @@ Supports scalars, strings, booleans, arrays, nested objects, R data frames (colu
 This document uses the markdown engine; the snippets below are illustrative.
 For an executable demo, switch the document `engine` to `knitr` (R) or `jupyter` (Python) and copy the helper from `_extensions/mcanouil/typst-render/_resources/` (once installed): `typst_define.R` or `typst_define.py`.
 
+::: {.content-visible when-format="revealjs"}
+## Passing Data from R/Python
+:::
+
 R (knitr engine):
 
 ````markdown
@@ -447,6 +488,10 @@ n = #typst_define.n
 )
 ```
 ````
+
+::: {.content-visible when-format="revealjs"}
+## Passing Data from R/Python
+:::
 
 Python (jupyter engine):
 
@@ -734,7 +779,7 @@ extensions:
 
 | Option             | Type            | Default   | Description                                                                                   |
 | ------------------ | --------------- | --------- | --------------------------------------------------------------------------------------------- |
-| `format`           | string          | (auto)    | Image format: `png`, `svg`, `pdf`.                                                            |
+| `format`           | string          | (auto)    | Output format: `png`, `svg`, `pdf`, or `html` (native HTML for HTML-based output).             |
 | `dpi`              | number          | `144`     | Pixels per inch (PNG only).                                                                   |
 | `width`            | string          | `"auto"`  | Page width for image compilation (ignored with `output: asis`).                               |
 | `height`           | string          | `"auto"`  | Page height for image compilation (ignored with `output: asis`).                              |
@@ -742,7 +787,7 @@ extensions:
 | `background`       | string\|object  | `"none"`  | Page fill colour. Accepts a Typst colour, `auto` (from `_brand.yml`), or `{light, dark}` map. |
 | `foreground`       | string\|object  | (none)    | Text fill colour. Accepts a Typst colour, `auto` (from `_brand.yml`), or `{light, dark}` map. |
 | `preamble`         | string          | `""`      | Typst code or path to a `.typ` file prepended before user code.                               |
-| `cache`            | boolean\|string | `true`    | Cache compiled images. Use `"clean"` to also remove stale cache files.                        |
+| `cache`            | boolean         | `true`    | Cache compiled images. Set `false` to skip the cache (existing files are preserved).          |
 | `input`            | object          | (none)    | Key-value pairs passed as `--input` flags to Typst CLI.                                       |
 | `file`             | string          | (none)    | Path to external `.typ` file to render.                                                       |
 | `output-directory` | string          | (none)    | Directory for saving compiled images.                                                         |

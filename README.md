@@ -25,13 +25,7 @@ filters:
   - typst-render
 ```
 
-For cross-referencing support, use timing control:
-
-```yaml
-filters:
-  - path: typst-render
-    at: pre-quarto
-```
+The extension registers its filters at the pipeline stages it needs (cross-referencing and the `math: typst` equation takeover both depend on this), so reference it by name and do not pin it to a single stage with `at:`.
 
 Then write Typst code blocks in your document:
 
@@ -428,11 +422,54 @@ Per-block input override using comma-separated syntax:
 ```
 ````
 
+### Native HTML Output
+
+For HTML-based output (HTML and Reveal.js), `format: html` renders a `{typst}` block or inline expression to native HTML instead of an image, using Typst's HTML export.
+Maths become accessible MathML, prose becomes selectable semantic HTML, and the result scales with the page.
+
+````markdown
+```{typst}
+//| format: html
+#set text(size: 14pt)
+A *Typst* paragraph with maths $f(x) = sum_(i=0)^n x_i$.
+```
+````
+
+Requirements and caveats:
+
+- Typst HTML export landed in Typst 0.15 and is experimental.
+  Quarto 1.9 bundles Typst 0.14, so set `QUARTO_TYPST` to a Typst >= 0.15 binary, for example `QUARTO_TYPST=/path/to/typst quarto render`.
+- When the binary is older than 0.15, or the output is not HTML-based, the block falls back to an SVG image with a warning.
+- Content that relies on layout (shapes, absolute positioning) does not translate to semantic HTML.
+  Wrap such content in Typst's `html.frame` to embed it as inline SVG.
+
+### Typst Equations
+
+Set the global `math: typst` option to treat every document equation (`$...$` and `$$...$$`) as **Typst** math syntax rather than LaTeX.
+
+```yaml
+extensions:
+  typst-render:
+    math: typst
+```
+
+```markdown
+Inline $f(x) = sum_(i=0)^n x_i$ and a display equation:
+
+$$ x^2 + y^2 = z^2 $$ {#eq-pythagoras}
+
+See @eq-pythagoras.
+```
+
+- For HTML output the equations become native MathML (same Typst >= 0.15 requirement as above; otherwise Quarto's default math renderer is kept).
+- For Typst output the equations pass through unchanged, so author-written Typst syntax is not reinterpreted as LaTeX.
+- Quarto equation numbering and `@eq-` cross-references keep working.
+
 ### Options
 
 | Option             | Type            | Default   | Description                                                                                                         |
 | ------------------ | --------------- | --------- | ------------------------------------------------------------------------------------------------------------------- |
-| `format`           | string          | (auto)    | Image format: `png`, `svg`, `pdf`.                                                                                  |
+| `format`           | string          | (auto)    | Output format: `png`, `svg`, `pdf`, or `html`. See [Native HTML Output](#native-html-output).                       |
 | `dpi`              | number          | `144`     | Pixels per inch (PNG only).                                                                                         |
 | `width`            | string          | `"auto"`  | Page width for image compilation (ignored with `output: asis`).                                                     |
 | `height`           | string          | `"auto"`  | Page height for image compilation (ignored with `output: asis`).                                                    |
@@ -471,6 +508,7 @@ These options can only be set in the document YAML and cannot be overridden per 
 | `root`         | string        | (document directory) | Root directory for Typst compilation. Relative paths resolve against the document directory; a leading `/` means the project root. |
 | `font-path`    | string\|array | (none)               | Path or list of paths to directories containing additional fonts.                                                                  |
 | `package-path` | string        | (none)               | Path to a directory containing Typst packages (offline/reproducible).                                                              |
+| `math`         | string        | (none)               | Set to `typst` to render every document equation as Typst math. See [Typst Equations](#typst-equations).                           |
 
 ### Per-Block Cross-Referencing Options
 
@@ -491,6 +529,8 @@ These options can only be set in the document YAML and cannot be overridden per 
 | Typst           | `png`                |
 | DOCX / PPTX     | `png`                |
 | Other           | `png`                |
+
+`html` is never auto-selected; opt in with `format: html` (see [Native HTML Output](#native-html-output)).
 
 ### Echo/Eval Behaviour
 
