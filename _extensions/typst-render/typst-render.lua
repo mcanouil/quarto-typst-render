@@ -76,6 +76,7 @@ local KNOWN_KEYS = {
   root = true,
   ['font-path'] = true,
   ['package-path'] = true,
+  math = true,
   format = true,
   foreground = true,
   file = true,
