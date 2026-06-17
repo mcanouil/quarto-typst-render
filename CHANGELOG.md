@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### New Features
+
+- feat: add a `html` value for `format` that renders `{typst}` blocks and inline expressions as native HTML for HTML-based output, using Typst 0.15 HTML export.
+  Maths become accessible MathML and prose becomes selectable semantic HTML instead of an image.
+  It requires a Typst >= 0.15 binary via `QUARTO_TYPST` and falls back to SVG otherwise; content that relies on layout must be wrapped in Typst's `html.frame`.
+- feat: add a global `math: typst` option that renders every document equation (`$...$` and `$$...$$`) as Typst math syntax rather than LaTeX.
+  HTML output gets native MathML and Typst output passes the maths through unchanged, while Quarto equation numbering and `@eq-` cross-references keep working.
+  Reference the extension by name without an `at:` stage so its filters run where they are needed.
+
 ## 0.17.0 (2026-05-31)
 
 ### New Features
