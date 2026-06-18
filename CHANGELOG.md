@@ -5,7 +5,6 @@
 ### New Features
 
 - feat: add a `code-line-numbers` option for echoed Typst source.
-  With `echo: true`, a value such as `"1|3-4"` drives progressive line highlighting in Reveal.js (and `true` numbers every line), mirroring Quarto's native code blocks; the attribute is handled by Quarto's own line-numbers pass, so other formats fall back to static numbering and `echo: fenced` ignores it.
 
 ## 0.18.0 (2026-06-17)
 
