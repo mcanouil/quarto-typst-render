@@ -192,7 +192,7 @@ A centred block.
 ## Native HTML Output
 
 For HTML-based output, `format: html` renders a block to native HTML (semantic markup with MathML maths) instead of an image, using Typst's HTML export.
-It requires a Typst >= 0.15 binary via `QUARTO_TYPST`; otherwise, and for non-HTML output, it falls back to an image.
+It requires a Typst >= 0.15 binary via `QUARTO_TYPST` (**this is for development and early access, be aware other native features can break**); otherwise, and for non-HTML output, it falls back to an image.
 
 ```{typst}
 //| echo: fenced
@@ -203,6 +203,13 @@ A *Typst* paragraph with maths $f(x) = sum_(i=0)^n x_i$ rendered as MathML.
 
 This document also enables the global `math: typst` option, which takes over every document equation (`$...$` and `$$...$$`), treating its contents as Typst math syntax: native MathML for HTML output and unchanged passthrough for Typst output, with Quarto numbering and `@eq-` cross-references preserved.
 It applies to HTML and Typst output only, so the equations below use conditional content (`when-format`) to stay out of the LaTeX, DOCX, and PPTX renders, where Typst syntax would be misread as LaTeX.
+
+::: {.callout-important}
+## Do not use in production yet
+
+- Typst HTML export is experimental and not yet stable.
+- `QUARTO_TYPST` is an internal development feature that might break current Quarto Typst behaviour.
+:::
 
 ::: {.content-visible when-format="html" when-format="revealjs" when-format="typst"}
 
@@ -388,11 +395,23 @@ For all other formats, `output: asis` behaves the same as `output: true` (compil
 This block uses native passthrough in Typst output.
 ```
 
+## Code Line Numbers (Reveal.js)
+
+With `echo: true`, `code-line-numbers` highlights lines of the Typst source.
+A string of steps separated by `|` reveals the highlight progressively across fragments.
+
+```{typst}
+//| echo: true
+//| code-line-numbers: "1|2"
+#set text(size: 14pt)
+$ E = m c^2 $
+```
+
 ## Output Location (Reveal.js)
 
-::: {.content-visible when-format="revealjs"}
-
 The `output-location` option controls where rendered output appears in Reveal.js presentations.
+
+::: {.content-visible when-format="revealjs"}
 
 ### Fragment
 
