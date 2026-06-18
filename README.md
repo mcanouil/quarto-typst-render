@@ -457,7 +457,7 @@ Requirements and caveats:
 - Content that relies on layout (shapes, absolute positioning) does not translate to semantic HTML.
   Wrap such content in Typst's `html.frame` to embed it as inline SVG.
 
-> [!DANGER]
+> [!CAUTION]
 > Do not use in production yet:
 >
 > - Typst HTML export is experimental and not yet stable.
