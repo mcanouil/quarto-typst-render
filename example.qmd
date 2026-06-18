@@ -192,7 +192,7 @@ A centred block.
 ## Native HTML Output
 
 For HTML-based output, `format: html` renders a block to native HTML (semantic markup with MathML maths) instead of an image, using Typst's HTML export.
-It requires a Typst >= 0.15 binary via `QUARTO_TYPST`; otherwise, and for non-HTML output, it falls back to an image.
+It requires a Typst >= 0.15 binary via `QUARTO_TYPST` (**this is for development and early access, be aware other native features can break**); otherwise, and for non-HTML output, it falls back to an image.
 
 ```{typst}
 //| echo: fenced
