@@ -151,6 +151,20 @@ $ E = m c^2 $                // <2>
 Code annotations are honoured only for `echo: true`; with `echo: false` or `echo: fenced` the `// <N>` markers are stripped and annotations are ignored.
 Annotations compose with `code-fold`.
 
+With `echo: true`, highlight lines of the echoed source with `code-line-numbers`, mirroring Quarto's native [code line numbers](https://quarto.org/docs/presentations/revealjs/#line-highlighting).
+Use a string of steps for progressive line highlighting in Reveal.js (steps separated by `|`, ranges with `-`, sets with `,`):
+
+````markdown
+```{typst}
+//| echo: true
+//| code-line-numbers: "1|2"
+#set text(size: 14pt)
+$ E = m c^2 $
+```
+````
+
+`code-line-numbers: true` numbers every line. The attribute is passed to Quarto's own line-numbers pass, so animated highlighting applies in Reveal.js while other formats fall back to static numbering. It is ignored for `echo: fenced`.
+
 ### External File Rendering
 
 Render an external `.typ` file instead of inline code:
@@ -467,34 +481,35 @@ See @eq-pythagoras.
 
 ### Options
 
-| Option             | Type            | Default   | Description                                                                                                         |
-| ------------------ | --------------- | --------- | ------------------------------------------------------------------------------------------------------------------- |
-| `format`           | string          | (auto)    | Output format: `png`, `svg`, `pdf`, or `html`. See [Native HTML Output](#native-html-output).                       |
-| `dpi`              | number          | `144`     | Pixels per inch (PNG only).                                                                                         |
-| `width`            | string          | `"auto"`  | Page width for image compilation (ignored with `output: asis`).                                                     |
-| `height`           | string          | `"auto"`  | Page height for image compilation (ignored with `output: asis`).                                                    |
-| `margin`           | string          | `"0.5em"` | Page margin for image compilation; block `inset` with `output: asis`.                                               |
-| `background`       | string\|object  | `"none"`  | Page fill colour. Accepts a Typst colour, `auto` (from `_brand.yml`), or `{light, dark}` map.                       |
-| `foreground`       | string\|object  | (none)    | Text fill colour. Accepts a Typst colour, `auto` (from `_brand.yml`), or `{light, dark}` map.                       |
-| `preamble`         | string          | `""`      | Typst code or path to a `.typ` file prepended before user code.                                                     |
-| `cache`            | boolean         | `true`    | Cache compiled images. Set `false` to skip cache (existing files are preserved).                                    |
-| `cache-refresh`    | boolean         | `false`   | Remove stale cache files after each render (global only).                                                           |
-| `input`            | object          | (none)    | Key-value pairs passed as `--input` flags to Typst CLI.                                                             |
-| `file`             | string          | (none)    | Path to external `.typ` file to render.                                                                             |
-| `output-directory` | string          | (none)    | Directory for saving compiled images. See [Output Directory](#output-directory).                                    |
-| `output-filename`  | string          | (none)    | Filename for the saved image. Leading `/` overrides `output-directory`. Auto-generated if omitted.                  |
-| `output-source`    | boolean         | `false`   | Also write the compiled Typst source next to each saved image. Requires `output-directory` or `output-filename`.    |
-| `echo`             | boolean\|string | `false`   | Show Typst source code alongside output (`true`, `false`, `fenced`). `true` honours code annotations on the source. |
-| `code-fold`        | boolean\|string | `false`   | Collapse the echoed source in a `<details>` block (HTML only). Use `show` to render expanded.                       |
-| `code-summary`     | string          | `"Code"`  | Summary text for the `code-fold` `<details>` block (HTML only).                                                     |
-| `eval`             | boolean         | `true`    | Compile Typst code to image.                                                                                        |
-| `include`          | boolean         | `true`    | Include block in output. Set `false` to suppress entirely.                                                          |
-| `output`           | boolean\|string | `true`    | Show rendered output. Use `asis` for native Typst passthrough.                                                      |
-| `output-location`  | string          | (none)    | Output placement in Reveal.js (`fragment`, `slide`, `column`, `column-fragment`).                                   |
-| `classes`          | string          | (none)    | Space-separated CSS classes on the output image (e.g., `r-stretch`).                                                |
-| `pages`            | string          | `"all"`   | Pages to include from multi-page output: `all`, `1`, `1-3`, `2,5`, `3-`.                                            |
-| `layout-ncol`      | string          | (none)    | Number of columns for arranging multi-page output. Omit for vertical stack.                                         |
-| `align`            | string          | (none)    | Horizontal alignment: `left`, `center`, `right`, `default`.                                                         |
+| Option              | Type            | Default   | Description                                                                                                         |
+| ------------------- | --------------- | --------- | ------------------------------------------------------------------------------------------------------------------- |
+| `format`            | string          | (auto)    | Output format: `png`, `svg`, `pdf`, or `html`. See [Native HTML Output](#native-html-output).                       |
+| `dpi`               | number          | `144`     | Pixels per inch (PNG only).                                                                                         |
+| `width`             | string          | `"auto"`  | Page width for image compilation (ignored with `output: asis`).                                                     |
+| `height`            | string          | `"auto"`  | Page height for image compilation (ignored with `output: asis`).                                                    |
+| `margin`            | string          | `"0.5em"` | Page margin for image compilation; block `inset` with `output: asis`.                                               |
+| `background`        | string\|object  | `"none"`  | Page fill colour. Accepts a Typst colour, `auto` (from `_brand.yml`), or `{light, dark}` map.                       |
+| `foreground`        | string\|object  | (none)    | Text fill colour. Accepts a Typst colour, `auto` (from `_brand.yml`), or `{light, dark}` map.                       |
+| `preamble`          | string          | `""`      | Typst code or path to a `.typ` file prepended before user code.                                                     |
+| `cache`             | boolean         | `true`    | Cache compiled images. Set `false` to skip cache (existing files are preserved).                                    |
+| `cache-refresh`     | boolean         | `false`   | Remove stale cache files after each render (global only).                                                           |
+| `input`             | object          | (none)    | Key-value pairs passed as `--input` flags to Typst CLI.                                                             |
+| `file`              | string          | (none)    | Path to external `.typ` file to render.                                                                             |
+| `output-directory`  | string          | (none)    | Directory for saving compiled images. See [Output Directory](#output-directory).                                    |
+| `output-filename`   | string          | (none)    | Filename for the saved image. Leading `/` overrides `output-directory`. Auto-generated if omitted.                  |
+| `output-source`     | boolean         | `false`   | Also write the compiled Typst source next to each saved image. Requires `output-directory` or `output-filename`.    |
+| `echo`              | boolean\|string | `false`   | Show Typst source code alongside output (`true`, `false`, `fenced`). `true` honours code annotations on the source. |
+| `code-fold`         | boolean\|string | `false`   | Collapse the echoed source in a `<details>` block (HTML only). Use `show` to render expanded.                       |
+| `code-summary`      | string          | `"Code"`  | Summary text for the `code-fold` `<details>` block (HTML only).                                                     |
+| `code-line-numbers` | boolean\|string | `false`   | Highlight echoed source lines (e.g. `1\|3-4`) for Reveal.js. Requires `echo: true`.                                 |
+| `eval`              | boolean         | `true`    | Compile Typst code to image.                                                                                        |
+| `include`           | boolean         | `true`    | Include block in output. Set `false` to suppress entirely.                                                          |
+| `output`            | boolean\|string | `true`    | Show rendered output. Use `asis` for native Typst passthrough.                                                      |
+| `output-location`   | string          | (none)    | Output placement in Reveal.js (`fragment`, `slide`, `column`, `column-fragment`).                                   |
+| `classes`           | string          | (none)    | Space-separated CSS classes on the output image (e.g., `r-stretch`).                                                |
+| `pages`             | string          | `"all"`   | Pages to include from multi-page output: `all`, `1`, `1-3`, `2,5`, `3-`.                                            |
+| `layout-ncol`       | string          | (none)    | Number of columns for arranging multi-page output. Omit for vertical stack.                                         |
+| `align`             | string          | (none)    | Horizontal alignment: `left`, `center`, `right`, `default`.                                                         |
 
 Any unknown option with a string value is forwarded as an HTML attribute on the output image element (e.g., `//| style: "max-height: 300px;"`).
 Values that look like booleans (`true`/`false`) must be quoted to be forwarded (e.g., `//| data-lazy: "true"`).

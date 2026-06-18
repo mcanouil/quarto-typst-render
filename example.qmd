@@ -388,11 +388,23 @@ For all other formats, `output: asis` behaves the same as `output: true` (compil
 This block uses native passthrough in Typst output.
 ```
 
+## Code Line Numbers (Reveal.js)
+
+With `echo: true`, `code-line-numbers` highlights lines of the Typst source.
+A string of steps separated by `|` reveals the highlight progressively across fragments.
+
+```{typst}
+//| echo: true
+//| code-line-numbers: "1|2"
+#set text(size: 14pt)
+$ E = m c^2 $
+```
+
 ## Output Location (Reveal.js)
 
-::: {.content-visible when-format="revealjs"}
-
 The `output-location` option controls where rendered output appears in Reveal.js presentations.
+
+::: {.content-visible when-format="revealjs"}
 
 ### Fragment
 

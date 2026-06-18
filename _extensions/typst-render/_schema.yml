@@ -156,7 +156,7 @@ attributes:
     format:
       type: string
       enum: [png, svg, pdf, html]
-      description: "Output format for this block. Use 'html' for native HTML (semantic markup with MathML maths) in HTML-based output; requires Typst >= 0.15 (set QUARTO_TYPST), falls back to SVG otherwise."
+      description: "Output format for this block. Use 'html' for native HTML (semantic markup with MathML maths) in HTML-based output; requires Typst >= 0.15."
     dpi:
       type: integer
       exclusiveMinimum: 0
