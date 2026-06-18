@@ -457,6 +457,12 @@ Requirements and caveats:
 - Content that relies on layout (shapes, absolute positioning) does not translate to semantic HTML.
   Wrap such content in Typst's `html.frame` to embed it as inline SVG.
 
+> [!DANGER]
+> Do not use in production yet:
+>
+> - Typst HTML export is experimental and not yet stable.
+> - `QUARTO_TYPST` is an internal development feature that might break current Quarto Typst behaviour.
+
 ### Typst Equations
 
 Set the global `math: typst` option to treat every document equation (`$...$` and `$$...$$`) as **Typst** math syntax rather than LaTeX.
