@@ -204,6 +204,13 @@ A *Typst* paragraph with maths $f(x) = sum_(i=0)^n x_i$ rendered as MathML.
 This document also enables the global `math: typst` option, which takes over every document equation (`$...$` and `$$...$$`), treating its contents as Typst math syntax: native MathML for HTML output and unchanged passthrough for Typst output, with Quarto numbering and `@eq-` cross-references preserved.
 It applies to HTML and Typst output only, so the equations below use conditional content (`when-format`) to stay out of the LaTeX, DOCX, and PPTX renders, where Typst syntax would be misread as LaTeX.
 
+::: {.callout-important}
+## Do not use in production yet
+
+- Typst HTML export is experimental and not yet stable.
+- `QUARTO_TYPST` is an internal development feature that might break current Quarto Typst behaviour.
+:::
+
 ::: {.content-visible when-format="html" when-format="revealjs" when-format="typst"}
 
 ### Math as Typst
