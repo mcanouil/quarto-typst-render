@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.19.0 (2026-06-18)
+
 ### New Features
 
 - feat: add a `code-line-numbers` option for echoed Typst source.
