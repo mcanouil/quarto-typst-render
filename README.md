@@ -452,7 +452,7 @@ A *Typst* paragraph with maths $f(x) = sum_(i=0)^n x_i$.
 Requirements and caveats:
 
 - Typst HTML export landed in Typst 0.15 and is experimental.
-  Quarto 1.10+ bundles Typst 0.15, so ensure your Quarto installation is up to date.
+  Quarto 1.10.18 and later bundle Typst 0.15, so ensure your Quarto installation is up to date.
 - When the binary is older than 0.15, or the output is not HTML-based, the block falls back to an SVG image with a warning.
 - Content that relies on layout (shapes, absolute positioning) does not translate to semantic HTML.
   Wrap such content in Typst's `html.frame` to embed it as inline SVG.
