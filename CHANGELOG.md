@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Breaking Changes
+
+- chore: require Quarto >= 1.10.18, which bundles Typst 0.15.
+  Native HTML output (`format: html`) and `math: typst` now work with the bundled Typst binary, so the `QUARTO_TYPST` environment variable is no longer needed for early access.
+
 ## 0.19.0 (2026-06-18)
 
 ### New Features
