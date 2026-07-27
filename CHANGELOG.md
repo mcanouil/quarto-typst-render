@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.20.0 (2026-07-27)
+
 ### Breaking Changes
 
 - chore: require Quarto >= 1.10.18, which bundles Typst 0.15.
