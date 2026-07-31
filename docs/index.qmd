@@ -1,0 +1,88 @@
+---
+title: "Typst Render"
+subtitle: "Typst figures, in every output format."
+description: "What the typst-render extension is for, how to enable it, and the smallest Typst block that becomes a figure."
+authors:
+  - name: "Mickaël CANOUIL, _Ph.D._"
+    orcid: "0000-0002-3396-4549"
+    url: "https://mickael.canouil.fr"
+# A ```{typst} block looks like an executable cell to Quarto's engine
+# detection, which then selects Jupyter and fails for want of a kernel. The
+# extension compiles those blocks itself, so the page needs no engine.
+engine: markdown
+---
+
+Typst draws diagrams, tables, and equations well, and Quarto can render to Typst.
+The moment the same document also has to produce HTML, a PDF through LaTeX, or a Word file, none of that Typst is available.
+
+`typst-render` compiles the Typst instead of passing it through.
+A `{typst}` block becomes an image, built by the Typst binary Quarto already ships, so the figure survives into every format.
+
+## Installation
+
+```bash
+quarto add {{< var extension.reference >}}
+```
+
+This will install the extension under the `_extensions` subdirectory.
+If you are using version control, you will want to check in this directory.
+
+Or install it from your editor with [Quarto Wizard](https://m.canouil.dev/quarto-wizard):
+
+::: {.btn-group role="group" aria-label="Quarto Wizard installer options"}
+
+[Visual Studio Code](vscode://mcanouil.quarto-wizard/install?repo={{< var extension.wizard-reference >}}){.btn .btn-outline-primary title="Install {{< var extension.reference >}} in Visual Studio Code using the Quarto Wizard extension."}
+[Positron](positron://mcanouil.quarto-wizard/install?repo={{< var extension.wizard-reference >}}){.btn .btn-outline-primary title="Install {{< var extension.reference >}} in Positron using the Quarto Wizard extension."}
+[VSCodium](vscodium://mcanouil.quarto-wizard/install?repo={{< var extension.wizard-reference >}}){.btn .btn-outline-primary title="Install {{< var extension.reference >}} in VSCodium using the Quarto Wizard extension."}
+
+:::
+
+::: {.callout-important}
+Reference the filter by name, without an `at:` stage.
+It registers itself at the several stages it needs, and pinning it to one breaks cross-referencing and the `math: typst` takeover.
+:::
+
+## Quick start
+
+```yaml
+filters:
+  - typst-render
+```
+
+Then write Typst:
+
+````markdown
+```{typst}
+#circle(radius: 1cm, fill: blue)
+```
+````
+
+Which compiles to this, as the page is built:
+
+```{typst}
+#circle(radius: 1cm, fill: blue)
+```
+
+Inline expressions work too, and scale to the surrounding text:
+
+```markdown
+A red word `{typst} #text(red)[hello]` in the middle of a sentence.
+```
+
+A red word `{typst} #text(red)[hello]` in the middle of a sentence.
+
+See the [Reference](reference.qmd) for every option, and the [Examples](examples.qmd) for figures, tables, equations, and the options that shape them.
+
+## Where it works
+
+Every output format.
+The Typst is compiled to an image, so HTML, PDF, Word, PowerPoint, and slides all receive the same figure.
+
+Under Typst output the image is produced too, unless you ask for `output: asis`, which passes the code through natively instead.
+
+## Links
+
+- [Reference](reference.qmd) for every option.
+- [Examples](examples.qmd) for rendered figures.
+- [Changelog](changelog.qmd) for what each release changed.
+- [Source and issues](https://github.com/mcanouil/quarto-typst-render) on GitHub.

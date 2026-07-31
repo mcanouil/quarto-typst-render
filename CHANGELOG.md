@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Documentation
+
+- docs: Add a documentation website under `docs/`, built on the `atelier` project type and published to <https://m.canouil.dev/quarto-typst-render/>, compiling its figures with the extension itself.
+- docs: Record that a document containing `{typst}` blocks needs `engine: markdown`, since Quarto's engine detection otherwise selects Jupyter and the render fails for want of a kernel.
+- docs: Record that `code-window` claims `{typst}` blocks at `pre-quarto` and prevents this filter from ever seeing them.
+- docs: Trim `README.md` to a landing page pointing at the website.
+- docs: Add the Pages workflow, which renders `docs/` on pull requests and deploys it from the release tag.
+- docs: Add the Quarto Extensions Updates workflow, scanning `docs` for the website's own dependencies.
+
 ## 0.20.0 (2026-07-27)
 
 ### Breaking Changes
