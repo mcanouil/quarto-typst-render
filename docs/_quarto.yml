@@ -91,10 +91,10 @@ filters:
   # code-window is not run on this site. It claims ```{typst} blocks at
   # pre-quarto, rewriting them into decorated code blocks before typst-render
   # can compile them, so the figures never appear.
-  - at: post-quarto
-    path: gitlink
+  - gitlink
   # No `at:`: the extension registers itself at the stages it needs.
   - typst-render
+  - code-window
 
 extensions:
   # Quarto keeps the `website` block out of the metadata it hands to Lua
