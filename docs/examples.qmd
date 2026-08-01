@@ -108,3 +108,6 @@ Running both, the blocks come out as ordinary listings with `{typst}` as their f
 ## Source
 
 The repository ships a short, standalone starting point you can copy: [`example.qmd`](https://github.com/mcanouil/quarto-typst-render/blob/main/example.qmd).
+
+Every release attaches `example-render.tar.gz`, that same file rendered to HTML, Typst, PDF through each of the three LaTeX engines, RevealJS, Beamer, Word, and PowerPoint.
+It is on the [latest release](https://github.com/mcanouil/quarto-typst-render/releases/latest), and is the way to see one source come out as figures in nine outputs.

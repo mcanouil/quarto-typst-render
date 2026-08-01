@@ -84,5 +84,6 @@ Under Typst output the image is produced too, unless you ask for `output: asis`,
 
 - [Reference](reference.qmd) for every option.
 - [Examples](examples.qmd) for rendered figures.
+- [The latest release](https://github.com/mcanouil/quarto-typst-render/releases/latest) for `example-render.tar.gz`, one source rendered to every format the repository builds.
 - [Changelog](changelog.qmd) for what each release changed.
 - [Source and issues](https://github.com/mcanouil/quarto-typst-render) on GitHub.

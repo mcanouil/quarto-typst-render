@@ -32,7 +32,8 @@ Set under `extensions.typst-render`.
 | `dpi` | `144` | Pixels per inch, for PNG. |
 | `width`, `height` | `auto` | Page size for compilation. Ignored with `output: asis`. |
 | `margin` | `0.5em` | Page margin, or block inset with `output: asis`. |
-| `background`, `foreground` | `none` | A Typst colour, `auto` to read `_brand.yml`, or a map with `light` and `dark` keys. |
+| `background` | `none` | Page fill, or the block fill with `output: asis`. A Typst colour, `auto` to read `_brand.yml`, or a map with `light` and `dark` keys. |
+| `foreground` | | Text fill for the compiled image, taking the same three shapes. |
 | `preamble` | | Typst code, or paths to `.typ` files, prepended to every block. |
 | `root` | | Root directory for compilation. Global only. |
 | `font-path`, `package-path` | | Extra fonts, and a package directory for offline builds. Global only. |
@@ -50,7 +51,7 @@ Written as `//| key: value` at the top of a block.
 
 | Option | Default | Description |
 | --- | --- | --- |
-| `typst` | | The output format for this block alone. |
+| `format` | | The output format for this block alone: `png`, `svg`, `pdf`, or `html`. |
 | `echo` | `false` | Show the source alongside the output. `fenced` includes the block markers. |
 | `code-fold` | `false` | Collapse the echoed source into a `<details>`. `show` renders it open. HTML only. |
 | `code-summary` | `Code` | The summary text for that `<details>`. |
@@ -68,7 +69,9 @@ Written as `//| key: value` at the top of a block.
 
 : Options accepted on a block. {.striped .hover tbl-colwidths="[24,10,66]"}
 
-The global options above also apply per block, apart from `math`, `root`, `font-path`, and `package-path`, which are global only.
+The two tables are one set of options read at two levels.
+Everything in the first can be set on a block, apart from `math`, `root`, `font-path`, and `package-path`, which are global only.
+Everything in the second can be set globally as a default for every block, apart from `file`, `output-filename`, `label`, `cap`, and `alt`, which belong to a block alone.
 
 ## Inline expressions
 
@@ -76,7 +79,8 @@ The global options above also apply per block, apart from `math`, `root`, `font-
 A red word `{typst} #text(red)[hello]` in a sentence.
 ```
 
-The global options apply; the block-only ones do not, which rules out `echo`, `eval`, `label`, `cap`, `alt` as an option, `file`, `output-filename`, `pages`, `layout-ncol`, and `output-location`.
+An inline expression takes the options that shape the compilation, `format`, `dpi`, `background`, `foreground`, `preamble`, `input`, `cache`, `output`, and `classes` among them.
+The options that describe a block are ignored: `echo` and its companions, `eval`, `include`, `label`, `cap`, `alt` as an option, `file`, `output-filename`, `pages`, `layout-ncol`, `align`, and `output-location`.
 
 Alt text is given as an attribute instead:
 
@@ -85,6 +89,8 @@ The area is `{typst} $pi r^2$`{alt="pi r squared"}.
 ```
 
 Without it, the Typst source is used as the alt text.
+
+An inline expression sets its own `width`, `height`, and `margin` so the result sits on the text baseline, and ignores the values configured for blocks.
 
 ## Interactions
 

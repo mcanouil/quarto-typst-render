@@ -23,6 +23,9 @@ website:
   # with a leading-slash image path, without normalising.
   site-url: &site-url https://m.canouil.dev/quarto-typst-render
   repo-url: https://github.com/mcanouil/quarto-typst-render
+  # The pages live under docs/, so the "Edit this page" action needs the
+  # subdirectory; without it the link points at a path that does not exist.
+  repo-subdir: docs
   page-navigation: true
   # atelier defaults search to an overlay button in the navbar. With no navbar
   # the search belongs in the sidebar, as a field rather than a button.
