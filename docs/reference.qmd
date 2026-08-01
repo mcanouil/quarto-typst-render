@@ -1,0 +1,106 @@
+---
+title: "Reference"
+subtitle: "Every option the typst-render extension accepts."
+description: "The complete typst-render configuration: the global options, the per-block options, output control, and the interactions to know about."
+---
+
+## Enabling the filter
+
+```yaml
+filters:
+  - typst-render
+```
+
+::: {.callout-important}
+Reference it by name, with no `at:` stage.
+It registers itself at the several stages it needs, and pinning it to one breaks cross-referencing and the `math: typst` takeover.
+:::
+
+::: {.callout-caution}
+A ```` ```{typst} ```` block looks like an executable cell to Quarto's engine detection, which then selects Jupyter and fails for want of a kernel.
+Set `engine: markdown` on any document that uses one; the repository's own `example.qmd` does.
+:::
+
+## Global options
+
+Set under `extensions.typst-render`.
+
+| Option | Default | Description |
+| --- | --- | --- |
+| `format` | auto | `png`, `svg`, `pdf`, or `html`. `html` gives semantic markup with MathML maths, needs Typst 0.15, and falls back to SVG. |
+| `math` | | Set to `typst` to render every equation in the document as Typst maths rather than LaTeX. Quarto numbering and cross-references keep working. |
+| `dpi` | `144` | Pixels per inch, for PNG. |
+| `width`, `height` | `auto` | Page size for compilation. Ignored with `output: asis`. |
+| `margin` | `0.5em` | Page margin, or block inset with `output: asis`. |
+| `background` | `none` | Page fill, or the block fill with `output: asis`. A Typst colour, `auto` to read `_brand.yml`, or a map with `light` and `dark` keys. |
+| `foreground` | | Text fill for the compiled image, taking the same three shapes. |
+| `preamble` | | Typst code, or paths to `.typ` files, prepended to every block. |
+| `root` | | Root directory for compilation. Global only. |
+| `font-path`, `package-path` | | Extra fonts, and a package directory for offline builds. Global only. |
+| `input` | | Key-value pairs passed as `--input`, readable through `sys.inputs`. |
+| `cache` | `true` | Cache compiled images between renders. |
+| `cache-refresh` | `false` | Remove stale cache files after each render. |
+| `output-directory` | | Where saved images are written. |
+| `output-source` | `false` | Also write the compiled Typst source beside each image. |
+
+: Options under `extensions.typst-render`. {.striped .hover tbl-colwidths="[22,12,66]"}
+
+## Per-block options
+
+Written as `//| key: value` at the top of a block.
+
+| Option | Default | Description |
+| --- | --- | --- |
+| `format` | | The output format for this block alone: `png`, `svg`, `pdf`, or `html`. |
+| `echo` | `false` | Show the source alongside the output. `fenced` includes the block markers. |
+| `code-fold` | `false` | Collapse the echoed source into a `<details>`. `show` renders it open. HTML only. |
+| `code-summary` | `Code` | The summary text for that `<details>`. |
+| `code-line-numbers` | `false` | Highlight lines of the echoed source. A string such as `1|3-4` steps through them in RevealJS. |
+| `eval` | `true` | Whether to compile at all. |
+| `include` | `true` | Whether to embed the result. `false` still compiles and writes files. |
+| `output` | `true` | Whether to show the result. `asis` passes the code through natively in Typst output. |
+| `output-location` | | RevealJS placement: `fragment`, `slide`, `column`, `column-fragment`. |
+| `classes` | | CSS classes for the image element, such as `r-stretch`. |
+| `pages` | `all` | Which pages of a multi-page result to include: `1`, `1-3`, `2,5`, `3-`. |
+| `layout-ncol` | | Arrange multi-page output in this many columns. |
+| `align` | | `left`, `center`, `right`, or `default`. |
+| `label`, `cap`, `alt` | | Cross-reference label, caption, and alternative text. |
+| `file`, `output-filename` | | Compile an external `.typ` file, and name the written image. |
+
+: Options accepted on a block. {.striped .hover tbl-colwidths="[24,10,66]"}
+
+The two tables are one set of options read at two levels.
+Everything in the first can be set on a block, apart from `math`, `root`, `font-path`, and `package-path`, which are global only.
+Everything in the second can be set globally as a default for every block, apart from `file`, `output-filename`, `label`, `cap`, and `alt`, which belong to a block alone.
+
+## Inline expressions
+
+```markdown
+A red word `{typst} #text(red)[hello]` in a sentence.
+```
+
+An inline expression takes the options that shape the compilation, `format`, `dpi`, `background`, `foreground`, `preamble`, `input`, `cache`, `output`, and `classes` among them.
+The options that describe a block are ignored: `echo` and its companions, `eval`, `include`, `label`, `cap`, `alt` as an option, `file`, `output-filename`, `pages`, `layout-ncol`, `align`, and `output-location`.
+
+Alt text is given as an attribute instead:
+
+```markdown
+The area is `{typst} $pi r^2$`{alt="pi r squared"}.
+```
+
+Without it, the Typst source is used as the alt text.
+
+An inline expression sets its own `width`, `height`, and `margin` so the result sits on the text baseline, and ignores the values configured for blocks.
+
+## Interactions
+
+::: {.callout-caution}
+`code-window` claims ```` ```{typst} ```` blocks at `pre-quarto` and rewrites them into decorated code blocks, so this filter never sees them and no figure is produced.
+Do not run both on the same document.
+:::
+
+## Limitations
+
+- Inline Typst is not available in PowerPoint: Pandoc cannot put an image inside a run of text there. Blocks work normally.
+- `engine: markdown` is required on documents containing `{typst}` blocks.
+- `format: html` needs Typst 0.15 or later, and falls back to SVG below that.

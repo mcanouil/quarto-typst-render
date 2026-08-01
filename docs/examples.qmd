@@ -1,0 +1,113 @@
+---
+title: "Examples"
+subtitle: "Typst, compiled as this page builds."
+description: "Typst figures, tables, equations, and inline expressions compiled to images by the extension, with the options that shape them."
+# A ```{typst} block looks like an executable cell to Quarto's engine
+# detection, which then selects Jupyter and fails for want of a kernel. The
+# extension compiles those blocks itself, so the page needs no engine.
+engine: markdown
+---
+
+Every figure below is compiled by the Typst binary Quarto ships, as this page is rendered.
+The site asks for SVG, so they stay sharp at any zoom:
+
+```yaml
+extensions:
+  typst-render:
+    format: svg
+```
+
+## A figure
+
+````markdown
+```{typst}
+#circle(radius: 1cm, fill: blue)
+```
+````
+
+```{typst}
+#circle(radius: 1cm, fill: blue)
+```
+
+## A table
+
+````markdown
+```{typst}
+#table(
+  columns: 3,
+  [*Format*], [*Writer*], [*Figures*],
+  [HTML], [html], [image],
+  [PDF], [latex], [image],
+  [Typst], [typst], [native or image],
+)
+```
+````
+
+```{typst}
+#table(
+  columns: 3,
+  [*Format*], [*Writer*], [*Figures*],
+  [HTML], [html], [image],
+  [PDF], [latex], [image],
+  [Typst], [typst], [native or image],
+)
+```
+
+## An equation
+
+```{typst}
+$ integral_0^1 x^2 dif x = 1/3 $
+```
+
+## Inline expressions
+
+An inline expression scales to the text around it, so a red word `{typst} #text(red)[hello]` sits in a sentence, and so does a formula `{typst} $ x^2 + y^2 = z^2 $`.
+
+Give it alt text for a reader who cannot see it:
+
+```markdown
+The area is `{typst} $pi r^2$`{alt="pi r squared"} for a circle of radius r.
+```
+
+Without an `alt` attribute the Typst source is used instead.
+
+::: {.callout-note}
+Inline Typst is not available in PowerPoint, since Pandoc cannot put an image inside a run of text there.
+Blocks work normally.
+:::
+
+## Showing the source
+
+`echo` puts the Typst beside its output, and `code-fold` tucks it away:
+
+````markdown
+```{typst}
+//| echo: true
+//| code-fold: true
+#circle(radius: 0.6cm, fill: green)
+```
+````
+
+```{typst}
+//| echo: true
+//| code-fold: true
+#circle(radius: 0.6cm, fill: green)
+```
+
+Per-block options use the comment and pipe form, `//| key: value`, at the top of the block.
+
+## An interaction worth knowing
+
+::: {.callout-caution}
+This site does not run the `code-window` filter, unlike the others in this family.
+
+`code-window` claims ```` ```{typst} ```` blocks at `pre-quarto` and rewrites them into decorated code blocks, so `typst-render` never sees them and no figure is produced.
+Running both, the blocks come out as ordinary listings with `{typst}` as their filename.
+:::
+
+## Source
+
+The repository ships a short, standalone starting point you can copy: [`example.qmd`](https://github.com/mcanouil/quarto-typst-render/blob/main/example.qmd).
+
+Every release attaches `example-render.tar.gz`, that same file rendered to HTML, Typst, PDF through each of the three LaTeX engines, RevealJS, Beamer, Word, and PowerPoint.
+It is on the [latest release](https://github.com/mcanouil/quarto-typst-render/releases/latest), and is the way to see one source come out as figures in nine outputs.
