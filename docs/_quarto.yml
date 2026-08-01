@@ -122,3 +122,4 @@ extensions:
       style-navbar-tools: false
   typst-render:
     format: svg
+    output-directory: "./images"
