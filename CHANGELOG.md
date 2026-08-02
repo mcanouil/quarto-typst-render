@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.21.0 (2026-08-02)
+
 ### Breaking Changes
 
 - feat: `output-directory` now defaults to `./assets/typst-render`, resolved relative to the document, instead of being unset.
