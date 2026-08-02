@@ -44,7 +44,7 @@ local DEFAULTS = {
   cache = true,
   ['cache-refresh'] = false,
   file = nil,
-  ['output-directory'] = nil,
+  ['output-directory'] = './assets/typst-render',
   ['output-filename'] = nil,
   ['output-source'] = false,
   input = nil,
@@ -2225,7 +2225,25 @@ local function process_inline_code(el)
     return el
   end
 
-  return create_inline_image_element(pages[1], opts)
+  -- Inline expressions carry no label or output-filename, so the image is named
+  -- from the inline counter. A failed copy falls back to the cache path so the
+  -- render still produces an image.
+  local img_path = pages[1]
+  local output_path = resolve_output_path(
+    global_config['output-directory'], opts['output-directory'],
+    nil, nil, inline_id, img_format
+  )
+  if output_path then
+    local out_pages = save_output_files({ img_path }, output_path, nil, img_format)
+    if out_pages then
+      img_path = out_pages[1]
+    end
+    if opts['output-source'] == true then
+      save_source_file(full_source, output_path, nil)
+    end
+  end
+
+  return create_inline_image_element(img_path, opts)
 end
 
 --- Remove stale cache files after all blocks have been processed.
