@@ -79,11 +79,23 @@ Everything in the second can be set globally as a default for every block, apart
 A red word `{typst} #text(red)[hello]` in a sentence.
 ```
 
-An inline expression takes the options that shape the compilation, `format`, `dpi`, `background`, `foreground`, `preamble`, `input`, `cache`, `output`, `classes`, `output-directory`, and `output-source` among them.
+An inline expression takes the global options that shape the compilation, `format`, `dpi`, `background`, `foreground`, `preamble`, `input`, `cache`, `output`, `eval`, `include`, `classes`, `output-directory`, and `output-source` among them.
 Its image is written as `typst-inline-<N>.<ext>`, numbered in document order, beside the block images in `<output-directory>/<document>/`.
-The options that describe a block are ignored: `echo` and its companions, `eval`, `include`, `label`, `cap`, `alt` as an option, `file`, `output-filename`, `pages`, `layout-ncol`, `align`, and `output-location`.
+The options that describe a block are ignored: `echo` and its companions, `label`, `cap`, `file`, `output-filename`, `pages`, `layout-ncol`, `align`, and `output-location`.
 
-Alt text is given as an attribute instead:
+`eval: false` leaves the expression as inline code, since there is no source listing to fall back on.
+`include: false` compiles and writes the image, then leaves the expression out of the sentence.
+
+The compilation options can also be set on one expression, as attributes:
+
+```markdown
+A big red `{typst} $pi r^2$`{format="png" dpi="300" foreground="#ff0000"} in a sentence.
+```
+
+`format`, `dpi`, `background`, `foreground`, `cache`, `classes`, `preamble`, and `input` are accepted there, along with `alt`.
+Anything else is ignored; where images are written stays a global decision.
+
+Alt text is given the same way:
 
 ```markdown
 The area is `{typst} $pi r^2$`{alt="pi r squared"}.
@@ -92,6 +104,10 @@ The area is `{typst} $pi r^2$`{alt="pi r squared"}.
 Without it, the Typst source is used as the alt text.
 
 An inline expression sets its own `width`, `height`, and `margin` so the result sits on the text baseline, and ignores the values configured for blocks.
+With `output: asis` in Typst output it is passed through instead, scoped in `#[ ... ]` with the preamble and colour bindings ahead of it, so a `#let` or `#set` inside stays local to the expression.
+Every other writer compiles an image, as it does for a block.
+
+When `background` or `foreground` carries both a `light` and a `dark` value, an expression in HTML output is compiled twice and both images are emitted, marked with Quarto's `light-content` and `dark-content` so the page shows the one matching its mode.
 
 ## Interactions
 

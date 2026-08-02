@@ -14,6 +14,15 @@
 ### New Features
 
 - feat: inline `{typst}` expressions honour `output-directory` and `output-source`, writing `typst-inline-<N>` files alongside the images compiled from blocks.
+- feat: inline `{typst}` expressions accept the compilation options as attributes: `format`, `dpi`, `background`, `foreground`, `cache`, `classes`, `preamble`, and `input`, as in `` `{typst} $x$`{format="png" dpi="300"} ``.
+- feat: an inline expression with both a `light` and a `dark` colour is compiled for each mode in HTML output and emitted with Quarto's `light-content` and `dark-content` classes, as blocks already were.
+
+### Bug Fixes
+
+- fix: an inline expression with `output: asis` was emitted as raw Typst for every writer, so it vanished from HTML, LaTeX, and DOCX output. Only Typst output passes it through now; the others compile an image, as they do for a block.
+- fix: an inline expression with `output: asis` is scoped in `#[ ... ]` and gets the colour bindings, the `typst_define` values, and the `preamble` that blocks get. A `#let` or `#set` inside it no longer leaks into the rest of the document, and the preamble is finally in scope.
+- fix: inline expressions honour `eval` and `include`. `eval: false` leaves the expression as inline code, and `include: false` compiles and writes the image without embedding it.
+- fix: inline expressions warn about the PDF-to-PNG fallback in HTML output and about dual colours under `format: html`, and a failed compilation now leaves a `typst-render-error` marker in the text instead of the original code.
 
 ## 0.20.1 (2026-08-01)
 
