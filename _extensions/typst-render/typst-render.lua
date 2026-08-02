@@ -561,8 +561,15 @@ local function resolve_preamble_entry(value)
     return nil
   end
   if value:match('%.typ$') then
+    -- Every block and every inline expression resolves the preamble, so the
+    -- file is read once per document through the shared cache rather than once
+    -- per unit. It is cleared for each document during the Meta pass.
     local file_path = paths.resolve_project_path(value)
-    local content = read_file(file_path)
+    local content = read_file_cache[file_path]
+    if content == nil then
+      content = read_file(file_path)
+      read_file_cache[file_path] = content or false
+    end
     if content then
       return content
     end
@@ -1463,6 +1470,39 @@ local function create_error_block(id)
   )
 end
 
+--- Resolve the image format to compile for, from the requested one and the
+--- output being written. Shared by blocks and inline expressions so the two
+--- cannot drift: `html` downgrades when it cannot be honoured, and `pdf` is
+--- unusable in HTML output.
+--- @param requested string|nil Format asked for by the options
+--- @return string Effective image format
+local function resolve_compile_format(requested)
+  local img_format = requested
+  if img_format and not VALID_FORMAT_SET[img_format] then
+    log.log_warning(
+      EXTENSION_NAME,
+      'Invalid format "' .. img_format .. '"; auto-detecting from output format.'
+    )
+    img_format = nil
+  end
+  if not img_format then
+    img_format = get_image_format_for_output()
+  end
+
+  -- Native HTML output requires HTML-based output and Typst >= 0.15; otherwise
+  -- fall back to an image format with a warning.
+  img_format = resolve_html_format(img_format)
+
+  if img_format == 'pdf' and quarto.format.is_html_output() then
+    log.log_warning(
+      EXTENSION_NAME,
+      'PDF images are not supported in HTML output. Falling back to PNG.'
+    )
+    img_format = 'png'
+  end
+  return img_format
+end
+
 --- Create an inline error marker for failed Typst compilation.
 --- The inline counterpart of create_error_block; the expression it replaces is
 --- part of a sentence, so the marker has to be an inline element.
@@ -1928,31 +1968,7 @@ local function process_codeblock(el)
     return result
   end
 
-  -- Determine image format
-  local img_format = opts.format
-  if img_format and not VALID_FORMAT_SET[img_format] then
-    log.log_warning(
-      EXTENSION_NAME,
-      'Invalid format "' .. img_format .. '"; auto-detecting from output format.'
-    )
-    img_format = nil
-  end
-  if not img_format then
-    img_format = get_image_format_for_output()
-  end
-
-  -- Native HTML output requires HTML-based output and Typst >= 0.15; otherwise
-  -- fall back to an image format with a warning.
-  img_format = resolve_html_format(img_format)
-
-  -- Warn about PDF in HTML
-  if img_format == 'pdf' and quarto.format.is_html_output() then
-    log.log_warning(
-      EXTENSION_NAME,
-      'PDF images are not supported in HTML output. Falling back to PNG.'
-    )
-    img_format = 'png'
-  end
+  local img_format = resolve_compile_format(opts.format)
 
   -- Dual-mode rendering for HTML/Reveal.js when both light and dark colours are present.
   -- Native HTML output renders once (colours apply via the Typst source, not CSS classes).
@@ -2280,9 +2296,11 @@ local function process_inline_code(el)
   end
 
   -- Nothing to compile: leave the expression as inline code, so the source
-  -- stays readable rather than vanishing from the sentence.
+  -- stays readable rather than vanishing from the sentence. With include off
+  -- there is nothing to show at all, as for a block that neither evaluates
+  -- nor echoes.
   if opts.eval == false then
-    return el
+    return do_include and el or {}
   end
 
   -- Native Typst output: pass through as a scoped RawInline. Any other writer
@@ -2304,46 +2322,7 @@ local function process_inline_code(el)
   opts.height = 'auto'
   opts.margin = '(x: 0.5pt, top: 0.5pt, bottom: 0.25em)'
 
-  local img_format = opts.format
-  if img_format and not VALID_FORMAT_SET[img_format] then
-    log.log_warning(
-      EXTENSION_NAME,
-      'Invalid format "' .. img_format .. '"; auto-detecting from output format.'
-    )
-    img_format = nil
-  end
-  if not img_format then
-    img_format = get_image_format_for_output()
-  end
-  img_format = resolve_html_format(img_format)
-
-  if img_format == 'html' then
-    if has_dual_mode_colours(opts) then
-      log.log_warning(
-        EXTENSION_NAME,
-        'Dual light/dark colours are not supported with format "html"; using the document brand mode.'
-      )
-      opts = resolve_opts_colours(opts, global_brand_mode)
-    end
-    local html_source = build_typst_source(code, opts, false)
-    local body = compile_typst_html(html_source, opts)
-    if not body then
-      log.log_warning(EXTENSION_NAME, compilation_failed_message(inline_id))
-      return create_error_inline(inline_id)
-    end
-    if not do_include then
-      return {}
-    end
-    return create_inline_html_element(typst_cli.strip_paragraph(body), opts)
-  end
-
-  if img_format == 'pdf' and quarto.format.is_html_output() then
-    log.log_warning(
-      EXTENSION_NAME,
-      'PDF images are not supported in HTML output. Falling back to PNG.'
-    )
-    img_format = 'png'
-  end
+  local img_format = resolve_compile_format(opts.format)
 
   --- Compile one colour mode and build its inline element.
   --- Inline expressions carry no label or output-filename, so the image is named
@@ -2375,19 +2354,24 @@ local function process_inline_code(el)
     return create_inline_image_element(img_path, mode_opts)
   end
 
-  -- Dual-mode rendering for HTML when both light and dark colours are present.
-  -- Quarto's own `light-content` / `dark-content` classes hide the mode that
-  -- does not match the page, and work on inline elements too.
-  if quarto.format.is_html_output() and has_dual_mode_colours(opts) then
+  local element
+  if img_format == 'html' then
+    if has_dual_mode_colours(opts) then
+      log.log_warning(
+        EXTENSION_NAME,
+        'Dual light/dark colours are not supported with format "html"; using the document brand mode.'
+      )
+      opts = resolve_opts_colours(opts, global_brand_mode)
+    end
+    local html_source = build_typst_source(code, opts, false)
+    local body = compile_typst_html(html_source, opts)
+    element = body and create_inline_html_element(typst_cli.strip_paragraph(body), opts) or nil
+  elseif quarto.format.is_html_output() and has_dual_mode_colours(opts) then
+    -- Dual-mode rendering when both light and dark colours are present. Quarto's
+    -- own `light-content` / `dark-content` classes hide the mode that does not
+    -- match the page, and work on inline elements too.
     local light = compile_inline(resolve_opts_colours(opts, 'light'), '-light')
     local dark = compile_inline(resolve_opts_colours(opts, 'dark'), '-dark')
-    if not light and not dark then
-      log.log_warning(EXTENSION_NAME, compilation_failed_message(inline_id))
-      return create_error_inline(inline_id)
-    end
-    if not do_include then
-      return {}
-    end
     local inlines = {}
     if light then
       inlines[#inlines + 1] = pandoc.Span({ light }, pandoc.Attr('', { 'light-content' }, {}))
@@ -2395,13 +2379,16 @@ local function process_inline_code(el)
     if dark then
       inlines[#inlines + 1] = pandoc.Span({ dark }, pandoc.Attr('', { 'dark-content' }, {}))
     end
-    return pandoc.Inlines(inlines)
+    element = #inlines > 0 and pandoc.Inlines(inlines) or nil
+  else
+    local resolved_opts = has_dual_mode_colours(opts)
+        and resolve_opts_colours(opts, global_brand_mode)
+        or opts
+    element = compile_inline(resolved_opts, nil)
   end
 
-  local resolved_opts = has_dual_mode_colours(opts)
-      and resolve_opts_colours(opts, global_brand_mode)
-      or opts
-  local element = compile_inline(resolved_opts, nil)
+  -- Compilation and file-save side effects have run; report a failure once,
+  -- then suppress embedding if include is false.
   if not element then
     log.log_warning(EXTENSION_NAME, compilation_failed_message(inline_id))
     return create_error_inline(inline_id)
