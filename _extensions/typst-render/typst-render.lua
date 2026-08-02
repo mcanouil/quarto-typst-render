@@ -933,7 +933,8 @@ end
 local function resolve_output_path(global_dir, block_dir, block_filename, label, counter_name, img_format)
   -- Determine the filename
   local filename = block_filename
-  if not filename or filename == '' then
+  local auto_named = not filename or filename == ''
+  if auto_named then
     -- Auto-generate from label or counter
     local stem = (type(label) == 'string' and label ~= '') and label or counter_name
     filename = stem .. '.' .. img_format
@@ -954,8 +955,13 @@ local function resolve_output_path(global_dir, block_dir, block_filename, label,
     return nil
   end
 
-  -- Join directory and filename
-  local joined = pandoc.path.join({ dir, filename })
+  -- Labels and block counters are unique within a document only, so images
+  -- named from them go in a per-document subdirectory; two documents in the
+  -- same directory would otherwise overwrite each other's images. An explicit
+  -- output-filename is the author's own path and is left alone.
+  local joined = auto_named
+      and pandoc.path.join({ dir, typst_cli.doc_stem(), filename })
+      or pandoc.path.join({ dir, filename })
 
   return resolve_to_absolute(joined)
 end

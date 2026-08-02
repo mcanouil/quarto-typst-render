@@ -40,7 +40,7 @@ Set under `extensions.typst-render`.
 | `input` | | Key-value pairs passed as `--input`, readable through `sys.inputs`. |
 | `cache` | `true` | Cache compiled images between renders. |
 | `cache-refresh` | `false` | Remove stale cache files after each render. |
-| `output-directory` | `./assets/typst-render` | Where saved images are written, relative to the document. An empty string writes none, leaving them in the render cache where a deployed site cannot reach them. |
+| `output-directory` | `./assets/typst-render` | Where saved images are written, relative to the document, under a subdirectory named after it. An empty string writes none, leaving them in the render cache where a deployed site cannot reach them. |
 | `output-source` | `false` | Also write the compiled Typst source beside each image. |
 
 : Options under `extensions.typst-render`. {.striped .hover tbl-colwidths="[22,12,66]"}
@@ -80,7 +80,7 @@ A red word `{typst} #text(red)[hello]` in a sentence.
 ```
 
 An inline expression takes the options that shape the compilation, `format`, `dpi`, `background`, `foreground`, `preamble`, `input`, `cache`, `output`, `classes`, `output-directory`, and `output-source` among them.
-Its image is written as `typst-inline-<N>.<ext>`, numbered in document order.
+Its image is written as `typst-inline-<N>.<ext>`, numbered in document order, beside the block images in `<output-directory>/<document>/`.
 The options that describe a block are ignored: `echo` and its companions, `eval`, `include`, `label`, `cap`, `alt` as an option, `file`, `output-filename`, `pages`, `layout-ncol`, `align`, and `output-location`.
 
 Alt text is given as an attribute instead:

@@ -142,7 +142,7 @@ options:
   output-directory:
     type: string
     default: "./assets/typst-render"
-    description: "Default output directory for saving compiled images, resolved relative to the document directory. Per-block output-filename paths are resolved relative to this directory. Set to an empty string to write no image files, leaving them in the render cache."
+    description: "Default output directory for saving compiled images, resolved relative to the document directory. Images named from a label or a block counter are written to a subdirectory named after the document, so two documents in the same directory do not overwrite each other. Per-block output-filename paths are resolved relative to this directory, without that subdirectory. Set to an empty string to write no image files, leaving them in the render cache."
     completion:
       type: directory
   output-source:
@@ -202,7 +202,7 @@ attributes:
         type: directory
     output-filename:
       type: string
-      description: "Path to save the compiled image. Leading '/' means project root (ignores output-directory). Otherwise resolved relative to output-directory. Auto-generated from label or block counter if omitted."
+      description: "Path to save the compiled image. Leading '/' means project root (ignores output-directory). Otherwise resolved relative to output-directory, without the per-document subdirectory. Auto-generated from label or block counter if omitted."
       completion:
         type: file
         extensions: [.png, .svg, .pdf]
