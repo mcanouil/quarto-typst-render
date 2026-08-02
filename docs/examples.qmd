@@ -96,15 +96,6 @@ Blocks work normally.
 
 Per-block options use the comment and pipe form, `//| key: value`, at the top of the block.
 
-## An interaction worth knowing
-
-::: {.callout-caution}
-This site does not run the `code-window` filter, unlike the others in this family.
-
-`code-window` claims ```` ```{typst} ```` blocks at `pre-quarto` and rewrites them into decorated code blocks, so `typst-render` never sees them and no figure is produced.
-Running both, the blocks come out as ordinary listings with `{typst}` as their filename.
-:::
-
 ## Source
 
 The repository ships a short, standalone starting point you can copy: [`example.qmd`](https://github.com/mcanouil/quarto-typst-render/blob/main/example.qmd).
