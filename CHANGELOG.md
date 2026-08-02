@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+### Breaking Changes
+
+- feat: `output-directory` now defaults to `./assets/typst-render`, resolved relative to the document, instead of being unset.
+  Compiled images are written into the project rather than kept only in the render cache under `.quarto/`, which a website does not copy to its output directory and therefore cannot serve once deployed.
+  Set `output-directory: ""` to restore the previous behaviour.
+- fix: images named from a label or a block counter are written to a subdirectory of `output-directory` named after the document.
+  Two documents in one directory both produced `typst-block-1`, so whichever rendered last overwrote the other's image and one of the pages showed the wrong figure.
+  An explicit `output-filename` is unaffected.
+
+### New Features
+
+- feat: inline `{typst}` expressions honour `output-directory` and `output-source`, writing `typst-inline-<N>` files alongside the images compiled from blocks.
+
 ## 0.20.1 (2026-08-01)
 
 ### Documentation

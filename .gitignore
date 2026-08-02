@@ -6,6 +6,7 @@
 *.docx
 *.pptx
 *_files/
+**/assets/typst-render/
 .DS_Store
 
 **/*.quarto_ipynb

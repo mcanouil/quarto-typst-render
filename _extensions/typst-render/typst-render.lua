@@ -44,7 +44,7 @@ local DEFAULTS = {
   cache = true,
   ['cache-refresh'] = false,
   file = nil,
-  ['output-directory'] = nil,
+  ['output-directory'] = './assets/typst-render',
   ['output-filename'] = nil,
   ['output-source'] = false,
   input = nil,
@@ -933,7 +933,8 @@ end
 local function resolve_output_path(global_dir, block_dir, block_filename, label, counter_name, img_format)
   -- Determine the filename
   local filename = block_filename
-  if not filename or filename == '' then
+  local auto_named = not filename or filename == ''
+  if auto_named then
     -- Auto-generate from label or counter
     local stem = (type(label) == 'string' and label ~= '') and label or counter_name
     filename = stem .. '.' .. img_format
@@ -954,8 +955,13 @@ local function resolve_output_path(global_dir, block_dir, block_filename, label,
     return nil
   end
 
-  -- Join directory and filename
-  local joined = pandoc.path.join({ dir, filename })
+  -- Labels and block counters are unique within a document only, so images
+  -- named from them go in a per-document subdirectory; two documents in the
+  -- same directory would otherwise overwrite each other's images. An explicit
+  -- output-filename is the author's own path and is left alone.
+  local joined = auto_named
+      and pandoc.path.join({ dir, typst_cli.doc_stem(), filename })
+      or pandoc.path.join({ dir, filename })
 
   return resolve_to_absolute(joined)
 end
@@ -2225,7 +2231,25 @@ local function process_inline_code(el)
     return el
   end
 
-  return create_inline_image_element(pages[1], opts)
+  -- Inline expressions carry no label or output-filename, so the image is named
+  -- from the inline counter. A failed copy falls back to the cache path so the
+  -- render still produces an image.
+  local img_path = pages[1]
+  local output_path = resolve_output_path(
+    global_config['output-directory'], opts['output-directory'],
+    nil, nil, inline_id, img_format
+  )
+  if output_path then
+    local out_pages = save_output_files({ img_path }, output_path, nil, img_format)
+    if out_pages then
+      img_path = out_pages[1]
+    end
+    if opts['output-source'] == true then
+      save_source_file(full_source, output_path, nil)
+    end
+  end
+
+  return create_inline_image_element(img_path, opts)
 end
 
 --- Remove stale cache files after all blocks have been processed.
