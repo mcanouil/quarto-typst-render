@@ -66,15 +66,13 @@ local DEFAULTS = {
 --- Keys consumed by the filter; any other option is forwarded as an HTML attribute.
 --- NOTE: pairs(DEFAULTS) skips nil-valued keys, so all keys with nil defaults
 --- must be listed explicitly here to prevent them leaking as HTML attributes.
+--- Keys the filter sets on itself are not listed: `is_known_key` claims every
+--- name starting with an underscore.
 local KNOWN_KEYS = {
   cap = true,
   alt = true,
   ['code-summary'] = true,
   ['code-line-numbers'] = true,
-  _block_input = true,
-  _inline = true,
-  _alt = true,
-  _source = true,
   root = true,
   ['font-path'] = true,
   ['package-path'] = true,
@@ -97,10 +95,17 @@ for k in pairs(DEFAULTS) do
 end
 
 --- Check whether a key is consumed by the filter (not forwarded as an attribute).
---- Matches exact known keys and prefix-specific cross-ref keys (e.g. fig-cap, tbl-alt).
+--- Matches keys the filter sets on itself (leading underscore), exact known keys,
+--- and prefix-specific cross-ref keys (e.g. fig-cap, tbl-alt).
+--- The underscore rule is what `serialise_opts` uses to keep internal keys out of
+--- the cache key, so one convention covers both and a new internal key is safe by
+--- its name alone.
 --- @param key string
 --- @return boolean
 local function is_known_key(key)
+  if key:sub(1, 1) == '_' then
+    return true
+  end
   if KNOWN_KEYS[key] then
     return true
   end
@@ -274,8 +279,8 @@ end
 --- Cached brand module (nil = not yet attempted, false = unavailable)
 local brand_module = nil
 
---- Memoised `_typst_render_brand` literals, keyed by brand mode.
-local brand_literal_cache = {}
+--- Memoised `_typst_render_brand` let-bindings, keyed by brand mode.
+local brand_binding_cache = {}
 
 --- Load the Quarto brand module if available.
 --- @return table|nil The brand module, or nil if unavailable
@@ -330,54 +335,41 @@ local BRAND_COLOUR_ROLES = {
 --- already has it, and brand sizes are relative units with no pt equivalent.
 local BRAND_TYPOGRAPHY_ENTRIES = { 'base', 'headings' }
 
---- Normalise a CSS colour to a brand.yml hex string.
+--- Keep a brand colour when it is a CSS hex string, the form a brand.yml reader
+--- expects.
 --- The brand dictionary carries brand.yml *values*, not Typst expressions, so a
 --- consumer reads them the same way it reads the file itself. Such a consumer
---- takes hex only, and would read a CSS keyword as a palette entry name.
---- @param css string CSS colour string from the brand module
---- @return string|nil "#rgb", "#rgba", "#rrggbb", or "#rrggbbaa", else nil
+--- takes hex only, and would read any other notation as a palette entry name.
+--- @param css string Colour string from the brand module
+--- @return string|nil The value unchanged when it is hex, else nil
 local function brand_colour_to_hex(css)
-  if type(css) ~= 'string' then return nil end
   local digits = css:match('^#(%x+)$')
-  if digits then
-    local count = #digits
-    if count == 3 or count == 4 or count == 6 or count == 8 then return css end
-    return nil
-  end
-  local args = css:match('^rgba?%((.+)%)$')
-  if not args then return nil end
-  local components = {}
-  for part in args:gmatch('[^,%s/]+') do components[#components + 1] = part end
-  if #components < 3 then return nil end
-  local out = { '#' }
-  for index = 1, 3 do
-    local percent = components[index]:match('^(%d+%.?%d*)%%$')
-    local value = percent and (tonumber(percent) * 255 / 100) or tonumber(components[index])
-    if not value then return nil end
-    value = math.min(math.max(value, 0), 255)
-    out[#out + 1] = string.format('%02X', math.floor(value + 0.5))
-  end
-  return table.concat(out)
+  if not digits then return nil end
+  local count = #digits
+  -- Valid CSS hex colours are exactly 3, 4, 6, or 8 digits.
+  if count == 3 or count == 4 or count == 6 or count == 8 then return css end
+  return nil
 end
 
 --- Build the brand dictionary for one mode, in brand.yml shape.
 --- Quarto's brand module has already followed palette aliases and light/dark
 --- variants, so a downstream resolver has nothing left to do.
+--- Returns an empty table when the document has no brand, so a caller has one
+--- shape to handle rather than two.
 --- @param mode string "light" or "dark"
---- @return table|nil Table with `color` and `typography` keys, or nil when empty
+--- @return table Table with `color` and `typography` keys, empty without a brand
 local function build_brand_dict(mode)
+  local dict = {}
   local brand = get_brand_module()
-  if not brand or not brand.get_color_css then return nil end
+  if not brand or not brand.get_color_css then return dict end
 
+  -- A brand that carries one mode answers for that mode whichever side is
+  -- asked for. When it carries neither, every lookup below returns nil and the
+  -- dictionary comes out empty, which is the wanted result.
   local resolved_mode = mode
-  if brand.has_mode then
-    local ok, present = pcall(brand.has_mode, mode)
-    if ok and not present then
-      local other = mode == 'light' and 'dark' or 'light'
-      local ok_other, present_other = pcall(brand.has_mode, other)
-      if not (ok_other and present_other) then return nil end
-      resolved_mode = other
-    end
+  local ok_mode, present = pcall(brand.has_mode, mode)
+  if ok_mode and not present then
+    resolved_mode = mode == 'light' and 'dark' or 'light'
   end
 
   local colours = {}
@@ -390,43 +382,37 @@ local function build_brand_dict(mode)
       else
         log.log_warning(
           EXTENSION_NAME,
-          'Brand colour "' .. role .. '" is "' .. css .. '", which is not a hex value; '
-          .. 'omitting it from _typst_render_brand.'
+          'The brand dictionary carries hex colours only, so the "' .. role
+          .. '" role, written as "' .. css .. '", is left out of _typst_render_brand.'
         )
       end
     end
   end
 
   local typography = {}
-  if brand.get_typography then
-    for _, name in ipairs(BRAND_TYPOGRAPHY_ENTRIES) do
-      local ok, font = pcall(brand.get_typography, resolved_mode, name)
-      if ok and font then
-        local family = type(font) == 'table' and font.family or font
-        if type(family) == 'string' and family ~= '' then
-          typography[name] = { family = family }
-        end
-      end
+  for _, name in ipairs(BRAND_TYPOGRAPHY_ENTRIES) do
+    local ok, font = pcall(brand.get_typography, resolved_mode, name)
+    if ok and type(font) == 'table' and type(font.family) == 'string' and font.family ~= '' then
+      typography[name] = { family = font.family }
     end
   end
 
-  local dict = {}
   if next(colours) ~= nil then dict.color = colours end
   if next(typography) ~= nil then dict.typography = typography end
-  if next(dict) == nil then return nil end
   return dict
 end
 
---- Return the `_typst_render_brand` Typst literal for a mode, memoised per render.
+--- Return the `_typst_render_brand` let-binding for a mode, memoised per render.
+--- The whole line is cached rather than the dictionary alone: it is byte-identical
+--- for every block, and the caller runs once per block and inline expression.
 --- @param mode string "light" or "dark"
---- @return string Typst dictionary literal, `(:)` when the document has no brand
-local function brand_literal(mode)
-  local cached = brand_literal_cache[mode]
+--- @return string Typst let-binding, holding `(:)` without a brand
+local function brand_binding(mode)
+  local cached = brand_binding_cache[mode]
   if cached then return cached end
-  local dict = build_brand_dict(mode)
-  local literal = dict and to_typst_literal(dict) or '(:)'
-  brand_literal_cache[mode] = literal
-  return literal
+  local binding = '#let _typst_render_brand = ' .. to_typst_literal(build_brand_dict(mode))
+  brand_binding_cache[mode] = binding
+  return binding
 end
 
 --- Resolve a colour option to a config value preserving both modes when available.
@@ -869,23 +855,22 @@ local function typst_colour_to_hex(typst_expr)
   return typst_expr:match('^rgb%("(#[%x]+)"%)$')
 end
 
---- Prepend Typst let-bindings for the render background/foreground variables and
---- the document brand dictionary.
+--- Prepend the Typst let-bindings every block and inline expression receives:
+--- the render background and foreground, and the document brand dictionary.
 --- These make document colours and brand data available to library code under
---- predictable names. The brand dictionary is always bound, empty when the
---- document has no brand, so consuming code compiles either way.
+--- predictable names. All three are always bound, so consuming code compiles
+--- whether or not the document sets colours or carries a brand.
 --- @param parts table String parts list to append to
 --- @param opts table Options containing background, optional foreground, and
 ---   optionally `_brand_mode` when compiling one side of a light/dark pair
-local function inject_colour_vars(parts, opts)
+local function inject_render_bindings(parts, opts)
   parts[#parts + 1] = '#let _typst_render_background = ' .. opts.background
   if opts.foreground then
     parts[#parts + 1] = '#let _typst_render_foreground = ' .. opts.foreground
   else
     parts[#parts + 1] = '#let _typst_render_foreground = none'
   end
-  parts[#parts + 1] = '#let _typst_render_brand = '
-      .. brand_literal(opts._brand_mode or global_brand_mode)
+  parts[#parts + 1] = brand_binding(opts._brand_mode or global_brand_mode)
 end
 
 --- Build the `#set page(...)` directive from options (for image compilation).
@@ -916,7 +901,7 @@ end
 --- @return string Complete Typst source
 local function build_typst_source(code, opts, include_page)
   local parts = {}
-  inject_colour_vars(parts, opts)
+  inject_render_bindings(parts, opts)
   local define_preamble = build_define_preamble()
   if define_preamble then
     parts[#parts + 1] = define_preamble
@@ -936,27 +921,13 @@ local function build_typst_source(code, opts, include_page)
 end
 
 --- Build the inner Typst source for `output: asis` pass-through.
---- Unlike build_typst_source there is no `#set page(...)`: the code is emitted
---- into the document Typst is already laying out, so it inherits the page.
+--- There is no `#set page(...)`: the code is emitted into the document Typst is
+--- already laying out, so it inherits the page.
 --- @param code string User Typst code
 --- @param opts table Merged options (colours must be plain strings)
 --- @return string Typst source to place inside a `#[ ... ]` scope
 local function build_asis_inner(code, opts)
-  local parts = {}
-  inject_colour_vars(parts, opts)
-  local define_preamble = build_define_preamble()
-  if define_preamble then
-    parts[#parts + 1] = define_preamble
-  end
-  if opts.foreground then
-    parts[#parts + 1] = '#set text(fill: ' .. opts.foreground .. ')'
-  end
-  local preamble = resolve_preamble(opts.preamble)
-  if preamble then
-    parts[#parts + 1] = preamble
-  end
-  parts[#parts + 1] = code
-  return table.concat(parts, '\n')
+  return build_typst_source(code, opts, false)
 end
 
 --- Build a human-readable cache file stem from label or block number and a
@@ -1370,7 +1341,7 @@ local function compile_typst(source, opts, img_format)
   -- Expose document colours to library theme functions via sys.inputs.
   -- Only hex colours (rgb("#RRGGBB")) can be round-tripped through a CLI flag;
   -- other expressions (oklch, named colours) are available via the #let bindings
-  -- injected by inject_colour_vars and do not need a separate --input flag.
+  -- injected by inject_render_bindings and do not need a separate --input flag.
   local fg_hex = typst_colour_to_hex(opts.foreground)
   local bg_hex = typst_colour_to_hex(opts.background)
   if fg_hex then
@@ -1746,8 +1717,8 @@ local function get_configuration(meta)
   register_custom_crossref_types(meta)
   read_file_cache = {}
   -- Quarto reuses the Lua state across documents in a project render, so a brand
-  -- literal built for one document must not leak into the next.
-  brand_literal_cache = {}
+  -- binding built for one document must not leak into the next.
+  brand_binding_cache = {}
   -- Quarto may reuse the Lua state across documents; re-inject the Typst head
   -- CSS for each document that produces native HTML output.
   typst_cli.reset_head_injection()
