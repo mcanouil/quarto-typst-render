@@ -109,6 +109,49 @@ Every other writer compiles an image, as it does for a block.
 
 When `background` or `foreground` carries both a `light` and a `dark` value, an expression in HTML output is compiled twice and both images are emitted, marked with Quarto's `light-content` and `dark-content` so the page shows the one matching its mode.
 
+## Brand data
+
+Three bindings are placed ahead of every block and every inline expression, so library code can read them under known names.
+
+| Binding | Value |
+| --- | --- |
+| `_typst_render_background` | The resolved `background`, as a Typst colour. `none` when unset. |
+| `_typst_render_foreground` | The resolved `foreground`, as a Typst colour. `none` when unset. |
+| `_typst_render_brand` | The document brand, as a dictionary in `_brand.yml` shape. |
+
+: Bindings available inside a `{typst}` block. {.striped .hover tbl-colwidths="[34,66]"}
+
+`_typst_render_brand` always holds a `color` key and a `typography` key, each empty when the brand says nothing under it:
+
+```typ
+#let _typst_render_brand = (
+  "color": ("background": "#FFFAF0", "foreground": "#1A1A1A", "primary": "#E94C3D"),
+  "typography": ("base": ("family": "Inter"), "headings": ("family": "Inter")),
+)
+```
+
+Under `color` are the nine semantic roles that a chart can act on: `foreground`, `background`, `primary`, `secondary`, `tertiary`, `success`, `info`, `warning`, and `danger`.
+Quarto resolves palette aliases first, and every value is carried as written in the brand file.
+Only hex values reach the dictionary, because hex is what a `_brand.yml` reader expects.
+A role written in any other notation, such as `red` or `oklch(...)`, is left out with a warning naming it.
+Under `typography` are the `base` and `headings` families.
+Sizes and weights are left out, because Typst can use a font family only when the compiler already has it.
+
+The dictionary follows the document `brand-mode`, so a dark document gets the dark values.
+It is not itself a reason to compile twice: `background: auto` or `foreground: auto` is what produces a light and dark pair, and the dictionary then matches the side being compiled.
+A role or a family written for one mode only is carried into both, so a brand that gives `secondary` a light value and no dark value keeps that value in dark mode.
+
+`background: auto` reads the same brand role as `_typst_render_brand.color.background`, in a different form: a Typst colour ready for `fill:`, rather than the `_brand.yml` string.
+
+A block with no brand still compiles, because the two keys are bound empty:
+
+```typ
+#let _typst_render_brand = ("color": (:), "typography": (:))
+```
+
+A role is a different matter: read one that the brand does not define and Typst stops.
+Use `.at(name, default: ...)` for a role the brand may leave out.
+
 ## Interactions
 
 ::: {.callout-caution}
