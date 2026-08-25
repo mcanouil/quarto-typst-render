@@ -1,5 +1,5 @@
 --- Code Cell - Generic code-cell processing for Quarto Lua extensions
---- @module code-cell
+--- @module "code-cell"
 --- @license MIT
 --- @copyright 2026 Mickaël Canouil
 --- @author Mickaël Canouil
