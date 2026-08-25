@@ -139,6 +139,7 @@ Sizes and weights are left out, because Typst can use a font family only when th
 
 The dictionary follows the document `brand-mode`, so a dark document gets the dark values.
 It is not itself a reason to compile twice: `background: auto` or `foreground: auto` is what produces a light and dark pair, and the dictionary then matches the side being compiled.
+A role or a family written for one mode only is carried into both, so a brand that gives `secondary` a light value and no dark value keeps that value in dark mode.
 
 `background: auto` reads the same brand role as `_typst_render_brand.color.background`, in a different form: a Typst colour ready for `fill:`, rather than the `_brand.yml` string.
 

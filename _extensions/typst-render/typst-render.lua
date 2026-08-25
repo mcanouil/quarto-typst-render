@@ -282,6 +282,10 @@ local brand_module = nil
 --- Memoised `_typst_render_brand` let-bindings, keyed by brand mode.
 local brand_binding_cache = {}
 
+--- Colour roles already reported as non-hex, so the warning is emitted once per
+--- document rather than once per brand mode.
+local brand_warned_roles = {}
+
 --- Load the Quarto brand module if available.
 --- @return table|nil The brand module, or nil if unavailable
 local function get_brand_module()
@@ -358,28 +362,50 @@ end
 --- shape to handle rather than two.
 --- @param mode string "light" or "dark"
 --- @return table Table with `color` and `typography` keys, empty without a brand
+--- Read one brand entry, falling back to the opposite mode when the wanted mode
+--- does not define it.
+--- The fallback is per entry, not per brand: Quarto marks a brand as carrying a
+--- dark mode as soon as any one role declares a dark value, so a role written
+--- for light only would otherwise vanish in dark mode. `background: auto` falls
+--- back the same way, and the two must agree.
+--- @param accessor function Brand module accessor taking (mode, name)
+--- @param mode string "light" or "dark"
+--- @param name string Colour role or typography entry name
+--- @param kind string Word for the log message, "colour" or "typography entry"
+--- @return any|nil The entry, or nil when neither mode defines it
+local function brand_lookup(accessor, mode, name, kind)
+  local other = mode == 'light' and 'dark' or 'light'
+  for _, side in ipairs({ mode, other }) do
+    local ok, value = pcall(accessor, side, name)
+    if not ok then
+      log.log_debug(
+        EXTENSION_NAME,
+        'Brand ' .. kind .. ' "' .. name .. '" could not be read for ' .. side
+        .. ' mode: ' .. tostring(value)
+      )
+    elseif value ~= nil and value ~= '' then
+      return value
+    end
+  end
+  return nil
+end
+
 local function build_brand_dict(mode)
   local dict = {}
   local brand = get_brand_module()
   if not brand or not brand.get_color_css then return dict end
 
-  -- A brand that carries one mode answers for that mode whichever side is
-  -- asked for. When it carries neither, every lookup below returns nil and the
-  -- dictionary comes out empty, which is the wanted result.
-  local resolved_mode = mode
-  local ok_mode, present = pcall(brand.has_mode, mode)
-  if ok_mode and not present then
-    resolved_mode = mode == 'light' and 'dark' or 'light'
-  end
-
   local colours = {}
   for _, role in ipairs(BRAND_COLOUR_ROLES) do
-    local ok, css = pcall(brand.get_color_css, resolved_mode, role)
-    if ok and type(css) == 'string' and css ~= '' then
+    local css = brand_lookup(brand.get_color_css, mode, role, 'colour')
+    if type(css) == 'string' then
       local hex = brand_colour_to_hex(css)
       if hex then
         colours[role] = hex
-      else
+      elseif not brand_warned_roles[role] then
+        -- Once per document: the dictionary is built once per mode, and the
+        -- brand file is the same on both sides.
+        brand_warned_roles[role] = true
         log.log_warning(
           EXTENSION_NAME,
           'The brand dictionary carries hex colours only, so the "' .. role
@@ -391,8 +417,8 @@ local function build_brand_dict(mode)
 
   local typography = {}
   for _, name in ipairs(BRAND_TYPOGRAPHY_ENTRIES) do
-    local ok, font = pcall(brand.get_typography, resolved_mode, name)
-    if ok and type(font) == 'table' and type(font.family) == 'string' and font.family ~= '' then
+    local font = brand_lookup(brand.get_typography, mode, name, 'typography entry')
+    if type(font) == 'table' and type(font.family) == 'string' and font.family ~= '' then
       typography[name] = { family = font.family }
     end
   end
@@ -1719,6 +1745,7 @@ local function get_configuration(meta)
   -- Quarto reuses the Lua state across documents in a project render, so a brand
   -- binding built for one document must not leak into the next.
   brand_binding_cache = {}
+  brand_warned_roles = {}
   -- Quarto may reuse the Lua state across documents; re-inject the Typst head
   -- CSS for each document that produces native HTML output.
   typst_cli.reset_head_injection()
