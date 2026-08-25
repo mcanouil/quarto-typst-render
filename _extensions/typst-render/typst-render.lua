@@ -282,9 +282,8 @@ local brand_module = nil
 --- Memoised `_typst_render_brand` let-bindings, keyed by brand mode.
 local brand_binding_cache = {}
 
---- Colour roles already reported as non-hex, so the warning is emitted once per
---- document rather than once per brand mode.
-local brand_warned_roles = {}
+--- Whether the non-hex colour omission has been reported for this document.
+local brand_omission_warned = false
 
 --- Load the Quarto brand module if available.
 --- @return table|nil The brand module, or nil if unavailable
@@ -355,26 +354,32 @@ local function brand_colour_to_hex(css)
   return nil
 end
 
---- Build the brand dictionary for one mode, in brand.yml shape.
---- Quarto's brand module has already followed palette aliases and light/dark
---- variants, so a downstream resolver has nothing left to do.
---- Returns an empty table when the document has no brand, so a caller has one
---- shape to handle rather than two.
---- @param mode string "light" or "dark"
---- @return table Table with `color` and `typography` keys, empty without a brand
---- Read one brand entry, falling back to the opposite mode when the wanted mode
---- does not define it.
---- The fallback is per entry, not per brand: Quarto marks a brand as carrying a
---- dark mode as soon as any one role declares a dark value, so a role written
---- for light only would otherwise vanish in dark mode. `background: auto` falls
---- back the same way, and the two must agree.
+--- Keep a brand typography entry when it names a font family.
+--- @param font any Value from the brand module
+--- @return string|nil The family name, or nil when the entry names none
+local function brand_font_family(font)
+  if type(font) ~= 'table' then return nil end
+  if type(font.family) ~= 'string' or font.family == '' then return nil end
+  return font.family
+end
+
+--- Read one brand entry, scanning the wanted mode first and then the other.
+--- The scan is per entry, not per brand: Quarto marks a brand as carrying a dark
+--- mode as soon as any one role declares a dark value, so a role written for
+--- light only would otherwise vanish in dark mode. `background: auto` falls back
+--- the same way, and the two must agree. A mode that holds the entry in a form
+--- the dictionary cannot carry does not stop the scan either, so one unusable
+--- side never hides a usable one.
 --- @param accessor function Brand module accessor taking (mode, name)
 --- @param mode string "light" or "dark"
 --- @param name string Colour role or typography entry name
 --- @param kind string Word for the log message, "colour" or "typography entry"
---- @return any|nil The entry, or nil when neither mode defines it
-local function brand_lookup(accessor, mode, name, kind)
+--- @param keep function Maps a raw value to the value to carry, or nil to reject
+--- @return any|nil The kept value, or nil when neither mode offers one
+--- @return any|nil The first rejected value, for reporting
+local function brand_lookup(accessor, mode, name, kind, keep)
   local other = mode == 'light' and 'dark' or 'light'
+  local rejected = nil
   for _, side in ipairs({ mode, other }) do
     local ok, value = pcall(accessor, side, name)
     if not ok then
@@ -384,47 +389,57 @@ local function brand_lookup(accessor, mode, name, kind)
         .. ' mode: ' .. tostring(value)
       )
     elseif value ~= nil and value ~= '' then
-      return value
+      local kept = keep(value)
+      if kept ~= nil then return kept end
+      rejected = rejected or value
     end
   end
-  return nil
+  return nil, rejected
 end
 
+--- Build the brand dictionary for one mode, in brand.yml shape.
+--- Quarto's brand module has already followed palette aliases and light/dark
+--- variants, so a downstream resolver has nothing left to do.
+--- `color` and `typography` are always present, empty when the brand says
+--- nothing under them, so consuming code has one shape to read.
+--- @param mode string "light" or "dark"
+--- @return table Table with `color` and `typography` keys
 local function build_brand_dict(mode)
-  local dict = {}
+  local colours = {}
+  local typography = {}
+  local dict = { color = colours, typography = typography }
   local brand = get_brand_module()
   if not brand or not brand.get_color_css then return dict end
 
-  local colours = {}
+  local omitted = {}
   for _, role in ipairs(BRAND_COLOUR_ROLES) do
-    local css = brand_lookup(brand.get_color_css, mode, role, 'colour')
-    if type(css) == 'string' then
-      local hex = brand_colour_to_hex(css)
-      if hex then
-        colours[role] = hex
-      elseif not brand_warned_roles[role] then
-        -- Once per document: the dictionary is built once per mode, and the
-        -- brand file is the same on both sides.
-        brand_warned_roles[role] = true
-        log.log_warning(
-          EXTENSION_NAME,
-          'The brand dictionary carries hex colours only, so the "' .. role
-          .. '" role, written as "' .. css .. '", is left out of _typst_render_brand.'
-        )
-      end
+    local hex, rejected = brand_lookup(brand.get_color_css, mode, role, 'colour', brand_colour_to_hex)
+    if hex then
+      colours[role] = hex
+    elseif rejected then
+      omitted[#omitted + 1] = role
     end
   end
 
-  local typography = {}
+  -- One line per document rather than one per role per mode: the brand file is
+  -- the same on both sides, and a brand written in another notation would
+  -- otherwise report every role it defines, twice.
+  if #omitted > 0 and not brand_omission_warned then
+    brand_omission_warned = true
+    log.log_warning(
+      EXTENSION_NAME,
+      '_typst_render_brand carries hex colours only, so these roles are left out of it: '
+      .. table.concat(omitted, ', ') .. '. Colour options such as `background: auto` are unaffected.'
+    )
+  end
+
   for _, name in ipairs(BRAND_TYPOGRAPHY_ENTRIES) do
-    local font = brand_lookup(brand.get_typography, mode, name, 'typography entry')
-    if type(font) == 'table' and type(font.family) == 'string' and font.family ~= '' then
-      typography[name] = { family = font.family }
+    local family = brand_lookup(brand.get_typography, mode, name, 'typography entry', brand_font_family)
+    if family then
+      typography[name] = { family = family }
     end
   end
 
-  if next(colours) ~= nil then dict.color = colours end
-  if next(typography) ~= nil then dict.typography = typography end
   return dict
 end
 
@@ -1745,7 +1760,7 @@ local function get_configuration(meta)
   -- Quarto reuses the Lua state across documents in a project render, so a brand
   -- binding built for one document must not leak into the next.
   brand_binding_cache = {}
-  brand_warned_roles = {}
+  brand_omission_warned = false
   -- Quarto may reuse the Lua state across documents; re-inject the Typst head
   -- CSS for each document that produces native HTML output.
   typst_cli.reset_head_injection()

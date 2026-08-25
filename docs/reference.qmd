@@ -121,7 +121,7 @@ Three bindings are placed ahead of every block and every inline expression, so l
 
 : Bindings available inside a `{typst}` block. {.striped .hover tbl-colwidths="[34,66]"}
 
-`_typst_render_brand` holds `color` and `typography` keys:
+`_typst_render_brand` always holds a `color` key and a `typography` key, each empty when the brand says nothing under it:
 
 ```typ
 #let _typst_render_brand = (
@@ -143,11 +143,14 @@ A role or a family written for one mode only is carried into both, so a brand th
 
 `background: auto` reads the same brand role as `_typst_render_brand.color.background`, in a different form: a Typst colour ready for `fill:`, rather than the `_brand.yml` string.
 
-A block with no brand still compiles, because an empty dictionary is bound:
+A block with no brand still compiles, because the two keys are bound empty:
 
 ```typ
-#let _typst_render_brand = (:)
+#let _typst_render_brand = ("color": (:), "typography": (:))
 ```
+
+A role is a different matter: read one that the brand does not define and Typst stops.
+Use `.at(name, default: ...)` for a role the brand may leave out.
 
 ## Interactions
 

@@ -478,7 +478,7 @@ This document has no `_brand.yml`, so the dictionary is empty and the block belo
 ```{typst}
 //| echo: fenced
 #let roles = ("primary", "secondary", "tertiary", "success", "info", "warning", "danger")
-#let colours = _typst_render_brand.at("color", default: (:))
+#let colours = _typst_render_brand.color
 #let swatches = roles.filter(role => role in colours)
 #if swatches.len() == 0 [
   #text(size: 14pt)[No brand]

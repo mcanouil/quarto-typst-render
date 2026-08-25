@@ -87,7 +87,7 @@ This page uses the pastel brand shared by these documentation sites.
 //| echo: true
 //| background: auto
 #let roles = ("primary", "secondary", "tertiary", "success", "info", "warning", "danger")
-#let colours = _typst_render_brand.at("color", default: (:))
+#let colours = _typst_render_brand.color
 #stack(
   dir: ltr,
   spacing: 4pt,
