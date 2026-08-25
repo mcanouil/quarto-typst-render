@@ -76,6 +76,47 @@ Inline Typst is not available in PowerPoint, since Pandoc cannot put an image in
 Blocks work normally.
 :::
 
+## Brand colours
+
+The document brand is bound as `_typst_render_brand`, a dictionary in `_brand.yml` shape, so a figure can draw itself in the colours of the site around it.
+This page uses the pastel brand shared by these documentation sites.
+
+`background: auto` compiles the block once per colour scheme, and the dictionary matches the side being compiled, so the swatches below change with the theme of the page.
+
+```{typst}
+//| echo: true
+//| background: auto
+#let roles = ("primary", "secondary", "tertiary", "success", "info", "warning", "danger")
+#let colours = _typst_render_brand.at("color", default: (:))
+#stack(
+  dir: ltr,
+  spacing: 4pt,
+  ..roles
+    .filter(role => role in colours)
+    .map(role => rect(width: 1.4cm, height: 1.4cm, radius: 3pt, fill: rgb(colours.at(role)))),
+)
+```
+
+A plotting package that reads `_brand.yml` takes the dictionary directly.
+[Gribouille](https://github.com/mcanouil/gribouille) is one, from version 0.7.0:
+
+````markdown
+```{typst}
+#import "@preview/gribouille:0.7.0": *
+
+#plot(
+  data: (x: (1, 2, 3, 4), y: (2, 4, 3, 5), g: ("a", "b", "a", "b")),
+  mapping: aes(x: "x", y: "y", colour: "g"),
+  layers: (geom-point(size: 5pt),),
+  theme: theme-brand(_typst_render_brand),
+  width: 8cm,
+  height: 5cm,
+)
+```
+````
+
+The reference page lists [every binding and every brand role](reference.qmd#brand-data) that reaches a block.
+
 ## Showing the source
 
 `echo` puts the Typst beside its output, and `code-fold` tucks it away:

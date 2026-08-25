@@ -109,6 +109,45 @@ Every other writer compiles an image, as it does for a block.
 
 When `background` or `foreground` carries both a `light` and a `dark` value, an expression in HTML output is compiled twice and both images are emitted, marked with Quarto's `light-content` and `dark-content` so the page shows the one matching its mode.
 
+## Brand data
+
+Three bindings are placed ahead of every block and every inline expression, so library code can read them under known names.
+
+| Binding | Value |
+| --- | --- |
+| `_typst_render_background` | The resolved `background`, as a Typst colour. `none` when unset. |
+| `_typst_render_foreground` | The resolved `foreground`, as a Typst colour. `none` when unset. |
+| `_typst_render_brand` | The document brand, as a dictionary in `_brand.yml` shape. Empty when the document has no brand. |
+
+: Bindings available inside a `{typst}` block. {.striped .hover tbl-colwidths="[34,66]"}
+
+`_typst_render_brand` holds `color` and `typography` keys:
+
+```typ
+#let _typst_render_brand = (
+  "color": ("background": "#FFFAF0", "foreground": "#1A1A1A", "primary": "#E94C3D"),
+  "typography": ("base": ("family": "Inter"), "headings": ("family": "Inter")),
+)
+```
+
+Under `color` are the nine semantic roles that a chart can act on: `foreground`, `background`, `primary`, `secondary`, `tertiary`, `success`, `info`, `warning`, and `danger`.
+Quarto resolves palette aliases first, so each value is a hex string.
+A role written as a CSS keyword, such as `red`, is left out with a warning, because a hex value is what a `_brand.yml` reader expects.
+Under `typography` are the `base` and `headings` families.
+Sizes and weights are left out, because Typst can use a font family only when the compiler already has it.
+
+The dictionary follows the document `brand-mode`, so a dark document gets the dark values.
+It is not itself a reason to compile twice: `background: auto` or `foreground: auto` is what produces a light and dark pair, and the dictionary then matches the side being compiled.
+
+`background: auto` and `_typst_render_brand.color.background` describe the same colour.
+They differ in form only: the first is a Typst colour, ready for `fill:`, and the second is the `_brand.yml` string.
+
+A block with no brand still compiles, because an empty dictionary is bound:
+
+```typ
+#let _typst_render_brand = (:)
+```
+
 ## Interactions
 
 ::: {.callout-caution}

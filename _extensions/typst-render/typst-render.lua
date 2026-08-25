@@ -274,6 +274,9 @@ end
 --- Cached brand module (nil = not yet attempted, false = unavailable)
 local brand_module = nil
 
+--- Memoised `_typst_render_brand` literals, keyed by brand mode.
+local brand_literal_cache = {}
+
 --- Load the Quarto brand module if available.
 --- @return table|nil The brand module, or nil if unavailable
 local function get_brand_module()
@@ -312,6 +315,118 @@ local function css_colour_to_typst(css_colour)
     return 'rgb("' .. css_colour .. '")'
   end
   return css_colour
+end
+
+--- Semantic brand colour roles carried by `_typst_render_brand`, in brand.yml order.
+--- These are the roles a Typst theme can act on: ink, paper, and the discrete
+--- data palette. Palette entries and logos stay out.
+local BRAND_COLOUR_ROLES = {
+  'foreground', 'background', 'primary', 'secondary', 'tertiary',
+  'success', 'info', 'warning', 'danger',
+}
+
+--- Brand typography entries carried by `_typst_render_brand`.
+--- Only the family survives: Typst can use a font family only when the compiler
+--- already has it, and brand sizes are relative units with no pt equivalent.
+local BRAND_TYPOGRAPHY_ENTRIES = { 'base', 'headings' }
+
+--- Normalise a CSS colour to a brand.yml hex string.
+--- The brand dictionary carries brand.yml *values*, not Typst expressions, so a
+--- consumer reads them the same way it reads the file itself. Such a consumer
+--- takes hex only, and would read a CSS keyword as a palette entry name.
+--- @param css string CSS colour string from the brand module
+--- @return string|nil "#rgb", "#rgba", "#rrggbb", or "#rrggbbaa", else nil
+local function brand_colour_to_hex(css)
+  if type(css) ~= 'string' then return nil end
+  local digits = css:match('^#(%x+)$')
+  if digits then
+    local count = #digits
+    if count == 3 or count == 4 or count == 6 or count == 8 then return css end
+    return nil
+  end
+  local args = css:match('^rgba?%((.+)%)$')
+  if not args then return nil end
+  local components = {}
+  for part in args:gmatch('[^,%s/]+') do components[#components + 1] = part end
+  if #components < 3 then return nil end
+  local out = { '#' }
+  for index = 1, 3 do
+    local percent = components[index]:match('^(%d+%.?%d*)%%$')
+    local value = percent and (tonumber(percent) * 255 / 100) or tonumber(components[index])
+    if not value then return nil end
+    value = math.min(math.max(value, 0), 255)
+    out[#out + 1] = string.format('%02X', math.floor(value + 0.5))
+  end
+  return table.concat(out)
+end
+
+--- Build the brand dictionary for one mode, in brand.yml shape.
+--- Quarto's brand module has already followed palette aliases and light/dark
+--- variants, so a downstream resolver has nothing left to do.
+--- @param mode string "light" or "dark"
+--- @return table|nil Table with `color` and `typography` keys, or nil when empty
+local function build_brand_dict(mode)
+  local brand = get_brand_module()
+  if not brand or not brand.get_color_css then return nil end
+
+  local resolved_mode = mode
+  if brand.has_mode then
+    local ok, present = pcall(brand.has_mode, mode)
+    if ok and not present then
+      local other = mode == 'light' and 'dark' or 'light'
+      local ok_other, present_other = pcall(brand.has_mode, other)
+      if not (ok_other and present_other) then return nil end
+      resolved_mode = other
+    end
+  end
+
+  local colours = {}
+  for _, role in ipairs(BRAND_COLOUR_ROLES) do
+    local ok, css = pcall(brand.get_color_css, resolved_mode, role)
+    if ok and type(css) == 'string' and css ~= '' then
+      local hex = brand_colour_to_hex(css)
+      if hex then
+        colours[role] = hex
+      else
+        log.log_warning(
+          EXTENSION_NAME,
+          'Brand colour "' .. role .. '" is "' .. css .. '", which is not a hex value; '
+          .. 'omitting it from _typst_render_brand.'
+        )
+      end
+    end
+  end
+
+  local typography = {}
+  if brand.get_typography then
+    for _, name in ipairs(BRAND_TYPOGRAPHY_ENTRIES) do
+      local ok, font = pcall(brand.get_typography, resolved_mode, name)
+      if ok and font then
+        local family = type(font) == 'table' and font.family or font
+        if type(family) == 'string' and family ~= '' then
+          typography[name] = { family = family }
+        end
+      end
+    end
+  end
+
+  local dict = {}
+  if next(colours) ~= nil then dict.color = colours end
+  if next(typography) ~= nil then dict.typography = typography end
+  if next(dict) == nil then return nil end
+  return dict
+end
+
+--- Return the `_typst_render_brand` Typst literal for a mode, memoised per render.
+--- @param mode string "light" or "dark"
+--- @return string Typst dictionary literal, `(:)` when the document has no brand
+local function brand_literal(mode)
+  local cached = brand_literal_cache[mode]
+  if cached then return cached end
+  local dict = build_brand_dict(mode)
+  local literal = dict and to_typst_literal(dict) or '(:)'
+  brand_literal_cache[mode] = literal
+  return literal
 end
 
 --- Resolve a colour option to a config value preserving both modes when available.
@@ -728,6 +843,9 @@ end
 
 --- Resolve table-valued colours in opts to strings for a specific mode.
 --- Returns a shallow copy of opts with background/foreground as plain strings.
+--- Records the mode so the brand dictionary is built for the same side of the
+--- pair; paths that never split keep `_brand_mode` unset and fall back to the
+--- document-wide mode.
 --- @param opts table Merged options (may contain table-valued colours)
 --- @param mode string "light" or "dark"
 --- @return table Copy of opts with colours resolved to strings
@@ -738,6 +856,7 @@ local function resolve_opts_colours(opts, mode)
   end
   resolved.background = resolve_colour_value(opts.background, mode) or DEFAULTS.background
   resolved.foreground = resolve_colour_value(opts.foreground, mode)
+  resolved._brand_mode = mode
   return resolved
 end
 
@@ -750,10 +869,14 @@ local function typst_colour_to_hex(typst_expr)
   return typst_expr:match('^rgb%("(#[%x]+)"%)$')
 end
 
---- Prepend Typst let-bindings for the render background/foreground variables.
---- These make document colours available to library code under predictable names.
+--- Prepend Typst let-bindings for the render background/foreground variables and
+--- the document brand dictionary.
+--- These make document colours and brand data available to library code under
+--- predictable names. The brand dictionary is always bound, empty when the
+--- document has no brand, so consuming code compiles either way.
 --- @param parts table String parts list to append to
---- @param opts table Options containing background and optional foreground
+--- @param opts table Options containing background, optional foreground, and
+---   optionally `_brand_mode` when compiling one side of a light/dark pair
 local function inject_colour_vars(parts, opts)
   parts[#parts + 1] = '#let _typst_render_background = ' .. opts.background
   if opts.foreground then
@@ -761,6 +884,8 @@ local function inject_colour_vars(parts, opts)
   else
     parts[#parts + 1] = '#let _typst_render_foreground = none'
   end
+  parts[#parts + 1] = '#let _typst_render_brand = '
+      .. brand_literal(opts._brand_mode or global_brand_mode)
 end
 
 --- Build the `#set page(...)` directive from options (for image compilation).
@@ -1620,6 +1745,9 @@ end
 local function get_configuration(meta)
   register_custom_crossref_types(meta)
   read_file_cache = {}
+  -- Quarto reuses the Lua state across documents in a project render, so a brand
+  -- literal built for one document must not leak into the next.
+  brand_literal_cache = {}
   -- Quarto may reuse the Lua state across documents; re-inject the Typst head
   -- CSS for each document that produces native HTML output.
   typst_cli.reset_head_injection()

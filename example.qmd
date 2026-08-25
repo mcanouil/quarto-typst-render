@@ -466,6 +466,33 @@ Global inputs are set in YAML; per-block inputs override them using comma-separa
 
 :::
 
+## Brand Data
+
+::: {.content-hidden when-format="typst"}
+
+The document brand is bound as `_typst_render_brand`, a dictionary in `_brand.yml` shape.
+Under `color` are `foreground`, `background`, `primary`, `secondary`, `tertiary`, `success`, `info`, `warning`, and `danger`, each a hex string.
+Under `typography` are the `base` and `headings` families.
+This document has no `_brand.yml`, so the dictionary is empty and the block below falls back.
+
+```{typst}
+//| echo: fenced
+#let roles = ("primary", "secondary", "tertiary", "success", "info", "warning", "danger")
+#let colours = _typst_render_brand.at("color", default: (:))
+#let swatches = roles.filter(role => role in colours)
+#if swatches.len() == 0 [
+  #text(size: 14pt)[No brand]
+] else [
+  #stack(
+    dir: ltr,
+    spacing: 4pt,
+    ..swatches.map(role => rect(width: 1cm, height: 1cm, fill: rgb(colours.at(role)))),
+  )
+]
+```
+
+:::
+
 ## Passing Data from R/Python
 
 Use `typst_define()` to push named values from a knitr or jupyter session into every `{typst}` cell.

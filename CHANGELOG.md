@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### New Features
+
+- feat: the document brand is bound inside every block and inline expression as `_typst_render_brand`, a dictionary in `_brand.yml` shape holding the nine semantic colour roles and the `base` and `headings` font families. It follows `brand-mode` and the side being compiled, and is empty when the document has no brand.
+
 ## 0.21.0 (2026-08-02)
 
 ### Breaking Changes
