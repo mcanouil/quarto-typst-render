@@ -12,13 +12,30 @@
 local EXTENSION_NAME = 'typst-render'
 
 --- Load modules
-local str = require(quarto.utils.resolve_path('_modules/string.lua'):gsub('%.lua$', ''))
-local log = require(quarto.utils.resolve_path('_modules/logging.lua'):gsub('%.lua$', ''))
-local paths = require(quarto.utils.resolve_path('_modules/paths.lua'):gsub('%.lua$', ''))
-local meta_mod = require(quarto.utils.resolve_path('_modules/metadata.lua'):gsub('%.lua$', ''))
+local str = require(quarto.utils.resolve_path('_vendor/quarto-lua-modules/string.lua'):gsub('%.lua$', ''))
+local log = require(quarto.utils.resolve_path('_vendor/quarto-lua-modules/logging.lua'):gsub('%.lua$', ''))
+local paths = require(quarto.utils.resolve_path('_vendor/quarto-lua-modules/paths.lua'):gsub('%.lua$', ''))
+local meta_mod = require(quarto.utils.resolve_path('_vendor/quarto-lua-modules/metadata.lua'):gsub('%.lua$', ''))
 local typst_cli = require(quarto.utils.resolve_path('_modules/typst-cli.lua'):gsub('%.lua$', ''))
 local code_cell = require(quarto.utils.resolve_path('_modules/code-cell.lua'):gsub('%.lua$', ''))
+local schema = require(quarto.utils.resolve_path('_vendor/quarto-wizard/schema.lua'):gsub('%.lua$', ''))
+local check = require(quarto.utils.resolve_path('_vendor/quarto-lua-modules/schema-check.lua'):gsub('%.lua$', ''))
 local cell = code_cell.new({ language = '{typst}', comment_prefix = '//|', comment_chars = '//' })
+
+--- The schema check, built once for the render. It reads `_schema.yml` on the
+--- way in and checks the document configuration once. The extension contributes
+--- no shortcode, so there is no call to check.
+---
+--- The validator is injected rather than required by the check module, so the
+--- two vendored sources stay independent of where the other was placed.
+---
+--- The extension contributes two filters, and the check runs from the earlier
+--- one so that a render reads the schema once. Both filters read the same
+--- `extensions.typst-render` namespace, so this one call covers every option.
+---
+--- A schema that cannot be read is reported by the module as an error and the
+--- render carries on: a configuration file must not stop a document.
+local checker = check.new(schema, EXTENSION_NAME)
 
 -- ============================================================================
 -- CONSTANTS
@@ -1779,6 +1796,8 @@ local function get_configuration(meta)
   local code_annotations_meta = meta['code-annotations']
   code_annotations_disabled = code_annotations_meta ~= nil
     and pandoc.utils.stringify(code_annotations_meta) == 'false'
+
+  checker:options(meta)
 
   local ext_config = meta_mod.get_extension_config(meta, EXTENSION_NAME) or meta['typst-render']
 
