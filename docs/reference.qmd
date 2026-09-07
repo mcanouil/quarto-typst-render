@@ -44,11 +44,13 @@ The block then reaches the page as highlighted Typst source, with no figure besi
 
 Register a passthrough engine in a setup chunk, so that knitr hands the block back unchanged:
 
-````r
+````markdown
+```{{r}}
 #| include: false
 knitr::knit_engines$set(typst = function(options) {
   knitr::asis_output(paste0("\n```{typst}\n", paste(options[["code"]], collapse = "\n"), "\n```\n"))
 })
+```
 ````
 
 Per-block options, cross-reference labels, and captions all work after that.
@@ -65,20 +67,24 @@ There is no Julia helper, so this feature covers knitr and jupyter only.
 The R helper needs `rlang` and `jsonlite`.
 Load it in a setup chunk:
 
-```r
+````markdown
+```{{r}}
 #| include: false
 source("_extensions/mcanouil/typst-render/_resources/typst_define.R")
 ```
+````
 
 The Python helper needs `IPython`.
 Load it the same way:
 
-```python
+````markdown
+```{{python}}
 #| include: false
 import sys
 sys.path.insert(0, "_extensions/mcanouil/typst-render/_resources")
 from typst_define import typst_define
 ```
+````
 
 Call it wherever the values are ready:
 
