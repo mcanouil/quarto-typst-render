@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.22.1 (2026-09-07)
+
 ### Documentation
 
 - docs: Record how each Quarto engine treats a `{typst}` block, and give the passthrough engine that `knitr` needs to stop claiming the cell and producing no figure. (#97)
