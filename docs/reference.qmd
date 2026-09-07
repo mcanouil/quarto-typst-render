@@ -47,7 +47,7 @@ Register a passthrough engine in a setup chunk, so that knitr hands the block ba
 ````r
 #| include: false
 knitr::knit_engines$set(typst = function(options) {
-  knitr::asis_output(paste0("\n```{typst}\n", paste(options$code, collapse = "\n"), "\n```\n"))
+  knitr::asis_output(paste0("\n```{typst}\n", paste(options[["code"]], collapse = "\n"), "\n```\n"))
 })
 ````
 
@@ -102,7 +102,8 @@ Scalars, strings, booleans, arrays, and nested objects are carried as written.
 An R, pandas, or polars data frame is carried column-wise, as a dictionary of arrays.
 A numpy array becomes a Typst array.
 
-Keys arrive sorted by name rather than in the order they were written, so read a column by name and never by position.
+Names keep the order of the calls that defined them.
+Inside a carried object or data frame, however, the keys arrive sorted by name, so read a column by name and never by position.
 An R data frame with row names carries them under an added `_row` key.
 
 Each call adds to the values already defined, and a repeated name takes the newer value.
