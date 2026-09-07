@@ -24,9 +24,8 @@ The document engine sees it before the filter does, and not every engine leaves 
 | Engine | What happens | What you do |
 | --- | --- | --- |
 | `markdown` | The block reaches the filter untouched. | Nothing. Best for a document with no executable code, as `example.qmd` and these pages are. |
-| `jupyter` | The block passes through the notebook conversion untouched. | Nothing. |
-| `julia` | The block passes through untouched. | Nothing. |
-| `knitr` | knitr claims the cell and knows no `typst` engine, so no figure is produced. | Register a passthrough engine, as below. |
+| `jupyter`, `julia` | The block passes through untouched. | Nothing. |
+| `knitr` | knitr claims the cell and knows no `typst` engine, so it produces no figure. | Register a passthrough engine, as below. |
 | none | Engine detection selects Jupyter, which then fails for want of a kernel. | Set `engine: markdown`, or name the engine you want. |
 
 : How each engine treats a `{typst}` block. {.striped .hover tbl-colwidths="[14,45,41]"}
@@ -57,7 +56,7 @@ The R helper in [Passing data from R or Python](#passing-data-from-r-or-python) 
 
 ## Passing data from R or Python
 
-`typst_define()` pushes named values from a knitr or jupyter session into every `{typst}` block that follows the call.
+`typst_define()` pushes named values from a knitr or jupyter session into the `{typst}` blocks of the document.
 Each value is read back as `#typst_define.<name>`.
 
 Two helpers ship with the extension, under `_extensions/mcanouil/typst-render/_resources/`.
@@ -84,31 +83,27 @@ from typst_define import typst_define
 Call it wherever the values are ready:
 
 ```r
-typst_define(mtcars = head(mtcars)[, c("mpg", "cyl", "hp")], n = 42L)
+typst_define(n = 42L, d = data.frame(mpg = c(21, 22.8), cyl = c(6L, 4L)))
 ```
 
 The call emits a hidden metadata block, so it adds nothing to the page.
 The chunk source is still echoed under the usual `echo` and `include` options.
 
-The values are then in scope in every block below:
+Read the values by name:
 
 ```typ
-n = #typst_define.n
-
-#let df = typst_define.mtcars
-#let cols = df.keys()
-#table(
-  columns: cols.len(),
-  table.header(..cols.map(c => [*#c*])),
-  ..for i in range(df.at(cols.at(0)).len()) {
-    cols.map(c => [#df.at(c).at(i)])
-  }
-)
+n is #typst_define.n, and the first mpg is #typst_define.d.mpg.at(0).
 ```
 
+Every `{typst}` block of the document reads the same values, wherever it sits.
+The engine runs the whole document before the filter does, so a block above the call sees them as well.
+
 Scalars, strings, booleans, arrays, and nested objects are carried as written.
-An R data frame is carried column-wise, as a dictionary of arrays, and a pandas or polars DataFrame is carried the same way.
+An R, pandas, or polars data frame is carried column-wise, as a dictionary of arrays.
 A numpy array becomes a Typst array.
+
+Keys arrive sorted by name rather than in the order they were written, so read a column by name and never by position.
+An R data frame with row names carries them under an added `_row` key.
 
 Each call adds to the values already defined, and a repeated name takes the newer value.
 The payload travels as hex-encoded JSON, because Pandoc's smart quotes and dashes would otherwise corrupt it.
@@ -254,5 +249,5 @@ Do not run both on the same document.
 ## Limitations
 
 - Inline Typst is not available in PowerPoint: Pandoc cannot put an image inside a run of text there. Blocks work normally.
-- A document with no engine declared falls to Jupyter, which needs a kernel. The `knitr` engine needs a passthrough engine registered. See [Engines](#engines).
+- The document engine decides whether a `{typst}` block reaches the filter at all. See [Engines](#engines).
 - `format: html` needs Typst 0.15 or later, and falls back to SVG below that.
