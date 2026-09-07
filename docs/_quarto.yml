@@ -20,9 +20,15 @@ website:
   title: "Typst Render"
   description: "A Quarto filter that compiles Typst code blocks and inline expressions to images, so Typst figures work in every output format."
   # No trailing slash: Quarto builds the social image URL by concatenating this
-  # with a leading-slash image path, without normalising.
+  # with the image path, without normalising.
   site-url: &site-url https://m.canouil.dev/quarto-typst-render
   repo-url: https://github.com/mcanouil/quarto-typst-render
+  open-graph:
+    image: assets/social/og-image.png
+    image-alt: "The quarto-typst-render social card: the extension name and the \"filter\" badge over the line \"Compile Typst code blocks to images across all output formats\", beside a dark code window showing document.qmd."
+  twitter-card:
+    image: assets/social/og-image.png
+    image-alt: "The quarto-typst-render social card: the extension name and the \"filter\" badge over the line \"Compile Typst code blocks to images across all output formats\", beside a dark code window showing document.qmd."
   # The pages live under docs/, so the "Edit this page" action needs the
   # subdirectory; without it the link points at a path that does not exist.
   repo-subdir: docs
