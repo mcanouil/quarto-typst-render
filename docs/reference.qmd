@@ -44,7 +44,7 @@ The block then reaches the page as highlighted Typst source, with no figure besi
 
 Register a passthrough engine in a setup chunk, so that knitr hands the block back unchanged:
 
-````quarto
+````markdown
 ```{{r}}
 #| include: false
 knitr::knit_engines$set(typst = function(options) {
@@ -67,7 +67,7 @@ There is no Julia helper, so this feature covers knitr and jupyter only.
 The R helper needs `rlang` and `jsonlite`.
 Load it in a setup chunk:
 
-````quarto
+````markdown
 ```{{r}}
 #| include: false
 source("_extensions/mcanouil/typst-render/_resources/typst_define.R")
@@ -77,7 +77,7 @@ source("_extensions/mcanouil/typst-render/_resources/typst_define.R")
 The Python helper needs `IPython`.
 Load it the same way:
 
-````quarto
+````markdown
 ```{{python}}
 #| include: false
 import sys
