@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Documentation
+
+- docs: Record how each Quarto engine treats a `{typst}` block, and give the passthrough engine that `knitr` needs to stop claiming the cell and producing no figure. (#97)
+- docs: Document the `typst_define()` helpers on the reference page: the loader for each language, the value types carried, and the key order they reach Typst in. (#97)
+
 ## 0.22.0 (2026-09-07)
 
 ### New Features
