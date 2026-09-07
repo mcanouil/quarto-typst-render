@@ -16,10 +16,98 @@ Reference it by name, with no `at:` stage.
 It registers itself at the several stages it needs, and pinning it to one breaks cross-referencing and the `math: typst` takeover.
 :::
 
-::: {.callout-caution}
-A ```` ```{typst} ```` block looks like an executable cell to Quarto's engine detection, which then selects Jupyter and fails for want of a kernel.
-Set `engine: markdown` on any document that uses one; the repository's own `example.qmd` does.
-:::
+## Engines
+
+A ```` ```{typst} ```` block looks like an executable cell to Quarto.
+The document engine sees it before the filter does, and not every engine leaves it alone.
+
+| Engine | What happens | What you do |
+| --- | --- | --- |
+| `markdown` | The block reaches the filter untouched. | Nothing. Best for a document with no executable code, as `example.qmd` and these pages are. |
+| `jupyter`, `julia` | The block passes through untouched. | Nothing. |
+| `knitr` | knitr claims the cell and knows no `typst` engine, so it produces no figure. | Register a passthrough engine, as below. |
+| none | Engine detection selects Jupyter, which then fails for want of a kernel. | Set `engine: markdown`, or name the engine you want. |
+
+: How each engine treats a `{typst}` block. {.striped .hover tbl-colwidths="[14,45,41]"}
+
+An inline `` `{typst}` `` expression is ordinary inline code, so every engine leaves it alone.
+
+### knitr
+
+knitr writes this warning:
+
+```text
+Unknown language engine 'typst' (must be registered via knit_engines$set()).
+```
+
+The block then reaches the page as highlighted Typst source, with no figure beside it.
+
+Register a passthrough engine in a setup chunk, so that knitr hands the block back unchanged:
+
+````r
+#| include: false
+knitr::knit_engines$set(typst = function(options) {
+  knitr::asis_output(paste0("\n```{typst}\n", paste(options[["code"]], collapse = "\n"), "\n```\n"))
+})
+````
+
+Per-block options, cross-reference labels, and captions all work after that.
+The R helper in [Passing data from R or Python](#passing-data-from-r-or-python) performs the same registration, so a document that calls `typst_define()` needs nothing more.
+
+## Passing data from R or Python
+
+`typst_define()` pushes named values from a knitr or jupyter session into the `{typst}` blocks of the document.
+Each value is read back as `#typst_define.<name>`.
+
+Two helpers ship with the extension, under `_extensions/mcanouil/typst-render/_resources/`.
+There is no Julia helper, so this feature covers knitr and jupyter only.
+
+The R helper needs `rlang` and `jsonlite`.
+Load it in a setup chunk:
+
+```r
+#| include: false
+source("_extensions/mcanouil/typst-render/_resources/typst_define.R")
+```
+
+The Python helper needs `IPython`.
+Load it the same way:
+
+```python
+#| include: false
+import sys
+sys.path.insert(0, "_extensions/mcanouil/typst-render/_resources")
+from typst_define import typst_define
+```
+
+Call it wherever the values are ready:
+
+```r
+typst_define(n = 42L, d = data.frame(mpg = c(21, 22.8), cyl = c(6L, 4L)))
+```
+
+The call emits a hidden metadata block, so it adds nothing to the page.
+The chunk source is still echoed under the usual `echo` and `include` options.
+
+Read the values by name:
+
+```typ
+n is #typst_define.n, and the first mpg is #typst_define.d.mpg.at(0).
+```
+
+Every `{typst}` block of the document reads the same values, wherever it sits.
+The engine runs the whole document before the filter does, so a block above the call sees them as well.
+
+Scalars, strings, booleans, arrays, and nested objects are carried as written.
+An R, pandas, or polars data frame is carried column-wise, as a dictionary of arrays.
+A numpy array becomes a Typst array.
+
+Names keep the order of the calls that defined them.
+Inside a carried object or data frame, however, the keys arrive sorted by name, so read a column by name and never by position.
+An R data frame with row names carries them under an added `_row` key.
+
+Each call adds to the values already defined, and a repeated name takes the newer value.
+The payload travels as hex-encoded JSON, because Pandoc's smart quotes and dashes would otherwise corrupt it.
 
 ## Global options
 
@@ -162,5 +250,5 @@ Do not run both on the same document.
 ## Limitations
 
 - Inline Typst is not available in PowerPoint: Pandoc cannot put an image inside a run of text there. Blocks work normally.
-- `engine: markdown` is required on documents containing `{typst}` blocks.
+- The document engine decides whether a `{typst}` block reaches the filter at all. See [Engines](#engines).
 - `format: html` needs Typst 0.15 or later, and falls back to SVG below that.
