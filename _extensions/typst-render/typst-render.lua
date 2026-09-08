@@ -1774,12 +1774,14 @@ end
 local function get_configuration(meta)
   register_custom_crossref_types(meta)
   read_file_cache = {}
-  -- Quarto reuses the Lua state across documents in a project render, so a brand
-  -- binding built for one document must not leak into the next.
+  -- Quarto gives each document its own Lua state, so nothing built here reaches
+  -- the next document of a project render and no brand binding can leak into
+  -- it. The resets are kept because they cost nothing and the lifetime is
+  -- Quarto's to change rather than this filter's.
   brand_binding_cache = {}
   brand_omission_warned = false
-  -- Quarto may reuse the Lua state across documents; re-inject the Typst head
-  -- CSS for each document that produces native HTML output.
+  -- Re-inject the Typst head CSS for each document that produces native HTML
+  -- output.
   typst_cli.reset_head_injection()
 
   -- Build per-document cache subdirectory from the input file stem
