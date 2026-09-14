@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### New Features
+
+- feat: Report a key nested inside an option that the schema does not declare, such as a typo in a nested setting. Only top-level keys were checked before. (#104)
+
 ### Documentation
 
 - docs: Serve the extension's social card as the Open Graph image, so a shared link shows the card rather than the first image on the page. (#100)
