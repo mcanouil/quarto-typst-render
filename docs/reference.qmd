@@ -167,7 +167,8 @@ Written as `//| key: value` at the top of a block.
 : Options accepted on a block. {.striped .hover tbl-colwidths="[24,10,66]"}
 
 The two tables are one set of options read at two levels.
-Everything in the first can be set on a block, apart from `math`, `root`, `font-path`, and `package-path`, which are global only.
+Everything in the first can be set on a block, apart from `math`, `root`, `font-path`, `package-path`, and `cache-refresh`, which are global only.
+A `cache-refresh` written on a block is dropped, with a warning.
 Everything in the second can be set globally as a default for every block, apart from `file`, `output-filename`, `label`, `cap`, and `alt`, which belong to a block alone.
 
 A block option is one line, so an option that takes a map, such as a `background` with a `light` and a `dark` value, is written in YAML and never on a block.
