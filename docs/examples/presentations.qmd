@@ -9,7 +9,8 @@ engine: markdown
 ---
 
 A slide deck receives the same compiled figure as any other format.
-Three options apply to Reveal.js alone, so this page shows the source and describes the result.
+Three options matter for a deck, so this page shows the source and describes the result.
+`output-location` works in Reveal.js alone, while `code-line-numbers` and `classes` work in any HTML output.
 
 ::: {.callout-note}
 This page is HTML, not a deck.

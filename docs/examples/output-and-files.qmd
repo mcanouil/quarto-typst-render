@@ -163,6 +163,7 @@ Set `cache: false` on a block that calls `read()`, `json()`, `csv()`, or `image(
 
 Caching is on by default.
 Set `cache-refresh: true` to remove stale files of the current output format after each render.
+That option is global: on a block it is dropped, with a warning.
 
 ## Native Typst output
 
