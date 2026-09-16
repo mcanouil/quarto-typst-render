@@ -1,0 +1,108 @@
+---
+title: "Cross-references"
+subtitle: "Label a block, caption it, and point at it."
+description: "Cross-referencing compiled Typst blocks with label, cap, and alt, for figures, tables, listings, and custom reference types."
+# A ```{typst} block looks like an executable cell to Quarto's engine
+# detection, which then selects Jupyter and fails for want of a kernel. The
+# extension compiles those blocks itself, so the page needs no engine.
+engine: markdown
+---
+
+A compiled block is a Quarto cross-reference target like any other.
+Three options do the work:
+
+- `label` names the block, and its prefix selects the reference type.
+- `cap` is the caption below it.
+- `alt` is the text for a reader who cannot see the image.
+
+## A figure
+
+````markdown
+```{typst}
+//| label: fig-shapes
+//| cap: "A circle and a square, drawn by Typst."
+//| alt: "A blue circle beside an orange square."
+#stack(
+  dir: ltr,
+  spacing: 1em,
+  circle(radius: 1cm, fill: blue.lighten(60%)),
+  rect(width: 2cm, height: 2cm, fill: orange.lighten(60%)),
+)
+```
+
+See @fig-shapes.
+````
+
+```{typst}
+//| label: fig-shapes
+//| cap: "A circle and a square, drawn by Typst."
+//| alt: "A blue circle beside an orange square."
+#stack(
+  dir: ltr,
+  spacing: 1em,
+  circle(radius: 1cm, fill: blue.lighten(60%)),
+  rect(width: 2cm, height: 2cm, fill: orange.lighten(60%)),
+)
+```
+
+See @fig-shapes.
+
+## A table
+
+The prefix of the label decides the type, so a `tbl-` label gives a table, numbered in its own series:
+
+````markdown
+```{typst}
+//| label: tbl-formats
+//| cap: "How each writer receives a block."
+//| alt: "A table of three output formats and how each one receives a block."
+#table(
+  columns: 2,
+  [*Writer*], [*Receives*],
+  [html], [image],
+  [latex], [image],
+  [typst], [native or image],
+)
+```
+
+@tbl-formats lists them.
+````
+
+```{typst}
+//| label: tbl-formats
+//| cap: "How each writer receives a block."
+//| alt: "A table of three output formats and how each one receives a block."
+#table(
+  columns: 2,
+  [*Writer*], [*Receives*],
+  [html], [image],
+  [latex], [image],
+  [typst], [native or image],
+)
+```
+
+@tbl-formats lists them.
+
+## Any reference type
+
+Every Quarto cross-reference prefix works, `fig-`, `tbl-`, `lst-`, and the custom types a document declares.
+The extension reads the prefix from the label and lets Quarto number the rest.
+
+## Prefix-specific captions
+
+`cap` and `alt` apply to any label.
+The prefixed forms, `fig-cap`, `tbl-cap`, `lst-cap`, and their `alt` counterparts, say the same thing for one type:
+
+```yaml
+//| label: fig-example
+//| fig-cap: "A caption for a figure."
+//| fig-alt: "Alternative text for a figure."
+```
+
+A prefixed option takes precedence over the generic one when the label matches its type.
+Write `cap` and `alt` unless a document already uses the prefixed names.
+
+::: {.callout-important}
+Reference the filter by name, with no `at:` stage.
+Pinning it to one stage breaks cross-referencing, because the labels must be in place before Quarto numbers them.
+:::

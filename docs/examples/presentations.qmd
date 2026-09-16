@@ -1,0 +1,87 @@
+---
+title: "Presentations"
+subtitle: "Typst figures on a slide."
+description: "The Reveal.js options: output placement, progressive line highlighting, and sizing a figure to the slide."
+# A ```{typst} block looks like an executable cell to Quarto's engine
+# detection, which then selects Jupyter and fails for want of a kernel. The
+# extension compiles those blocks itself, so the page needs no engine.
+engine: markdown
+---
+
+A slide deck receives the same compiled figure as any other format.
+Three options apply to Reveal.js alone, so this page shows the source and describes the result.
+
+::: {.callout-note}
+This page is HTML, not a deck.
+To see the options at work, render a Reveal.js document, or take `example-render.tar.gz` from the [latest release](https://github.com/mcanouil/quarto-typst-render/releases/latest), which carries the same source rendered to Reveal.js and to Beamer.
+:::
+
+## Placing the output
+
+`output-location` decides where the figure appears when the source is echoed beside it:
+
+| Value | Result |
+| --- | --- |
+| `fragment` | The figure appears on a click, after the source. |
+| `slide` | The figure moves to a slide of its own, which follows the source. |
+| `column` | The source and the figure sit side by side. |
+| `column-fragment` | The same two columns, with the figure revealed on a click. |
+
+: Where a compiled figure lands on a slide. {.striped .hover tbl-colwidths="[26,74]"}
+
+````markdown
+```{typst}
+//| echo: true
+//| output-location: column
+#circle(radius: 1.5cm, fill: blue.lighten(60%))
+```
+````
+
+The option is ignored in every other format.
+
+## Stepping through the source
+
+`code-line-numbers` highlights lines of the echoed source.
+A string steps through them, one step per `|`:
+
+````markdown
+```{typst}
+//| echo: true
+//| code-line-numbers: "1|2-3|4"
+#set text(size: 14pt)
+#let shape(fill) = circle(radius: 1cm, fill: fill)
+#stack(dir: ltr, spacing: 1em, shape(blue), shape(orange))
+#align(center)[Two shapes]
+```
+````
+
+Each step highlights its lines as the speaker advances.
+A range uses `-`, a set uses `,`, and `true` numbers the lines without stepping.
+The option needs `echo: true`.
+
+## Sizing a figure to the slide
+
+`classes` adds CSS classes to the image element, so Reveal.js can size it:
+
+````markdown
+```{typst}
+//| classes: r-stretch
+#circle(radius: 4cm, fill: teal.lighten(60%))
+```
+````
+
+`r-stretch` makes the figure take the free height of the slide.
+Ask for `format: svg` in a deck, so the figure stays sharp on a projector:
+
+```yaml
+format: revealjs
+extensions:
+  typst-render:
+    format: svg
+```
+
+## PowerPoint
+
+Blocks work in PowerPoint as everywhere else.
+An inline expression does not, because Pandoc cannot put an image inside a run of text there.
+Move the expression into a block, or keep it for the other formats.

@@ -1,0 +1,164 @@
+---
+title: "Figures and tables"
+subtitle: "The options that shape a compiled block."
+description: "Typst figures and tables compiled to images, with the size, format, alignment, and source-display options that shape them."
+# A ```{typst} block looks like an executable cell to Quarto's engine
+# detection, which then selects Jupyter and fails for want of a kernel. The
+# extension compiles those blocks itself, so the page needs no engine.
+engine: markdown
+---
+
+Every figure on this page is compiled by the Typst binary Quarto ships, as the page is built.
+
+## A figure
+
+````markdown
+```{typst}
+#circle(radius: 1cm, fill: blue)
+```
+````
+
+```{typst}
+#circle(radius: 1cm, fill: blue)
+```
+
+## A table
+
+Typst draws the table, and the result arrives as one image:
+
+````markdown
+```{typst}
+#table(
+  columns: 3,
+  [*Format*], [*Writer*], [*Figures*],
+  [HTML], [html], [image],
+  [PDF], [latex], [image],
+  [Typst], [typst], [native or image],
+)
+```
+````
+
+```{typst}
+#table(
+  columns: 3,
+  [*Format*], [*Writer*], [*Figures*],
+  [HTML], [html], [image],
+  [PDF], [latex], [image],
+  [Typst], [typst], [native or image],
+)
+```
+
+::: {.callout-tip}
+An image carries no text for a screen reader.
+Give a table `alt` text, or write it in Markdown when the data must stay readable.
+:::
+
+## Size
+
+`width` and `height` set the page Typst compiles on, and `margin` sets the space around the drawing.
+The default page is `auto`, which shrinks to the content:
+
+````markdown
+```{typst}
+//| width: 8cm
+//| height: 3cm
+//| margin: 0.5cm
+#align(center + horizon)[
+  #rect(width: 100%, height: 100%, fill: teal.lighten(70%), radius: 4pt)[
+    #align(center + horizon)[A fixed 8cm by 3cm page]
+  ]
+]
+```
+````
+
+```{typst}
+//| width: 8cm
+//| height: 3cm
+//| margin: 0.5cm
+#align(center + horizon)[
+  #rect(width: 100%, height: 100%, fill: teal.lighten(70%), radius: 4pt)[
+    #align(center + horizon)[A fixed 8cm by 3cm page]
+  ]
+]
+```
+
+## Format and resolution
+
+This site asks for SVG globally, so the figures stay sharp at any zoom:
+
+```yaml
+extensions:
+  typst-render:
+    format: svg
+```
+
+One block can ask for another format.
+`dpi` applies to PNG alone:
+
+````markdown
+```{typst}
+//| format: png
+//| dpi: 300
+#rect(width: 3cm, height: 1.2cm, fill: orange.lighten(50%), radius: 4pt)
+```
+````
+
+```{typst}
+//| format: png
+//| dpi: 300
+#rect(width: 3cm, height: 1.2cm, fill: orange.lighten(50%), radius: 4pt)
+```
+
+Without a `format`, the extension selects one from the output format.
+
+| Value | Use it for |
+| --- | --- |
+| `svg` | HTML and slides, where the figure must stay sharp. |
+| `png` | Word, PowerPoint, and any consumer that cannot read SVG. |
+| `pdf` | PDF through LaTeX, where a vector figure is wanted. |
+| `html` | Semantic markup with MathML maths, in HTML output. It needs Typst 0.15 and falls back to SVG. |
+
+: The four output formats. {.striped .hover tbl-colwidths="[16,84]"}
+
+## Alignment
+
+`align` places the image block on the page:
+
+````markdown
+```{typst}
+//| align: right
+#rect(width: 2cm, height: 1cm, fill: purple.lighten(60%), radius: 4pt)
+```
+````
+
+```{typst}
+//| align: right
+#rect(width: 2cm, height: 1cm, fill: purple.lighten(60%), radius: 4pt)
+```
+
+`left`, `center`, `right`, and `default` are accepted.
+
+## Showing the source
+
+`echo` puts the Typst beside its output, and `code-fold` tucks it away:
+
+````markdown
+```{typst}
+//| echo: true
+//| code-fold: true
+//| code-summary: "The Typst behind this circle"
+#circle(radius: 0.6cm, fill: green)
+```
+````
+
+```{typst}
+//| echo: true
+//| code-fold: true
+//| code-summary: "The Typst behind this circle"
+#circle(radius: 0.6cm, fill: green)
+```
+
+`echo: fenced` includes the block markers and the option comments, so a reader sees the block exactly as it is written.
+
+Per-block options are written as `//| key: value` at the top of the block, and every one of them can be set globally as a default.
+The [Reference](../reference.qmd#per-block-options) lists them all.

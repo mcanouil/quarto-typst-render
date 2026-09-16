@@ -1,0 +1,104 @@
+---
+title: "Brand and theming"
+subtitle: "Figures that match the document around them."
+description: "Reading _brand.yml inside a Typst block, and compiling a figure for both the light and the dark side of a page."
+# A ```{typst} block looks like an executable cell to Quarto's engine
+# detection, which then selects Jupyter and fails for want of a kernel. The
+# extension compiles those blocks itself, so the page needs no engine.
+engine: markdown
+---
+
+A compiled figure is an image, so it keeps the colours it was drawn with.
+Three bindings are placed ahead of every block and every inline expression, so the drawing can read the colours of the document instead:
+
+| Binding | Value |
+| --- | --- |
+| `_typst_render_background` | The resolved `background`, as a Typst colour. `none` when unset. |
+| `_typst_render_foreground` | The resolved `foreground`, as a Typst colour. `none` when unset. |
+| `_typst_render_brand` | The document brand, as a dictionary in `_brand.yml` shape. |
+
+: The bindings available inside a block. {.striped .hover tbl-colwidths="[34,66]"}
+
+## Brand colours
+
+This page uses the pastel brand shared by these documentation sites.
+`background: auto` compiles the block once per colour scheme, and the dictionary matches the side being compiled, so the swatches below change with the theme of the page:
+
+```{typst}
+//| echo: true
+//| background: auto
+#let roles = ("primary", "secondary", "tertiary", "success", "info", "warning", "danger")
+#let colours = _typst_render_brand.color
+#stack(
+  dir: ltr,
+  spacing: 4pt,
+  ..roles
+    .filter(role => role in colours)
+    .map(role => rect(width: 1.4cm, height: 1.4cm, radius: 3pt, fill: rgb(colours.at(role)))),
+)
+```
+
+Under `color` are nine semantic roles: `foreground`, `background`, `primary`, `secondary`, `tertiary`, `success`, `info`, `warning`, and `danger`.
+Under `typography` are the `base` and `headings` families.
+
+A role the brand does not define stops the compilation, so read an uncertain one with a default:
+
+```typ
+#let accent = _typst_render_brand.color.at("tertiary", default: "#888888")
+```
+
+## Light and dark
+
+`background` and `foreground` take three shapes: a Typst colour, `auto` to read the brand, or a map with `light` and `dark` keys.
+Both shapes with two values compile the block twice in HTML output, and the page shows the image that matches its mode:
+
+````markdown
+```{typst}
+//| background: auto
+//| foreground: auto
+#align(center)[#text(size: 14pt)[This box follows the page.]]
+```
+````
+
+```{typst}
+//| background: auto
+//| foreground: auto
+#align(center)[#text(size: 14pt)[This box follows the page.]]
+```
+
+Switch the theme of this page to see the pair swap.
+
+A block option is one line of `//| key: value`, so an explicit light and dark pair is written in the document or project YAML instead, where it becomes the default for every block:
+
+```yaml
+extensions:
+  typst-render:
+    background:
+      light: "#FFF6E5"
+      dark: "#20232A"
+    foreground:
+      light: "#20232A"
+      dark: "#FFF6E5"
+```
+
+## A plotting package
+
+A package that reads `_brand.yml` takes the dictionary directly.
+[Gribouille](https://github.com/mcanouil/gribouille) is one, from version 0.7.0:
+
+````markdown
+```{typst}
+#import "@preview/gribouille:0.7.0": *
+
+#plot(
+  data: (x: (1, 2, 3, 4), y: (2, 4, 3, 5), g: ("a", "b", "a", "b")),
+  mapping: aes(x: "x", y: "y", colour: "g"),
+  layers: (geom-point(size: 5pt),),
+  theme: theme-brand(_typst_render_brand),
+  width: 8cm,
+  height: 5cm,
+)
+```
+````
+
+The [Reference](../reference.qmd#brand-data) describes every binding, and what a brand written for one mode alone does in the other.
