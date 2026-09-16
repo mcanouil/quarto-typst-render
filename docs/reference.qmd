@@ -140,7 +140,7 @@ Set under `extensions.typst-render`.
 
 : Options under `extensions.typst-render`. {.striped .hover tbl-colwidths="[22,12,66]"}
 
-[Math](examples/math.qmd) shows the `math: typst` takeover, and [Output and files](examples/output-and-files.qmd) shows `preamble`, `input`, `output-directory`, and the cache at work.
+[Maths](examples/math.qmd) shows the `math: typst` takeover, and [Output and files](examples/output-and-files.qmd) shows `preamble`, `input`, `output-directory`, and the cache at work.
 
 ## Per-block options
 
