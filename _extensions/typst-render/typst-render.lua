@@ -1333,12 +1333,10 @@ local function compile_typst(source, opts, img_format)
     return nil
   end
 
+  -- An invalid dpi is already named by the schema check, for both the
+  -- document option and the block attribute; falling back here is silent.
   local dpi = tonumber(opts.dpi)
   if not dpi or dpi <= 0 or dpi ~= math.floor(dpi) then
-    log.log_warning(
-      EXTENSION_NAME,
-      'Invalid dpi value "' .. tostring(opts.dpi) .. '"; falling back to default (' .. DEFAULTS.dpi .. ').'
-    )
     dpi = DEFAULTS.dpi
   end
   dpi = tostring(math.floor(dpi))
@@ -1583,12 +1581,9 @@ local function wrap_alignment(block, opts)
   if not align or align == 'default' then
     return block
   end
+  -- An invalid align is already named by the schema check; ignoring it here
+  -- is silent.
   if not VALID_ALIGN_SET[align] then
-    log.log_warning(
-      EXTENSION_NAME,
-      'Invalid align value "' .. align .. '"; ignoring. '
-      .. 'Valid values: left, center, right, default.'
-    )
     return block
   end
   if quarto.format.is_typst_output() then
@@ -1631,12 +1626,10 @@ end
 --- @param requested string|nil Format asked for by the options
 --- @return string Effective image format
 local function resolve_compile_format(requested)
+  -- An invalid format is already named by the schema check; auto-detecting
+  -- here is silent.
   local img_format = requested
   if img_format and not VALID_FORMAT_SET[img_format] then
-    log.log_warning(
-      EXTENSION_NAME,
-      'Invalid format "' .. img_format .. '"; auto-detecting from output format.'
-    )
     img_format = nil
   end
   if not img_format then
@@ -1840,10 +1833,8 @@ local function get_configuration(meta)
             elseif str == 'false' then
               global_config[k] = false
             else
-              log.log_warning(
-                EXTENSION_NAME,
-                'Invalid code-fold value "' .. str .. '"; expected true, false, or show. Disabling code-fold.'
-              )
+              -- An invalid code-fold is already named by the schema check
+              -- above; disabling it here is silent.
               global_config[k] = false
             end
           end
@@ -1996,22 +1987,27 @@ local function process_codeblock(el)
 
   local block_opts, clean_code, option_lines = cell.parse_options(el.text)
 
-  if block_opts['cache-refresh'] ~= nil then
+  -- The schema resolves the comment-pipe options against the `typst`
+  -- attribute group before anything below strips or rewrites them; every
+  -- read from this point on uses the resolved table, never `block_opts`.
+  local resolved = checker:attributes(block_opts, 'typst')
+
+  if resolved['cache-refresh'] ~= nil then
     log.log_warning(
       EXTENSION_NAME,
       'Per-block "cache-refresh" is not supported; use the global option instead.'
     )
-    block_opts['cache-refresh'] = nil
+    resolved['cache-refresh'] = nil
   end
 
   -- Stash per-block input string before merge overwrites it with global table
   local block_input_str = nil
-  if type(block_opts.input) == 'string' then
-    block_input_str = block_opts.input
-    block_opts.input = nil
+  if type(resolved.input) == 'string' then
+    block_input_str = resolved.input
+    resolved.input = nil
   end
 
-  local opts = cell.merge_options(block_opts, global_config, DEFAULTS)
+  local opts = cell.merge_options(resolved, global_config, DEFAULTS)
   opts._block_input = block_input_str
 
   local block_id = (type(opts.label) == 'string' and opts.label ~= '')
@@ -2021,7 +2017,7 @@ local function process_codeblock(el)
   -- Resolve per-block colour overrides only. Values inherited from global_config
   -- are already resolved (e.g. 'rgb("#FAF6EE")') and must not be re-wrapped.
   for _, colour_key in ipairs({ 'background', 'foreground' }) do
-    local block_val = block_opts[colour_key]
+    local block_val = resolved[colour_key]
     if block_val == 'auto' then
       opts[colour_key] = resolve_colour_config('auto', colour_key) or DEFAULTS[colour_key]
     elseif type(block_val) == 'string' and block_val ~= DEFAULTS[colour_key] then
@@ -2036,13 +2032,10 @@ local function process_codeblock(el)
   local output_mode = cell.resolve_output_mode(opts)
 
   -- Code-fold collapses only the echoed source via Quarto's native attribute-driven
-  -- fold (rendered as a <details> for HTML output only).
+  -- fold (rendered as a <details> for HTML output only). An invalid value is
+  -- already named by the schema check above; disabling it here is silent.
   local cf = opts['code-fold']
   if cf ~= nil and cf ~= false and cf ~= true and cf ~= 'show' then
-    log.log_warning(
-      EXTENSION_NAME,
-      'Invalid code-fold value "' .. tostring(cf) .. '"; expected true, false, or show. Disabling code-fold.'
-    )
     cf = false
   end
   local fold = nil
@@ -2254,7 +2247,7 @@ local function process_codeblock(el)
     return pandoc.Null()
   end
 
-  local output_location = cell.resolve_output_location(opts, EXTENSION_NAME)
+  local output_location = cell.resolve_output_location(opts)
   if output_location then
     -- Reveal.js output-location layout does not support annotations; strip markers.
     local echo_block = do_echo
