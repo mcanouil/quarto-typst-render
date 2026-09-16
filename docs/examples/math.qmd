@@ -1,7 +1,7 @@
 ---
-title: "Math"
+title: "Maths"
 subtitle: "Write every equation in Typst syntax."
-description: "The math: typst takeover, which formats it reaches, Typst math syntax, and the block form that works everywhere."
+description: "The math: typst takeover, which formats it reaches, Typst maths syntax, and the block form that works everywhere."
 # A ```{typst} block looks like an executable cell to Quarto's engine
 # detection, which then selects Jupyter and fails for want of a kernel. The
 # extension compiles those blocks itself, so the page needs no engine.
@@ -26,11 +26,11 @@ This page sets that option in its own front matter, so every equation below is T
 
 | Output | What happens |
 | --- | --- |
-| HTML | Each equation is compiled to native MathML, which stays selectable text and follows the page font. Typst 0.15 or later is needed. |
+| HTML, Reveal.js, and EPUB | Each equation is compiled to native MathML, so it stays selectable text and scales with the text around it. Typst 0.15 or later is needed. |
 | Typst | Each equation passes through unchanged, and the Typst compiler reads it directly. |
 | PDF, Word, and the rest | Quarto's own renderer stays in place, so the equations are read as LaTeX. |
 
-: What each output does with `math: typst`. {.striped .hover tbl-colwidths="[26,74]"}
+: What each output does with `math: typst`. {.striped .hover tbl-colwidths="[30,70]"}
 
 On an older Typst the extension writes a warning and leaves the HTML equations to Quarto.
 For a document that must produce PDF or Word as well, use the block form in [Equations that work everywhere](#equations-that-work-everywhere).
@@ -74,7 +74,7 @@ $$ {#eq-integral}
 
 See @eq-integral.
 
-## Typst math syntax
+## Typst maths syntax
 
 Typst writes maths with words and parentheses rather than backslashes.
 The most common differences:
@@ -122,7 +122,7 @@ abs(x) = cases(
 )
 $$
 
-The [Typst maths documentation](https://typst.app/docs/reference/math/) lists every symbol and function.
+The [Typst maths reference](https://typst.app/docs/reference/math/) lists every symbol and function.
 
 ## Equations that work everywhere
 

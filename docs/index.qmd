@@ -71,7 +71,7 @@ A red word `{typst} #text(red)[hello]` in the middle of a sentence.
 
 A red word `{typst} #text(red)[hello]` in the middle of a sentence.
 
-See the [Reference](reference.qmd) for every option, and the [Examples](examples.qmd) for worked pages on [maths](examples/math.qmd), [figures and tables](examples/figures-and-tables.qmd), [cross-references](examples/cross-references.qmd), [brand colours](examples/brand-and-theming.qmd), [data from R and Python](examples/data-from-r-and-python.qmd), [files and output](examples/output-and-files.qmd), and [slides](examples/presentations.qmd).
+See the [Reference](reference.qmd) for every option, and the [Examples](examples.qmd) for a worked page on each topic, from [maths](examples/math.qmd) to [slides](examples/presentations.qmd).
 
 ## Where it works
 

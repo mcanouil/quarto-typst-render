@@ -83,17 +83,14 @@ The prefix of the label decides the type, so a `tbl-` label gives a table, numbe
 
 @tbl-formats lists them.
 
-## Any reference type
-
-Every Quarto cross-reference prefix works, `fig-`, `tbl-`, `lst-`, and the custom types a document declares.
-The extension reads the prefix from the label and lets Quarto number the rest.
+Every Quarto prefix works the same way, `lst-` and the custom types a document declares included.
 
 ## Prefix-specific captions
 
 `cap` and `alt` apply to any label.
 The prefixed forms, `fig-cap`, `tbl-cap`, `lst-cap`, and their `alt` counterparts, say the same thing for one type:
 
-```yaml
+```typ
 //| label: fig-example
 //| fig-cap: "A caption for a figure."
 //| fig-alt: "Alternative text for a figure."

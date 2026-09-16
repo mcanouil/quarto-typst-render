@@ -21,7 +21,7 @@ extensions:
 
 | Page | What it covers |
 | --- | --- |
-| [Math](examples/math.qmd) | The `math: typst` takeover, Typst maths syntax, and equations that reach every format. |
+| [Maths](examples/math.qmd) | The `math: typst` takeover, Typst maths syntax, and equations that reach every format. |
 | [Figures and tables](examples/figures-and-tables.qmd) | Size, output format, resolution, alignment, and showing the source. |
 | [Cross-references](examples/cross-references.qmd) | `label`, `cap`, and `alt`, for figures, tables, and any other reference type. |
 | [Brand and theming](examples/brand-and-theming.qmd) | Reading `_brand.yml` inside a block, and one figure for the light and the dark side of a page. |
@@ -35,24 +35,13 @@ extensions:
 
 An inline expression scales to the text around it, so a red word `{typst} #text(red)[hello]` sits in a sentence, and so does a formula `{typst} $ x^2 + y^2 = z^2 $`.
 
-Give it alt text for a reader who cannot see it:
+Attributes carry the alt text and the compilation options of one expression:
 
 ```markdown
-The area is `{typst} $pi r^2$`{alt="pi r squared"} for a circle of radius r.
+The area is `{typst} $pi r^2$`{alt="pi r squared" format="png" dpi="300"}.
 ```
 
-Without an `alt` attribute the Typst source is used instead.
-
-The compilation options can be set on one expression as attributes:
-
-```markdown
-A big red `{typst} $pi r^2$`{format="png" dpi="300" foreground="#ff0000"} in a sentence.
-```
-
-::: {.callout-note}
-Inline Typst is not available in PowerPoint, since Pandoc cannot put an image inside a run of text there.
-Blocks work normally.
-:::
+The [Reference](reference.qmd#inline-expressions) lists every attribute an expression accepts, and the block options it ignores.
 
 ## Source
 

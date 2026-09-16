@@ -9,20 +9,15 @@ engine: markdown
 ---
 
 A compiled figure is an image, so it keeps the colours it was drawn with.
-Three bindings are placed ahead of every block and every inline expression, so the drawing can read the colours of the document instead:
-
-| Binding | Value |
-| --- | --- |
-| `_typst_render_background` | The resolved `background`, as a Typst colour. `none` when unset. |
-| `_typst_render_foreground` | The resolved `foreground`, as a Typst colour. `none` when unset. |
-| `_typst_render_brand` | The document brand, as a dictionary in `_brand.yml` shape. |
-
-: The bindings available inside a block. {.striped .hover tbl-colwidths="[34,66]"}
+The extension binds the document brand ahead of every block, as `_typst_render_brand`, so a figure can draw itself in the colours of the page instead.
+Two more bindings, `_typst_render_background` and `_typst_render_foreground`, carry the resolved colours.
+The [Reference](../reference.qmd#brand-data) describes all three.
 
 ## Brand colours
 
 This page uses the pastel brand shared by these documentation sites.
-`background: auto` compiles the block once per colour scheme, and the dictionary matches the side being compiled, so the swatches below change with the theme of the page:
+`background: auto` compiles the block once per colour scheme.
+The dictionary matches the side being compiled, so the swatches below change with the theme of the page:
 
 ```{typst}
 //| echo: true
@@ -50,7 +45,8 @@ A role the brand does not define stops the compilation, so read an uncertain one
 ## Light and dark
 
 `background` and `foreground` take three shapes: a Typst colour, `auto` to read the brand, or a map with `light` and `dark` keys.
-Both shapes with two values compile the block twice in HTML output, and the page shows the image that matches its mode:
+`auto` and a map each carry two values, so the block is compiled twice in HTML output.
+The page then shows the image that matches its mode:
 
 ````markdown
 ```{typst}
@@ -101,4 +97,4 @@ A package that reads `_brand.yml` takes the dictionary directly.
 ```
 ````
 
-The [Reference](../reference.qmd#brand-data) describes every binding, and what a brand written for one mode alone does in the other.
+The [Reference](../reference.qmd#brand-data) also describes what a brand written for one mode alone does in the other.

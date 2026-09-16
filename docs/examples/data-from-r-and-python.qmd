@@ -71,47 +71,38 @@ typst_define(
 ````
 
 The call emits a hidden metadata block, so it adds nothing to the page.
-The chunk source is still echoed under the usual `echo` and `include` options.
 
 ## Reading them in a block
 
+A scalar is read by name, and a data frame column is an array:
+
 ````markdown
 ```{typst}
-#let d = typst_define.d
-#align(center)[
-  #text(size: 12pt, weight: "bold")[#typst_define.title]
-  #v(4pt)
-  #stack(
-    dir: ltr,
-    spacing: 6pt,
-    ..d.mpg.map(value => rect(
-      width: 1.2cm,
-      height: value * 1.2pt,
-      fill: teal.lighten(40%),
-    )),
-  )
-]
+#typst_define.title, first column value #typst_define.d.mpg.at(0)
 ```
 ````
 
-The same figure, with the values written as literals so this page can compile it:
+A figure draws the column:
+
+````markdown
+```{typst}
+#stack(
+  dir: ltr,
+  spacing: 6pt,
+  ..typst_define.d.mpg.map(value => rect(width: 1cm, height: value * 1.2pt, fill: teal.lighten(40%))),
+)
+```
+````
+
+The same figure, with the column written as a literal so this page can compile it:
 
 ```{typst}
 //| echo: false
-#let d = (cyl: (4, 6, 8), mpg: (26.7, 19.7, 15.1))
-#align(center)[
-  #text(size: 12pt, weight: "bold")[Fuel economy]
-  #v(4pt)
-  #stack(
-    dir: ltr,
-    spacing: 6pt,
-    ..d.mpg.map(value => rect(
-      width: 1.2cm,
-      height: value * 1.2pt,
-      fill: teal.lighten(40%),
-    )),
-  )
-]
+#stack(
+  dir: ltr,
+  spacing: 6pt,
+  ..(26.7, 19.7, 15.1).map(value => rect(width: 1cm, height: value * 1.2pt, fill: teal.lighten(40%))),
+)
 ```
 
 Every `{typst}` block of the document reads the same values, wherever it sits.
@@ -125,14 +116,9 @@ The engine runs the whole document before the filter does, so a block above the 
 | Array, nested object | A Typst array, a Typst dictionary. |
 | R data frame, pandas or polars data frame | A dictionary of arrays, one per column. |
 | numpy array | A Typst array. |
+| `NULL`, `NA`, `None` | Typst `none`. |
 
 : How a defined value arrives in a block. {.striped .hover tbl-colwidths="[52,48]"}
 
-Four rules to keep in mind:
-
-- Names keep the order of the calls that defined them.
-- Inside a carried object or data frame the keys arrive sorted by name, so read a column by name and never by position.
-- An R data frame with row names carries them under an added `_row` key.
-- Each call adds to the values already defined, and a repeated name takes the newer value.
-
-The payload travels as hex-encoded JSON, because Pandoc's smart quotes and dashes would otherwise corrupt it.
+Read a column by name and never by position, because the keys of a carried object arrive sorted by name.
+The [Reference](../reference.qmd#passing-data-from-r-or-python) gives the remaining rules: the order of the names, the `_row` key of an R data frame, and what a repeated name does.

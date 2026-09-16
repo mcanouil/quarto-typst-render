@@ -67,7 +67,7 @@ website:
         text: "Examples"
         contents:
           - href: examples/math.qmd
-            text: "Math"
+            text: "Maths"
           - href: examples/figures-and-tables.qmd
             text: "Figures and tables"
           - href: examples/cross-references.qmd

@@ -63,10 +63,8 @@ The default page is `auto`, which shrinks to the content:
 //| width: 8cm
 //| height: 3cm
 //| margin: 0.5cm
-#align(center + horizon)[
-  #rect(width: 100%, height: 100%, fill: teal.lighten(70%), radius: 4pt)[
-    #align(center + horizon)[A fixed 8cm by 3cm page]
-  ]
+#rect(width: 100%, height: 100%, fill: teal.lighten(70%), radius: 4pt)[
+  #align(center + horizon)[A fixed 8cm by 3cm page]
 ]
 ```
 ````
@@ -75,10 +73,8 @@ The default page is `auto`, which shrinks to the content:
 //| width: 8cm
 //| height: 3cm
 //| margin: 0.5cm
-#align(center + horizon)[
-  #rect(width: 100%, height: 100%, fill: teal.lighten(70%), radius: 4pt)[
-    #align(center + horizon)[A fixed 8cm by 3cm page]
-  ]
+#rect(width: 100%, height: 100%, fill: teal.lighten(70%), radius: 4pt)[
+  #align(center + horizon)[A fixed 8cm by 3cm page]
 ]
 ```
 
@@ -160,5 +156,6 @@ Without a `format`, the extension selects one from the output format.
 
 `echo: fenced` includes the block markers and the option comments, so a reader sees the block exactly as it is written.
 
-Per-block options are written as `//| key: value` at the top of the block, and every one of them can be set globally as a default.
+Per-block options are written as `//| key: value` at the top of the block.
+All of them can also be set globally as a default, apart from `file`, `output-filename`, `label`, `cap`, and `alt`, which belong to a block alone.
 The [Reference](../reference.qmd#per-block-options) lists them all.

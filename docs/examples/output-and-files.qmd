@@ -104,6 +104,9 @@ A block that produces several pages is included page by page.
 `pages` accepts `all`, one number, a range such as `1-3`, a set such as `2,5`, and an open range such as `3-`.
 Without `layout-ncol` the pages are stacked vertically.
 
+Both options need one file per page, which PNG and SVG give.
+A PDF block compiles to a single file, so neither option has any effect on it.
+
 ## Input variables
 
 `input` passes key-value pairs to the Typst compiler, which reads them through `sys.inputs`.
@@ -111,18 +114,16 @@ On a block the pairs are comma-separated:
 
 ````markdown
 ```{typst}
-//| input: "label=beta,fill=purple"
-#let name = sys.inputs.at("label", default: "none")
-#let fill = sys.inputs.at("fill", default: "gray")
-#box(fill: eval(fill + ".lighten(70%)"), radius: 4pt, inset: 8pt)[Built for #name]
+//| input: "release=beta"
+#let release = sys.inputs.at("release", default: "none")
+#box(fill: teal.lighten(70%), radius: 4pt, inset: 8pt)[Built for #release]
 ```
 ````
 
 ```{typst}
-//| input: "label=beta,fill=purple"
-#let name = sys.inputs.at("label", default: "none")
-#let fill = sys.inputs.at("fill", default: "gray")
-#box(fill: eval(fill + ".lighten(70%)"), radius: 4pt, inset: 8pt)[Built for #name]
+//| input: "release=beta"
+#let release = sys.inputs.at("release", default: "none")
+#box(fill: teal.lighten(70%), radius: 4pt, inset: 8pt)[Built for #release]
 ```
 
 Globally it is a map, and every block of the document reads the same pairs:
@@ -131,8 +132,7 @@ Globally it is a map, and every block of the document reads the same pairs:
 extensions:
   typst-render:
     input:
-      label: beta
-      fill: purple
+      release: beta
 ```
 
 Use `.at(name, default: ...)`, because a missing input stops the compilation.
@@ -141,18 +141,12 @@ Use `.at(name, default: ...)`, because a missing input stops the compilation.
 
 Compiled images are written under `./assets/typst-render`, relative to the document, in a subdirectory named after it.
 The figures on this page sit in `examples/assets/typst-render/output-and-files/`.
-
-```yaml
-extensions:
-  typst-render:
-    output-directory: "./assets/typst-render"
-    output-source: false
-```
+Three options change that:
 
 | Option | What it does |
 | --- | --- |
 | `output-directory` | Where images are written. An empty string writes none, which leaves them in the render cache, where a deployed site cannot reach them. |
-| `output-filename` | Names the image for one block. A leading `/` means the project root; anything else is resolved against `output-directory`. |
+| `output-filename` | Names the image for one block. A leading `/` means the project root; anything else is resolved against `output-directory`, without the per-document subdirectory. |
 | `output-source` | Writes the compiled Typst source beside each image, with the same stem and a `.typ` extension. |
 
 : The three options that decide what reaches the disk. {.striped .hover tbl-colwidths="[24,76]"}
@@ -161,17 +155,13 @@ Without `output-filename`, the name comes from the label of the block, or from i
 
 ## The cache
 
-Compiled images are cached between renders, keyed by the source and the options that shape it.
-A block that has not changed is not compiled again:
+Compiled images are cached between renders, so a block that has not changed is not compiled again.
+The key covers the source, the merged options, and the contents of every local `.typ` file the block imports or includes.
 
-```yaml
-extensions:
-  typst-render:
-    cache: true
-    cache-refresh: false
-```
+It does not cover data read while Typst compiles.
+Set `cache: false` on a block that calls `read()`, `json()`, `csv()`, or `image()`, so a change to that data reaches the page.
 
-Set `cache: false` on a block that reads something the cache key cannot see, such as a file the preamble loads.
+Caching is on by default.
 Set `cache-refresh: true` to remove stale files of the current output format after each render.
 
 ## Native Typst output

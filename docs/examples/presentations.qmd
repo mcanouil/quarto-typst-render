@@ -13,7 +13,8 @@ Three options apply to Reveal.js alone, so this page shows the source and descri
 
 ::: {.callout-note}
 This page is HTML, not a deck.
-To see the options at work, render a Reveal.js document, or take `example-render.tar.gz` from the [latest release](https://github.com/mcanouil/quarto-typst-render/releases/latest), which carries the same source rendered to Reveal.js and to Beamer.
+To see the options at work, render a Reveal.js document.
+`example-render.tar.gz` on the [latest release](https://github.com/mcanouil/quarto-typst-render/releases/latest) carries one source rendered to Reveal.js and to Beamer.
 :::
 
 ## Placing the output
