@@ -9,6 +9,7 @@
 ### Bug Fixes
 
 - fix: Report an invalid typst-render attribute through the schema once, instead of duplicating it in the extension's own warning. (#104)
+- fix: Report that nested key as a warning rather than an error, so the typo does not invalidate the whole configuration. (#104)
 
 ### Documentation
 
@@ -19,7 +20,7 @@
 
 - build: Update the vendored Lua modules to 2.3.0, which includes the `schema-check` fix for an extension whose entry points are in a subdirectory. A module no longer carries a version line in its header, so its checksum changes only when its code changes. (#101)
 - build: Fetch the schema validator from a Quarto Wizard release asset rather than a raw path inside its repository, which a refactor could move without notice. The vendored file is unchanged. (#103)
-- build: Update the vendored Lua modules to 2.5.0, which adds the accessors that read what the schema resolves an option, an element's attributes and a format's options to. The schema validator moves to its own release train and is pinned at `schema-v2.1.0`, which accepts only `true` and `false` as a boolean. (#104)
+- build: Update the vendored Lua modules to 2.5.0, which adds the accessors that read what the schema resolves an option, an element's attributes and a format's options to. The schema validator moves to its own release train and is pinned at `schema-v2.2.0`, which accepts only `true` and `false` as a boolean. (#104)
 
 ## 0.22.1 (2026-09-07)
 
