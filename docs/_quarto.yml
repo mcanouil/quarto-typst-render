@@ -63,8 +63,23 @@ website:
         text: "Home"
       - href: reference.qmd
         text: "Reference"
-      - href: examples.qmd
+      - section: examples.qmd
         text: "Examples"
+        contents:
+          - href: examples/math.qmd
+            text: "Maths"
+          - href: examples/figures-and-tables.qmd
+            text: "Figures and tables"
+          - href: examples/cross-references.qmd
+            text: "Cross-references"
+          - href: examples/brand-and-theming.qmd
+            text: "Brand and theming"
+          - href: examples/data-from-r-and-python.qmd
+            text: "Data from R and Python"
+          - href: examples/output-and-files.qmd
+            text: "Output and files"
+          - href: examples/presentations.qmd
+            text: "Presentations"
       - text: "---"
       - href: changelog.qmd
         text: "Changelog"

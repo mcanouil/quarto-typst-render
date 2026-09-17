@@ -55,6 +55,7 @@ knitr::knit_engines$set(typst = function(options) {
 
 Per-block options, cross-reference labels, and captions all work after that.
 The R helper in [Passing data from R or Python](#passing-data-from-r-or-python) performs the same registration, so a document that calls `typst_define()` needs nothing more.
+[Data from R and Python](examples/data-from-r-and-python.qmd) shows the whole setup.
 
 ## Passing data from R or Python
 
@@ -139,6 +140,8 @@ Set under `extensions.typst-render`.
 
 : Options under `extensions.typst-render`. {.striped .hover tbl-colwidths="[22,12,66]"}
 
+[Maths](examples/math.qmd) shows the `math: typst` takeover, and [Output and files](examples/output-and-files.qmd) shows `preamble`, `input`, `output-directory`, and the cache at work.
+
 ## Per-block options
 
 Written as `//| key: value` at the top of a block.
@@ -164,8 +167,13 @@ Written as `//| key: value` at the top of a block.
 : Options accepted on a block. {.striped .hover tbl-colwidths="[24,10,66]"}
 
 The two tables are one set of options read at two levels.
-Everything in the first can be set on a block, apart from `math`, `root`, `font-path`, and `package-path`, which are global only.
+Everything in the first can be set on a block, apart from `math`, `root`, `font-path`, `package-path`, and `cache-refresh`, which are global only.
+A `cache-refresh` written on a block is dropped, with a warning.
 Everything in the second can be set globally as a default for every block, apart from `file`, `output-filename`, `label`, `cap`, and `alt`, which belong to a block alone.
+
+A block option is one line, so an option that takes a map, such as a `background` with a `light` and a `dark` value, is written in YAML and never on a block.
+
+[Figures and tables](examples/figures-and-tables.qmd) shows the size, format, and alignment options, [Cross-references](examples/cross-references.qmd) shows `label`, `cap`, and `alt`, and [Presentations](examples/presentations.qmd) shows the Reveal.js options.
 
 ## Inline expressions
 
@@ -214,6 +222,8 @@ Three bindings are placed ahead of every block and every inline expression, so l
 | `_typst_render_brand` | The document brand, as a dictionary in `_brand.yml` shape. |
 
 : Bindings available inside a `{typst}` block. {.striped .hover tbl-colwidths="[34,66]"}
+
+[Brand and theming](examples/brand-and-theming.qmd) draws the brand roles, and shows a figure compiled for both colour schemes.
 
 `_typst_render_brand` always holds a `color` key and a `typography` key, each empty when the brand says nothing under it:
 

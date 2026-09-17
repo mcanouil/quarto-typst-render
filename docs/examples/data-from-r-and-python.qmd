@@ -1,0 +1,124 @@
+---
+title: "Data from R and Python"
+subtitle: "Values computed in a chunk, drawn by Typst."
+description: "Pushing named values from a knitr or Jupyter session into Typst blocks with typst_define, and reading them back inside a block."
+# A ```{typst} block looks like an executable cell to Quarto's engine
+# detection, which then selects Jupyter and fails for want of a kernel. The
+# extension compiles those blocks itself, so the page needs no engine.
+engine: markdown
+---
+
+`typst_define()` pushes named values from a knitr or Jupyter session into the `{typst}` blocks of the document.
+Each value is read back as `#typst_define.<name>`.
+
+::: {.callout-note}
+This page shows the source only.
+These documentation pages carry no R or Python session, so the figure at the end draws the same values written as literals.
+:::
+
+## Setup
+
+Two helpers ship with the extension, under `_extensions/mcanouil/typst-render/_resources/`.
+There is no Julia helper, so this covers knitr and Jupyter alone.
+
+The R helper needs `rlang` and `jsonlite`:
+
+````markdown
+```{{r}}
+#| include: false
+source("_extensions/mcanouil/typst-render/_resources/typst_define.R")
+```
+````
+
+The Python helper needs `IPython`:
+
+````markdown
+```{{python}}
+#| include: false
+import sys
+sys.path.insert(0, "_extensions/mcanouil/typst-render/_resources")
+from typst_define import typst_define
+```
+````
+
+The R helper also registers a passthrough engine for `typst` blocks, which knitr needs.
+A document that uses knitr without the helper registers it itself:
+
+````markdown
+```{{r}}
+#| include: false
+knitr::knit_engines$set(typst = function(options) {
+  knitr::asis_output(paste0("\n```{typst}\n", paste(options[["code"]], collapse = "\n"), "\n```\n"))
+})
+```
+````
+
+Without that registration knitr claims the cell, knows no `typst` engine, and writes the source to the page with no figure beside it.
+See [Engines](../reference.qmd#engines).
+
+## Defining values
+
+Call the helper wherever the values are ready:
+
+````markdown
+```{{r}}
+#| include: false
+typst_define(
+  title = "Fuel economy",
+  d = data.frame(cyl = c(4L, 6L, 8L), mpg = c(26.7, 19.7, 15.1))
+)
+```
+````
+
+The call emits a hidden metadata block, so it adds nothing to the page.
+
+## Reading them in a block
+
+A scalar is read by name, and a data frame column is an array:
+
+````markdown
+```{typst}
+#typst_define.title, first column value #typst_define.d.mpg.at(0)
+```
+````
+
+A figure draws the column:
+
+````markdown
+```{typst}
+#stack(
+  dir: ltr,
+  spacing: 6pt,
+  ..typst_define.d.mpg.map(value => rect(width: 1cm, height: value * 1.2pt, fill: teal.lighten(40%))),
+)
+```
+````
+
+The same figure, with the column written as a literal so this page can compile it:
+
+```{typst}
+//| echo: false
+#stack(
+  dir: ltr,
+  spacing: 6pt,
+  ..(26.7, 19.7, 15.1).map(value => rect(width: 1cm, height: value * 1.2pt, fill: teal.lighten(40%))),
+)
+```
+
+Every `{typst}` block of the document reads the same values, wherever it sits.
+The engine runs the whole document before the filter does, so a block above the call sees them as well.
+
+## What each type becomes
+
+| From R or Python | In Typst |
+| --- | --- |
+| Scalar, string, boolean | The same value. |
+| Array, nested object | A Typst array, a Typst dictionary. |
+| R data frame, pandas or polars data frame | A dictionary of arrays, one per column. |
+| numpy array | A Typst array. |
+| `NULL`, `NA`, `None` | Typst `none`. |
+
+: How a defined value arrives in a block. {.striped .hover tbl-colwidths="[52,48]"}
+
+Read a column by name and never by position, because the keys of a carried object arrive sorted by name.
+The [Reference](../reference.qmd#passing-data-from-r-or-python) gives the remaining rules: the order of the names, the `_row` key of an R data frame, and what a repeated name does.
