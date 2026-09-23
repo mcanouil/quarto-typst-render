@@ -5,8 +5,27 @@
 #' engine simply re-emits the chunk source as a `` ```{typst} `` fenced block
 #' so pandoc sees the literal `{typst}` class that the typst-render filter
 #' expects.
+#'
+#' knitr parses `#|` lines and chunk header options itself and removes them
+#' before calling the engine, so the filter never sees them. The engine warns
+#' about each such option: `{typst}` blocks take their options as `//|` lines.
 if (requireNamespace("knitr", quietly = TRUE)) {
   knitr::knit_engines$set(typst = function(options) {
+    label <- options[["label"]]
+    chunk_opts <- attr(knitr::knit_code$get(label), "chunk_opts")
+    consumed <- setdiff(names(chunk_opts), c("engine", "label"))
+    auto_label <- paste0("^", knitr::opts_knit$get("unnamed.chunk.label"), "-[0-9]+$")
+    if (!grepl(auto_label, label)) {
+      consumed <- c("label", consumed)
+    }
+    if (length(consumed) > 0) {
+      warning(
+        "typst-render: knitr took these options from the {typst} chunk \"", label,
+        "\", so they have no effect: ", paste(consumed, collapse = ", "), ". ",
+        "Write them as `//| key: value` lines at the top of the chunk instead.",
+        call. = FALSE
+      )
+    }
     code <- paste(options[["code"]], collapse = "\n")
     knitr::asis_output(paste0("\n```{typst}\n", code, "\n```\n"))
   })
