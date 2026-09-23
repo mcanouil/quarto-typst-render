@@ -53,7 +53,9 @@ knitr::knit_engines$set(typst = function(options) {
 ```
 ````
 
-Per-block options, cross-reference labels, and captions all work after that.
+Per-block options, cross-reference labels, and captions all work after that, written as `//|` lines as in [Per-block options](#per-block-options).
+knitr removes `#|` lines and chunk header options before the engine runs, so the filter never sees them.
+The helper's engine warns when it finds any; the snippet above does not.
 The R helper in [Passing data from R or Python](#passing-data-from-r-or-python) performs the same registration, so a document that calls `typst_define()` needs nothing more.
 [Data from R and Python](examples/data-from-r-and-python.qmd) shows the whole setup.
 

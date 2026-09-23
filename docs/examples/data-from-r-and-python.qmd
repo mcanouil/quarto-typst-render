@@ -42,7 +42,10 @@ from typst_define import typst_define
 ````
 
 The R helper also registers a passthrough engine for `typst` blocks, which knitr needs.
-A document that uses knitr without the helper registers it itself:
+A document that uses knitr without the helper registers it itself.
+knitr removes `#|` lines and chunk header options before the engine runs, so the filter never sees them.
+Write the options of a `typst` block as `//|` lines.
+The helper's engine warns when it finds options knitr took; the snippet below does not.
 
 ````markdown
 ```{{r}}
