@@ -13,10 +13,10 @@ if (requireNamespace("knitr", quietly = TRUE)) {
   knitr::knit_engines$set(typst = function(options) {
     label <- options[["label"]]
     chunk_opts <- attr(knitr::knit_code$get(label), "chunk_opts")
-    consumed <- setdiff(names(chunk_opts), c("engine", "label"))
+    consumed <- setdiff(names(chunk_opts), "engine")
     auto_label <- paste0("^", knitr::opts_knit$get("unnamed.chunk.label"), "-[0-9]+$")
-    if (!grepl(auto_label, label)) {
-      consumed <- c("label", consumed)
+    if (grepl(auto_label, label)) {
+      consumed <- setdiff(consumed, "label")
     }
     if (length(consumed) > 0) {
       warning(
