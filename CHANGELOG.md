@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.22.3 (2026-09-23)
+
 ### Bug Fixes
 
 - fix: Warn when knitr takes the options of a `{typst}` chunk, such as `#|` lines or chunk header options, which the filter then never sees. The warning names each lost option and points to the `//|` syntax. (#107)
