@@ -14,7 +14,7 @@
 ### Documentation
 
 - docs: Serve the extension's social card as the Open Graph image, so a shared link shows the card rather than the first image on the page. (#100)
-- docs: Split the examples of the documentation site into one page for each topic, and add pages for maths, cross-references, data from R and Python, and presentations.
+- docs: Split the examples of the documentation site into one page for each topic, and add pages for maths, cross-references, data from R and Python, and presentations. (#105)
 
 ### Refactoring
 
