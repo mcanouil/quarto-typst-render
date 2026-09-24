@@ -32,6 +32,11 @@ The document engine sees it before the filter does, and not every engine leaves 
 
 An inline `` `{typst}` `` expression is ordinary inline code, so every engine leaves it alone.
 
+With the `markdown`, `jupyter`, and `julia` engines, avoid blank lines inside a `{typst}` block when you render to Typst or PDF.
+Quarto reads the page with the plain pandoc reader before those renders, and that reader misreads such a block.
+It prints a spurious `Div … unclosed` warning and can turn a level-one heading into plain text.
+The knitr engine below avoids this, as [knitr](#knitr) explains.
+
 ### knitr
 
 knitr writes this warning:
