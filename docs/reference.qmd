@@ -23,8 +23,8 @@ The document engine sees it before the filter does, and not every engine leaves 
 
 | Engine | What happens | What you do |
 | --- | --- | --- |
-| `markdown` | The block reaches the filter untouched. | Nothing. Best for a document with no executable code, as `example.qmd` and these pages are. |
-| `jupyter`, `julia` | The block passes through untouched. | Nothing. |
+| `markdown` | The block reaches the filter untouched. | Nothing, apart from the blank-line caveat below. Best for a document with no executable code, as `example.qmd` and these pages are. |
+| `jupyter`, `julia` | The block passes through untouched. | Nothing, apart from the blank-line caveat below. |
 | `knitr` | knitr claims the cell and knows no `typst` engine, so it produces no figure. | Register a passthrough engine, as below. |
 | none | Engine detection selects Jupyter, which then fails for want of a kernel. | Set `engine: markdown`, or name the engine you want. |
 
