@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Bug Fixes
+
+- fix: Stop a `{typst}` block with a blank line from breaking knitr renders to Typst or PDF. Quarto printed a spurious `Div … unclosed` warning and could turn a level-one heading into plain text, so the knitr engine now writes the block with a `typst-render-cell` class instead of `{typst}`.
+
 ## 0.22.3 (2026-09-23)
 
 ### Bug Fixes

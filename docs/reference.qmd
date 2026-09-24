@@ -48,10 +48,15 @@ Register a passthrough engine in a setup chunk, so that knitr hands the block ba
 ```{{r}}
 #| include: false
 knitr::knit_engines$set(typst = function(options) {
-  knitr::asis_output(paste0("\n```{typst}\n", paste(options[["code"]], collapse = "\n"), "\n```\n"))
+  knitr::asis_output(paste0("\n```{.typst-render-cell}\n", paste(options[["code"]], collapse = "\n"), "\n```\n"))
 })
 ```
 ````
+
+The engine writes the block back with the `typst-render-cell` class, which the filter reads as a `{typst}` block.
+A bare `{typst}` fence works for the render itself, but not for a check Quarto runs first when rendering to Typst or PDF.
+That check uses the plain pandoc reader, which doesn't know `{typst}`.
+A blank line inside the block then makes it misread the rest of the page, so it prints a spurious `Div … unclosed` warning and can turn a level-one heading into plain text.
 
 Per-block options, cross-reference labels, and captions all work after that, written as `//|` lines as in [Per-block options](#per-block-options).
 knitr removes `#|` lines and chunk header options before the engine runs, so the filter never sees them.
