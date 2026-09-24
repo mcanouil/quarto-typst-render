@@ -1981,9 +1981,9 @@ end
 local function process_codeblock(el)
   -- The knitr engine in `typst_define.R` emits `{.typst-render-cell}`
   -- instead of `{typst}`; see the comment there for why.
-  if el.classes:includes('typst-render-cell') then
-    el.classes = pandoc.List({ '{typst}' })
-  end
+  el.classes = el.classes:map(function(class)
+    return class == 'typst-render-cell' and '{typst}' or class
+  end)
   if not cell.is_code_block(el) then
     return nil
   end
