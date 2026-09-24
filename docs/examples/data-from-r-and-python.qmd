@@ -51,13 +51,13 @@ The helper's engine warns when it finds options knitr took; the snippet below do
 ```{{r}}
 #| include: false
 knitr::knit_engines$set(typst = function(options) {
-  knitr::asis_output(paste0("\n```{typst}\n", paste(options[["code"]], collapse = "\n"), "\n```\n"))
+  knitr::asis_output(paste0("\n```{.typst-render-cell}\n", paste(options[["code"]], collapse = "\n"), "\n```\n"))
 })
 ```
 ````
 
 Without that registration knitr claims the cell, knows no `typst` engine, and writes the source to the page with no figure beside it.
-See [Engines](../reference.qmd#engines).
+See [Engines](../reference.qmd#engines), which also explains the `typst-render-cell` class.
 
 ## Defining values
 

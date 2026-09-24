@@ -2,9 +2,14 @@
 #'
 #' Without this, knitr emits "Unknown language engine 'typst'" warnings and
 #' wraps the block in a cell-output div with a `typst` (singular) class. The
-#' engine simply re-emits the chunk source as a `` ```{typst} `` fenced block
-#' so pandoc sees the literal `{typst}` class that the typst-render filter
-#' expects.
+#' engine re-emits the chunk source as a `` ```{.typst-render-cell} `` fenced
+#' block, which the typst-render filter treats as a `{typst}` block.
+#' A bare `{typst}` fence would do for Quarto's own reader, but Quarto also
+#' runs the plain pandoc reader over the markdown to look for level-one
+#' headings before a Typst or PDF render. That reader does not know
+#' `{typst}`, so a blank line in the block makes it misread the rest of the
+#' document, which prints a spurious "Div unclosed" warning and can hide a
+#' level-one heading.
 #'
 #' knitr parses `#|` lines and chunk header options itself and removes them
 #' before calling the engine, so the filter never sees them. The engine warns
@@ -33,7 +38,7 @@ if (requireNamespace("knitr", quietly = TRUE)) {
       )
     }
     code <- paste(options[["code"]], collapse = "\n")
-    knitr::asis_output(paste0("\n```{typst}\n", code, "\n```\n"))
+    knitr::asis_output(paste0("\n```{.typst-render-cell}\n", code, "\n```\n"))
   })
 }
 
