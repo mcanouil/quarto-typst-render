@@ -1537,8 +1537,17 @@ local function create_image_element(img_path, opts)
     kvpairs[#kvpairs + 1] = { 'fig-alt', alt_text }
   end
 
+  -- HTML and Typst take the alt from `fig-alt`, so the description stays empty
+  -- there: at `pre-ast`, a lone image with a description becomes an implicit
+  -- figure captioned by it. Other formats (docx, LaTeX) read the alt from the
+  -- description only.
+  local description = { pandoc.Str(alt_text) }
+  if quarto.format.is_html_output() or quarto.format.is_typst_output() then
+    description = {}
+  end
+
   local img = pandoc.Image(
-    { pandoc.Str(alt_text) },
+    description,
     img_path,
     '',
     pandoc.Attr('', classes, kvpairs)
