@@ -147,6 +147,11 @@ local global_brand_mode = 'light'
 --- Quarto's own pass leaves them literal instead of removing them.
 local code_annotations_disabled = false
 
+--- Whether Quarto's markdown reader is ready (set during Meta pass).
+--- False when the filter runs at `pre-ast`, before Quarto captures its reader
+--- options, where `quarto.utils.string_to_inlines` fails.
+local quarto_reader_ready = true
+
 --- Resolved Typst binary path (cached)
 local typst_bin = nil
 
@@ -1801,6 +1806,10 @@ local function get_configuration(meta)
   code_annotations_disabled = code_annotations_meta ~= nil
     and pandoc.utils.stringify(code_annotations_meta) == 'false'
 
+  -- Quarto removes `quarto_pandoc_reader_opts` from the metadata when it
+  -- captures its reader options, so the key is only present at `pre-ast`.
+  quarto_reader_ready = meta['quarto_pandoc_reader_opts'] == nil
+
   checker:options(meta)
 
   local ext_config = meta_mod.get_extension_config(meta, EXTENSION_NAME) or meta['typst-render']
@@ -2126,7 +2135,7 @@ local function process_codeblock(el)
     if opts.align and opts.align ~= 'default' and VALID_ALIGN_SET[opts.align] then
       scoped_code = '#align(' .. opts.align .. ')[\n' .. scoped_code .. '\n]'
     end
-    local result = cell.wrap_crossref(pandoc.RawBlock('typst', scoped_code), opts, REF_TYPE_NAMES)
+    local result = cell.wrap_crossref(pandoc.RawBlock('typst', scoped_code), opts, REF_TYPE_NAMES, quarto_reader_ready)
     if do_echo then
       -- Native Typst pass-through does not support annotations; strip markers.
       return cell.create_echo_block(code, is_fenced, option_lines, fold, result, false, line_numbers)
@@ -2209,7 +2218,7 @@ local function process_codeblock(el)
         pandoc.Attr('', { 'dark-content' }, {})
       )
     end
-    result = cell.wrap_crossref(pandoc.Div(blocks), opts, REF_TYPE_NAMES)
+    result = cell.wrap_crossref(pandoc.Div(blocks), opts, REF_TYPE_NAMES, quarto_reader_ready)
   else
     -- Single-mode: resolve colours to brand mode
     local resolved_opts = has_dual_mode_colours(opts)
@@ -2250,7 +2259,7 @@ local function process_codeblock(el)
       end
     end
 
-    result = cell.wrap_crossref(content, opts, REF_TYPE_NAMES)
+    result = cell.wrap_crossref(content, opts, REF_TYPE_NAMES, quarto_reader_ready)
   end
 
   -- Compilation and file-save side effects have run; suppress embedding if include is false.
