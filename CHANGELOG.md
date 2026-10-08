@@ -4,6 +4,7 @@
 
 ### Bug Fixes
 
+- fix: Stop a labelled `{typst}` block with a `fig-cap` from failing to render when the filter runs at `pre-ast`. At that stage, shortcodes in the caption stay as written. (#113)
 - fix: Stop the alt text of a `{typst}` block from showing as a figure caption in HTML and Typst when the filter runs at `pre-ast`. Inside a figure div, the block no longer triggers a `Subfloat without crossref information` warning. (#112)
 
 ## 0.22.4 (2026-09-24)
