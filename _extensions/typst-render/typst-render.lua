@@ -1558,6 +1558,11 @@ local function create_image_element(img_path, opts)
     pandoc.Attr('', classes, kvpairs)
   )
 
+  -- Quarto only promotes a Para holding a lone image with a description, so
+  -- a Plain keeps the description as alt without the implicit figure.
+  if not quarto_reader_ready and #description > 0 then
+    return pandoc.Plain({ img })
+  end
   return pandoc.Para({ img })
 end
 
@@ -2320,20 +2325,20 @@ local function create_inline_image_element(img_path, opts)
     )
   end
 
-  if quarto.format.is_docx_output() then
+  if not quarto.format.is_html_output() then
     local img = pandoc.Image(
       { pandoc.Str(opts._alt or '') },
       img_path
     )
-    img.attr = pandoc.Attr('', {}, { { 'height', '1em' } })
+    if quarto.format.is_docx_output() then
+      img.attr = pandoc.Attr('', {}, { { 'height', '1em' } })
+    end
+    -- At `pre-ast`, Quarto promotes a Para holding only this image to a figure
+    -- captioned by its alt; the Span keeps the image out of that pattern.
+    if not quarto_reader_ready then
+      return pandoc.Span({ img })
+    end
     return img
-  end
-
-  if not quarto.format.is_html_output() then
-    return pandoc.Image(
-      { pandoc.Str(opts._alt or '') },
-      img_path
-    )
   end
 
   local extra_classes = ''
