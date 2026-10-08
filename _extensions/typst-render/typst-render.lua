@@ -152,6 +152,10 @@ local code_annotations_disabled = false
 --- options, where `quarto.utils.string_to_inlines` fails.
 local quarto_reader_ready = true
 
+--- Quarto's reader options at `pre-ast` (set during Meta pass), used to parse
+--- captions with Quarto's own reader there; nil once Quarto's reader is ready.
+local pre_ast_reader_options = nil
+
 --- Resolved Typst binary path (cached)
 local typst_bin = nil
 
@@ -1814,6 +1818,10 @@ local function get_configuration(meta)
   -- Quarto removes `quarto_pandoc_reader_opts` from the metadata when it
   -- captures its reader options, so the key is only present at `pre-ast`.
   quarto_reader_ready = meta['quarto_pandoc_reader_opts'] == nil
+  pre_ast_reader_options = nil
+  if not quarto_reader_ready then
+    pre_ast_reader_options = require('readqmd').meta_to_options(meta['quarto_pandoc_reader_opts'])
+  end
 
   checker:options(meta)
 
@@ -2140,7 +2148,7 @@ local function process_codeblock(el)
     if opts.align and opts.align ~= 'default' and VALID_ALIGN_SET[opts.align] then
       scoped_code = '#align(' .. opts.align .. ')[\n' .. scoped_code .. '\n]'
     end
-    local result = cell.wrap_crossref(pandoc.RawBlock('typst', scoped_code), opts, REF_TYPE_NAMES, quarto_reader_ready)
+    local result = cell.wrap_crossref(pandoc.RawBlock('typst', scoped_code), opts, REF_TYPE_NAMES, pre_ast_reader_options)
     if do_echo then
       -- Native Typst pass-through does not support annotations; strip markers.
       return cell.create_echo_block(code, is_fenced, option_lines, fold, result, false, line_numbers)
@@ -2223,7 +2231,7 @@ local function process_codeblock(el)
         pandoc.Attr('', { 'dark-content' }, {})
       )
     end
-    result = cell.wrap_crossref(pandoc.Div(blocks), opts, REF_TYPE_NAMES, quarto_reader_ready)
+    result = cell.wrap_crossref(pandoc.Div(blocks), opts, REF_TYPE_NAMES, pre_ast_reader_options)
   else
     -- Single-mode: resolve colours to brand mode
     local resolved_opts = has_dual_mode_colours(opts)
@@ -2264,7 +2272,7 @@ local function process_codeblock(el)
       end
     end
 
-    result = cell.wrap_crossref(content, opts, REF_TYPE_NAMES, quarto_reader_ready)
+    result = cell.wrap_crossref(content, opts, REF_TYPE_NAMES, pre_ast_reader_options)
   end
 
   -- Compilation and file-save side effects have run; suppress embedding if include is false.
