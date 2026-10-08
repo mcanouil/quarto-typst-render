@@ -1517,8 +1517,16 @@ local REF_TYPE_NAMES = {
 --- @param opts table Merged options
 --- @return pandoc.Para Para containing the image
 local function create_image_element(img_path, opts)
+  -- Without an explicit alt, a labelled block's caption already describes the
+  -- figure, so it gets no alt, as Quarto's own figures do. An unlabelled
+  -- caption is shown nowhere else, so it becomes the alt as plain text.
   local caption_text = cell.resolve_caption(opts)
-  local fallback = caption_text ~= '' and caption_text or opts._source or ''
+  local fallback = opts._source or ''
+  if caption_text ~= '' and cell.ref_type(opts.label) then
+    fallback = ''
+  elseif caption_text ~= '' then
+    fallback = pandoc.utils.stringify(pandoc.read(caption_text, 'markdown').blocks)
+  end
   local alt_text = cell.resolve_alt(opts, fallback)
 
   local classes = {}
@@ -1551,7 +1559,7 @@ local function create_image_element(img_path, opts)
   -- figure captioned by it. Other formats (docx, LaTeX) read the alt from the
   -- description only.
   local description = { pandoc.Str(alt_text) }
-  if quarto.format.is_html_output() or quarto.format.is_typst_output() then
+  if alt_text == '' or quarto.format.is_html_output() or quarto.format.is_typst_output() then
     description = {}
   end
 

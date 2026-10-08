@@ -185,6 +185,11 @@ Everything in the second can be set globally as a default for every block, apart
 
 A block option is one line, so an option that takes a map, such as a `background` with a `light` and a `dark` value, is written in YAML and never on a block.
 
+A block without `alt` gets its alt text from the other options.
+A block with a `label` and a `cap` gets no alt text, because the caption already describes the figure, as for Quarto figures.
+A block with a `cap` but no `label` uses the caption as plain text, without markdown.
+A block with no caption uses the Typst source.
+
 [Figures and tables](examples/figures-and-tables.qmd) shows the size, format, and alignment options, [Cross-references](examples/cross-references.qmd) shows `label`, `cap`, and `alt`, and [Presentations](examples/presentations.qmd) shows the Reveal.js options.
 
 ## Inline expressions
