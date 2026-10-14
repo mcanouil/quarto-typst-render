@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.22.6 (2026-10-14)
+
 ### Bug Fixes
 
 - fix: Refresh a cached `{typst}` image when a file it imports changes through a root-relative path, such as `#import "/lib.typ"`, or through a nested import. These files were missed by the cache key, so an edit left the old image in place. (#122)
