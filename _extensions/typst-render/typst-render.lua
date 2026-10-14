@@ -623,17 +623,42 @@ local function extract_local_file_refs(source)
   return refs
 end
 
+--- Resolve an import path the way Typst does: a leading `/` is relative to the
+--- project root, anything else to the folder of the file that imports it.
+--- @param ref string Path as written in the #import or #include
+--- @param root string Absolute Typst project root path
+--- @param base_dir string Absolute folder of the importing file
+--- @return string Absolute path with `.` and `..` collapsed
+local function resolve_import_path(ref, root, base_dir)
+  local joined = ref:sub(1, 1) == '/' and (root .. ref) or pandoc.path.join({ base_dir, ref })
+  -- pandoc.path.normalize keeps `..`, so collapse it here: one file must map to
+  -- one path, or a cycle spelt through `..` would never be seen as visited.
+  local parts = pandoc.path.split(pandoc.path.normalize(joined))
+  local segments = { parts[1] }
+  for i = 2, #parts do
+    if parts[i] == '..' then
+      if #segments > 1 then segments[#segments] = nil end
+    elseif parts[i] ~= '.' then
+      segments[#segments + 1] = parts[i]
+    end
+  end
+  return pandoc.path.join(segments)
+end
+
 --- Recursively collect the content of locally imported Typst files for cache hashing.
---- All paths are resolved relative to root (matching how Typst resolves stdin imports).
+--- The block itself compiles from stdin, which Typst places at the root, so its
+--- imports resolve against the root; a nested file's imports resolve against its
+--- own folder.
 --- Missing files are silently skipped; cycles are prevented via visited table.
 --- @param source string Typst source to scan for imports
 --- @param root string Absolute Typst project root path
+--- @param base_dir string Absolute folder that relative imports in source resolve against
 --- @param visited table Set of already-visited absolute paths (prevents cycles)
---- @return string Concatenated rel_path+content string for all reachable local imports
-local function collect_import_content(source, root, visited)
+--- @return string Concatenated path+content string for all reachable local imports
+local function collect_import_content(source, root, base_dir, visited)
   local parts = {}
-  for _, rel_path in ipairs(extract_local_file_refs(source)) do
-    local abs_path = pandoc.path.normalize(pandoc.path.join({ root, rel_path }))
+  for _, ref in ipairs(extract_local_file_refs(source)) do
+    local abs_path = resolve_import_path(ref, root, base_dir)
     if not visited[abs_path] then
       visited[abs_path] = true
       local content = read_file_cache[abs_path]
@@ -644,8 +669,8 @@ local function collect_import_content(source, root, visited)
         content = nil
       end
       if content then
-        parts[#parts + 1] = rel_path .. '\0' .. content
-        local sub = collect_import_content(content, root, visited)
+        parts[#parts + 1] = ref .. '\0' .. content
+        local sub = collect_import_content(content, root, pandoc.path.directory(abs_path), visited)
         if sub ~= '' then parts[#parts + 1] = sub end
       end
     end
@@ -1295,7 +1320,7 @@ local function build_hash_source(source, opts, resolved_root, merged_input)
     hash_source = hash_source .. '|input:' .. input_serial
   end
   hash_source = hash_source .. '|opts:' .. serialise_opts(opts)
-  local import_content = collect_import_content(source, resolved_root, {})
+  local import_content = collect_import_content(source, resolved_root, resolved_root, {})
   if import_content ~= '' then
     hash_source = hash_source .. '|imports:' .. import_content
   end
