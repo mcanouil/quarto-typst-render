@@ -633,15 +633,23 @@ local function resolve_import_path(ref, root, base_dir)
   local joined = ref:sub(1, 1) == '/' and (root .. ref) or pandoc.path.join({ base_dir, ref })
   -- pandoc.path.normalize keeps `..`, so collapse it here: one file must map to
   -- one path, or a cycle spelt through `..` would never be seen as visited.
-  local parts = pandoc.path.split(pandoc.path.normalize(joined))
-  local segments = { parts[1] }
-  for i = 2, #parts do
-    if parts[i] == '..' then
-      if #segments > 1 then segments[#segments] = nil end
-    elseif parts[i] ~= '.' then
-      segments[#segments + 1] = parts[i]
+  -- An absolute path clamps `..` at its root component; a relative one, as when
+  -- the root is not a project directory, keeps the `..` it cannot pop.
+  local absolute = pandoc.path.is_absolute(joined)
+  local segments = {}
+  for _, part in ipairs(pandoc.path.split(pandoc.path.normalize(joined))) do
+    if part == '..' then
+      local last = segments[#segments]
+      if last and last ~= '..' and not (absolute and #segments == 1) then
+        segments[#segments] = nil
+      elseif not absolute then
+        segments[#segments + 1] = '..'
+      end
+    elseif part ~= '.' then
+      segments[#segments + 1] = part
     end
   end
+  if #segments == 0 then return '.' end
   return pandoc.path.join(segments)
 end
 
