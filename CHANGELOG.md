@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Bug Fixes
+
+- fix: Stop Quarto Wizard from checking a `.typst` code block, such as one shown with `include` from include-code-files, against the options of `{typst}` cells. (#124)
+
 ## 0.22.6 (2026-10-14)
 
 ### Bug Fixes
