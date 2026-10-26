@@ -152,7 +152,6 @@ options:
     default: false
     description: "Also write the compiled Typst source (preamble + colour bindings + user code) next to each saved image, using the same stem with a .typ extension. Has no effect when image saving is disabled with an empty output-directory."
 
-# Comment-pipe options (//| key: value) read from the top of {typst} cells.
 cells:
   typst:
     description: "Typst cells rendered by typst-render."
